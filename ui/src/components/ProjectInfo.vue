@@ -15,11 +15,13 @@ const pathParts = computed(() => {
 <template>
   <div class="project" :title="repo.overview?.workdir">
     <AppIcon name="folder" />
-    <span class="name ellipsis">{{ repo.overview?.repoName }}</span>
-    <span class="path">
-      <span class="path-start ellipsis">{{ pathParts.start }}</span>
-      <span class="path-end ellipsis">{{ pathParts.end }}</span>
-    </span>
+    <div class="text">
+      <span class="name ellipsis">{{ repo.overview?.repoName }}</span>
+      <span class="path">
+        <span class="path-start ellipsis">{{ pathParts.start }}</span>
+        <span class="path-end ellipsis">{{ pathParts.end }}</span>
+      </span>
+    </div>
   </div>
 </template>
 
@@ -29,17 +31,22 @@ const pathParts = computed(() => {
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  height: var(--control-height);
-  padding: 0 var(--space-3);
+  padding: var(--space-1) var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-bg-sunken);
   color: var(--color-accent-bright);
 }
 
+/* The path gets a line of its own, so it has the widget's full width. */
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
 .name {
-  flex: none;
-  max-width: 50%;
   color: var(--color-fg-strong);
   font-weight: 600;
 }

@@ -130,7 +130,7 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
   align-items: center;
   gap: var(--space-4);
   min-height: var(--bar-height);
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-1) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-panel);
 }
