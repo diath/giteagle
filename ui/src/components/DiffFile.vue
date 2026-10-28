@@ -14,7 +14,7 @@ import { languageFor, tokenizeFile, type Token } from '../utils/highlight'
 import AppIcon from './AppIcon.vue'
 
 /** Highlighting starts a little before a file scrolls into view. */
-const HIGHLIGHT_MARGIN_PX = 800
+const HIGHLIGHT_MARGIN_PX = 1200
 
 const props = defineProps<{ file: FileDiff; highlighted: boolean }>()
 
@@ -372,12 +372,12 @@ defineExpose({ element: root })
 }
 
 .line--added .changed {
-  border-radius: 2px;
+  border-radius: 3px;
   background: var(--color-diff-added-word);
 }
 
 .line--removed .changed {
-  border-radius: 2px;
+  border-radius: 3px;
   background: var(--color-diff-removed-word);
 }
 
@@ -390,7 +390,7 @@ defineExpose({ element: root })
 }
 
 .hunk-row td {
-  padding-block: 2px;
+  padding-block: 3px;
   background: var(--color-diff-hunk-bg);
   color: var(--color-diff-hunk-fg);
 }
@@ -414,7 +414,7 @@ defineExpose({ element: root })
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  padding: 2px var(--space-3);
+  padding: 3px var(--space-3);
   border: none;
   background: transparent;
   color: var(--color-link);

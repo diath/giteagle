@@ -65,7 +65,7 @@ onMounted(async () => {
   <div class="dialog-layer" @mousedown.self="!working && emit('close')">
     <form class="dialog" role="dialog" aria-modal="true" :aria-label="`Delete ${name}`" @submit.prevent="confirm">
       <h2 class="title">
-        <AppIcon name="trash" :size="20" />
+        <AppIcon name="trash" large />
         Delete branch <span class="branch">{{ name }}</span>
       </h2>
 
@@ -123,12 +123,12 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  width: min(520px, calc(100% - 2 * var(--space-6)));
+  width: min(780px, calc(100% - 2 * var(--space-6)));
   padding: var(--space-6);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-large);
   background: var(--color-bg-panel);
-  box-shadow: 0 8px 24px var(--color-shadow);
+  box-shadow: 0 12px 36px var(--color-shadow);
 }
 
 .title {

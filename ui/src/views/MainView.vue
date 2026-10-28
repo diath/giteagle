@@ -90,7 +90,7 @@ const TABS: { id: MainTab; label: string }[] = [
   right: var(--space-2);
   bottom: -1px;
   left: var(--space-2);
-  height: 2px;
+  height: 3px;
   background: var(--color-accent);
 }
 

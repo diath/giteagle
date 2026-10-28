@@ -59,12 +59,12 @@ defineExpose({ focus: () => input.value?.focus() })
 }
 
 .text-input {
-  padding-left: calc(var(--space-2) * 2 + 16px);
-  padding-right: calc(var(--space-2) + 24px);
+  padding-left: calc(var(--space-2) * 2 + var(--icon-size));
+  padding-right: calc(var(--space-2) + var(--icon-button-size));
 }
 
 .clear {
   position: absolute;
-  right: 2px;
+  right: 3px;
 }
 </style>

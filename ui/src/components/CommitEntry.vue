@@ -70,7 +70,7 @@ const expanded = ref(false)
 }
 
 .avatars {
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 .content {
@@ -102,7 +102,7 @@ const expanded = ref(false)
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  min-height: 22px;
+  min-height: 33px;
 }
 
 .subject {
@@ -111,15 +111,15 @@ const expanded = ref(false)
 }
 
 .expand {
-  width: 20px;
-  height: 20px;
+  width: 30px;
+  height: 30px;
   flex: none;
 }
 
 .body {
   margin: var(--space-2) 0 var(--space-1);
   padding: var(--space-2) var(--space-3);
-  border-left: 2px solid var(--color-border-strong);
+  border-left: 3px solid var(--color-border-strong);
   color: var(--color-fg-muted);
   font: inherit;
   font-size: var(--font-size-small);

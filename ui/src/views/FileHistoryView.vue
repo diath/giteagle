@@ -54,7 +54,7 @@ const load = (cursor: HistoryCursor | null) => api.fileHistory(props.path, curso
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: 48px;
+  min-height: var(--bar-height);
   padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-panel);

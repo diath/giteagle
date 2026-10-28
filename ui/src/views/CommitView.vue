@@ -152,7 +152,7 @@ onMounted(async () => {
           <pre v-if="details.body" class="body">{{ details.body }}</pre>
 
           <div class="authors">
-            <AvatarStack :authors="details.authors" :size="24" />
+            <AvatarStack :authors="details.authors" :size="36" />
             <div class="author-names">
               <span v-for="author in details.authors" :key="author.email" class="author">
                 {{ author.name }} <span class="faint">&lt;{{ author.email }}&gt;</span>
@@ -226,7 +226,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: 48px;
+  min-height: var(--bar-height);
   padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-panel);
@@ -278,7 +278,7 @@ onMounted(async () => {
 
 .file-list {
   flex: none;
-  width: clamp(220px, 24%, 360px);
+  width: clamp(330px, 24%, 540px);
   overflow-y: auto;
   border-right: 1px solid var(--color-border);
   background: var(--color-bg-panel);
@@ -294,9 +294,9 @@ onMounted(async () => {
   align-items: baseline;
   gap: var(--space-2);
   width: 100%;
-  padding: 3px var(--space-3);
+  padding: 5px var(--space-3);
   border: none;
-  border-left: 2px solid transparent;
+  border-left: 3px solid transparent;
   background: transparent;
   font-size: var(--font-size-small);
   text-align: left;

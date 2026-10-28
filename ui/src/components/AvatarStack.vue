@@ -7,7 +7,7 @@ import { initials, placeholderColors } from '../utils/authors'
 
 const MAX_SHOWN = 3
 
-const props = withDefaults(defineProps<{ authors: Person[]; size?: number }>(), { size: 20 })
+const props = withDefaults(defineProps<{ authors: Person[]; size?: number }>(), { size: 30 })
 
 const shown = computed(() =>
   props.authors.slice(0, MAX_SHOWN).map((author) => ({
@@ -49,7 +49,7 @@ const shown = computed(() =>
   width: var(--avatar-size);
   height: var(--avatar-size);
   overflow: hidden;
-  border: 1.5px solid var(--color-bg-app);
+  border: 2px solid var(--color-bg-app);
   border-radius: 50%;
   box-sizing: content-box;
 }

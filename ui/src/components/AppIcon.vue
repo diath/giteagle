@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { ICON_PATHS, type IconName } from '../icons/paths'
 
-withDefaults(defineProps<{ name: IconName; size?: 16 | 20 }>(), { size: 16 })
+defineProps<{ name: IconName; large?: boolean }>()
 </script>
 
 <template>
   <svg
     class="app-icon"
-    :width="size"
-    :height="size"
+    :class="{ large }"
     viewBox="0 0 16 16"
     fill="none"
     stroke="currentColor"
@@ -24,5 +23,12 @@ withDefaults(defineProps<{ name: IconName; size?: 16 | 20 }>(), { size: 16 })
 <style scoped>
 .app-icon {
   flex: none;
+  width: var(--icon-size);
+  height: var(--icon-size);
+}
+
+.app-icon.large {
+  width: var(--icon-size-large);
+  height: var(--icon-size-large);
 }
 </style>

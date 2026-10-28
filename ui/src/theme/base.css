@@ -4,26 +4,31 @@
 :root {
   --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono',
     Menlo, Consolas, monospace;
-  --font-size: 13px;
-  --font-size-small: 12px;
-  --font-size-tiny: 11px;
-  --font-size-large: 15px;
-  --font-size-title: 17px;
+  --font-size: 20px;
+  --font-size-small: 18px;
+  --font-size-tiny: 16px;
+  --font-size-large: 22px;
+  --font-size-title: 26px;
   --line-height: 1.5;
   --line-height-dense: 1.38;
   --tracking: -0.015em;
 
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --space-8: 32px;
+  --space-1: 6px;
+  --space-2: 12px;
+  --space-3: 18px;
+  --space-4: 24px;
+  --space-6: 36px;
+  --space-8: 48px;
 
-  --radius: 4px;
-  --radius-large: 6px;
+  --radius: 6px;
+  --radius-large: 9px;
   --transition: 140ms ease;
-  --control-height: 28px;
+  --control-height: 42px;
+  --icon-size: 24px;
+  --icon-size-large: 30px;
+  --icon-button-size: 36px;
+  /* The bars across the top of each view. */
+  --bar-height: 72px;
 }
 
 *,
@@ -75,8 +80,8 @@ input {
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
 }
 
 ::-webkit-scrollbar-track,
@@ -85,8 +90,8 @@ input {
 }
 
 ::-webkit-scrollbar-thumb {
-  border: 2px solid transparent;
-  border-radius: 6px;
+  border: 3px solid transparent;
+  border-radius: 9px;
   background: var(--color-scrollbar);
   background-clip: content-box;
 }
@@ -158,8 +163,8 @@ input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: var(--icon-button-size);
+  height: var(--icon-button-size);
   padding: 0;
   border: 1px solid transparent;
   border-radius: var(--radius);

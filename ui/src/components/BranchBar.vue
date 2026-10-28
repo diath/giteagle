@@ -129,7 +129,7 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
   grid-template-columns: minmax(15%, 1fr) minmax(0, max-content) minmax(15%, 1fr);
   align-items: center;
   gap: var(--space-4);
-  min-height: 48px;
+  min-height: var(--bar-height);
   padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-panel);
@@ -195,7 +195,7 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
 .divider {
   flex: none;
   width: 1px;
-  height: 20px;
+  height: 30px;
   margin: 0 var(--space-1);
   background: var(--color-border);
 }

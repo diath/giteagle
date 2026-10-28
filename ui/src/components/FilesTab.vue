@@ -294,11 +294,11 @@ function relativeToDirectory(path: string): string {
 
 .row {
   display: grid;
-  grid-template-columns: 16px minmax(10ch, 1fr) 16px minmax(0, 2fr) 15ch;
+  grid-template-columns: var(--icon-size) minmax(10ch, 1fr) var(--icon-size) minmax(0, 2fr) 15ch;
   gap: var(--space-3);
   align-items: center;
   width: 100%;
-  min-height: 32px;
+  min-height: 48px;
   padding: var(--space-1) var(--space-4);
   border: none;
   border-bottom: 1px solid var(--color-border-subtle);
@@ -309,7 +309,7 @@ function relativeToDirectory(path: string): string {
 }
 
 .row--search {
-  grid-template-columns: 16px minmax(0, 1fr) 16px;
+  grid-template-columns: var(--icon-size) minmax(0, 1fr) var(--icon-size);
 }
 
 .row:hover:not(:disabled) {
@@ -342,8 +342,8 @@ function relativeToDirectory(path: string): string {
 }
 
 .changes-dot {
-  width: 6px;
-  height: 6px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: var(--color-status-modified);
 }
