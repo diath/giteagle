@@ -1,0 +1,230 @@
+/* Global styles. Colors come from the custom properties that palette.ts
+   applies to the root element at startup. */
+
+:root {
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono',
+    Menlo, Consolas, monospace;
+  --font-size: 13px;
+  --font-size-small: 12px;
+  --font-size-tiny: 11px;
+  --font-size-large: 15px;
+  --font-size-title: 17px;
+  --line-height: 1.5;
+  --line-height-dense: 1.38;
+  --tracking: -0.015em;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --radius: 4px;
+  --radius-large: 6px;
+  --transition: 140ms ease;
+  --control-height: 28px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  background: var(--color-bg-app);
+  color: var(--color-fg);
+  font-family: var(--font-mono);
+  font-size: var(--font-size);
+  line-height: var(--line-height);
+  letter-spacing: var(--tracking);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+}
+
+::selection {
+  background: var(--color-accent-muted);
+  color: var(--color-fg-strong);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+/* Thin themed scrollbars on every platform. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: var(--color-scrollbar);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-hover);
+  background-clip: content-box;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg-raised);
+  color: var(--color-fg);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--transition),
+    border-color var(--transition),
+    color var(--transition);
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background: var(--color-bg-hover);
+}
+
+.button:active:not(:disabled) {
+  background: var(--color-bg-active);
+}
+
+.button:disabled {
+  color: var(--color-fg-disabled);
+  cursor: default;
+}
+
+.button--quiet {
+  border-color: transparent;
+  background: transparent;
+}
+
+.button--quiet:hover:not(:disabled) {
+  border-color: transparent;
+}
+
+.button--danger {
+  border-color: var(--color-danger);
+  background: var(--color-danger-muted);
+  color: var(--color-danger-bright);
+}
+
+.button--danger:hover:not(:disabled) {
+  border-color: var(--color-danger-bright);
+  background: var(--color-danger-muted);
+}
+
+.button--danger:disabled {
+  border-color: var(--color-border);
+  background: var(--color-bg-raised);
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--transition),
+    color var(--transition);
+}
+
+.icon-button:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  color: var(--color-fg);
+}
+
+.icon-button:disabled {
+  color: var(--color-fg-disabled);
+  cursor: default;
+}
+
+.text-input {
+  width: 100%;
+  height: var(--control-height);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg-sunken);
+  color: var(--color-fg);
+  transition: border-color var(--transition);
+}
+
+.text-input::placeholder {
+  color: var(--color-fg-faint);
+}
+
+.text-input:hover {
+  border-color: var(--color-border-strong);
+}
+
+.text-input:focus-visible {
+  outline-offset: -1px;
+}
+
+.hash {
+  color: var(--color-hash);
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--color-fg-muted);
+}
+
+.faint {
+  color: var(--color-fg-faint);
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty-state {
+  padding: var(--space-8) var(--space-4);
+  color: var(--color-fg-muted);
+  text-align: center;
+}
