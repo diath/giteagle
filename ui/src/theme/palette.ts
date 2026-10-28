@@ -2,15 +2,19 @@
 // through the CSS custom properties applied from here, or through the
 // helpers below; raw hex values in components are rejected by ESLint.
 
-/** Warm greys, darkest to lightest. None is pure black or white. */
+/**
+ * Greys, darkest to lightest. The dark steps used for backgrounds are only
+ * faintly brown; the light steps used for text are warmer. None is pure
+ * black or white.
+ */
 const neutral = {
-  950: '#131110',
-  900: '#191714',
-  850: '#1e1b18',
-  800: '#24211d',
-  750: '#2a2622',
-  700: '#332e29',
-  600: '#3f3933',
+  950: '#0e0d0c',
+  900: '#141210',
+  850: '#181614',
+  800: '#1e1c19',
+  750: '#24211e',
+  700: '#2c2925',
+  600: '#393430',
   500: '#585047',
   400: '#7b7266',
   300: '#9e9487',
