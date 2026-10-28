@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    branches: [release]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      # VERSION holds major.minor; the run number becomes the build part.
+      - name: Stamp the version
+        shell: bash
+        run: |
+          version="$(tr -d '[:space:]' < VERSION).${{ github.run_number }}"
+          sed -i "0,/^version = \".*\"/s//version = \"$version\"/" Cargo.toml
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$version\"/" tauri.conf.json
+          grep -m1 '^version' Cargo.toml
+          grep '"version"' tauri.conf.json
+
+      - name: Install the Tauri CLI
+        run: cargo install tauri-cli --version "^2.12" --locked
+
+      - name: Install frontend dependencies
+        working-directory: ui
+        run: npm ci
+
+      # Builds the NSIS installer on Windows and the AppImage on Linux, as
+      # configured in tauri.conf.json, and attaches them to the release.
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: .
+          tauriScript: cargo tauri
+          tagName: v__VERSION__
+          releaseName: GitEagle v__VERSION__
+          releaseBody: GitEagle v__VERSION__
+          releaseDraft: false
+          prerelease: false
