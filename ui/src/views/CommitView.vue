@@ -137,7 +137,7 @@ onMounted(async () => {
         >
           <span class="file-path ellipsis">
             <span class="file-name">{{ baseName(file.path) }}</span>
-            <span class="faint"> {{ directoryName(file.path) }}</span>
+            <span class="file-directory faint">{{ directoryName(file.path) }}</span>
           </span>
           <span class="file-delta">
             (<span class="additions">+{{ file.additions }}</span>
@@ -328,6 +328,11 @@ onMounted(async () => {
 
 .file-name {
   color: var(--color-fg);
+}
+
+/* A margin, because Vue drops a space that starts an element. */
+.file-directory {
+  margin-left: 1ch;
 }
 
 .file-delta {

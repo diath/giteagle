@@ -194,7 +194,7 @@ defineExpose({ element: root })
               <tr v-if="row.type === 'hunk'" class="hunk-row">
                 <td class="gutter" colspan="2"></td>
                 <td class="hunk-text" colspan="2">
-                  {{ row.header }}<span v-if="row.section" class="section"> {{ row.section }}</span>
+                  {{ row.header }}<span v-if="row.section" class="section">{{ row.section }}</span>
                 </td>
               </tr>
               <tr v-else-if="row.type === 'gap'" class="gap-row">
@@ -400,7 +400,9 @@ defineExpose({ element: root })
   white-space: pre;
 }
 
+/* A margin, because Vue drops a space that starts an element. */
 .section {
+  margin-left: 1ch;
   color: var(--color-fg-muted);
 }
 
