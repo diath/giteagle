@@ -148,18 +148,6 @@ onMounted(async () => {
 
       <div ref="scroller" class="diff-area" @scroll.passive="trackCurrentFile">
         <header class="commit-header">
-          <h1 class="subject">{{ details.subject }}</h1>
-          <pre v-if="details.body" class="body">{{ details.body }}</pre>
-
-          <div class="authors">
-            <AvatarStack :authors="details.authors" :size="30" />
-            <div class="author-names">
-              <span v-for="author in details.authors" :key="author.email" class="author">
-                {{ author.name }} <span class="faint">&lt;{{ author.email }}&gt;</span>
-              </span>
-            </div>
-          </div>
-
           <dl class="meta">
             <dt>Commit</dt>
             <dd>
@@ -200,6 +188,18 @@ onMounted(async () => {
               <span class="deletions">−{{ details.stats.deletions }}</span>
             </dd>
           </dl>
+
+          <h1 class="subject">{{ details.subject }}</h1>
+          <pre v-if="details.body" class="body">{{ details.body }}</pre>
+
+          <div class="authors">
+            <AvatarStack :authors="details.authors" :size="30" />
+            <div class="author-names">
+              <span v-for="author in details.authors" :key="author.email" class="author">
+                {{ author.name }} <span class="faint">&lt;{{ author.email }}&gt;</span>
+              </span>
+            </div>
+          </div>
         </header>
 
         <p v-if="details.files.length === 0" class="empty-state">This commit changes no files.</p>
@@ -382,7 +382,6 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin-bottom: var(--space-3);
 }
 
 .author-names {
@@ -399,7 +398,7 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: var(--space-1) var(--space-4);
-  margin: 0;
+  margin: 0 0 var(--space-4);
   font-size: var(--font-size-small);
 }
 
