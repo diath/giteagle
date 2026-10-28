@@ -55,7 +55,7 @@ const pathParts = computed(() => {
   display: flex;
   min-width: 0;
   color: var(--color-fg-muted);
-  font-size: var(--font-size-small);
+  font-size: calc(12 * var(--px));
 }
 
 /* Only the start shrinks, and the folder name gives way only once the start
