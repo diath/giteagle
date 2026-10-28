@@ -26,11 +26,11 @@ const LABELS: Record<FileStatus, { letter: string; title: string }> = {
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: calc(20 * var(--px));
+  height: calc(20 * var(--px));
   border: 1px solid currentColor;
   border-radius: var(--radius);
-  font-size: 13px;
+  font-size: calc(13 * var(--px));
   font-weight: 600;
   letter-spacing: 0;
   line-height: 1;

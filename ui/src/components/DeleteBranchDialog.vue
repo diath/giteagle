@@ -123,12 +123,12 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  width: min(650px, calc(100% - 2 * var(--space-6)));
+  width: min(calc(650 * var(--px)), calc(100% - 2 * var(--space-6)));
   padding: var(--space-6);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-large);
   background: var(--color-bg-panel);
-  box-shadow: 0 10px 30px var(--color-shadow);
+  box-shadow: 0 calc(10 * var(--px)) calc(30 * var(--px)) var(--color-shadow);
 }
 
 .title {

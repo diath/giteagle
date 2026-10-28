@@ -8,6 +8,8 @@ import { createApp } from 'vue'
 
 import App from './App.vue'
 import { applyPalette } from './theme/palette'
+import { applyScale } from './theme/scale'
 
 applyPalette(document.documentElement)
+applyScale(document.documentElement)
 createApp(App).mount('#app')

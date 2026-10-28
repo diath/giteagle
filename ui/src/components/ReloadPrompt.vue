@@ -26,7 +26,7 @@ import AppIcon from './AppIcon.vue'
   border-radius: var(--radius-large);
   background: var(--color-bg-raised);
   color: var(--color-fg-strong);
-  box-shadow: 0 5px 18px var(--color-shadow);
+  box-shadow: 0 calc(5 * var(--px)) calc(18 * var(--px)) var(--color-shadow);
   transform: translateX(-50%);
   white-space: nowrap;
 }

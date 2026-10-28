@@ -2,11 +2,12 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 
 import { errorMessage, type CommitSummary, type HistoryCursor, type HistoryPage } from '../api'
+import { scaled } from '../theme/scale'
 import AppIcon from './AppIcon.vue'
 import CommitEntry from './CommitEntry.vue'
 
 /** How close to the bottom the next page starts loading. */
-const PRELOAD_MARGIN_PX = 750
+const PRELOAD_MARGIN_PX = scaled(750)
 
 const props = defineProps<{
   load: (cursor: HistoryCursor | null) => Promise<HistoryPage>

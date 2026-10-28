@@ -111,7 +111,7 @@ function fetchNow(): void {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 43px;
+  min-height: calc(43 * var(--px));
   padding: var(--space-1) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-app);
@@ -126,7 +126,7 @@ function fetchNow(): void {
   min-width: 0;
   flex: 0 1 auto;
   overflow: hidden;
-  padding: 3px var(--space-2);
+  padding: calc(3 * var(--px)) var(--space-2);
   margin-left: calc(var(--space-2) * -1);
   border: none;
   border-radius: var(--radius);
@@ -155,7 +155,7 @@ function fetchNow(): void {
 .separator {
   flex: none;
   width: 1px;
-  height: 18px;
+  height: calc(18 * var(--px));
   background: var(--color-border);
 }
 
@@ -189,7 +189,7 @@ function fetchNow(): void {
   align-items: center;
   gap: var(--space-1);
   margin-left: auto;
-  padding: 3px var(--space-2);
+  padding: calc(3 * var(--px)) var(--space-2);
   border: none;
   border-radius: var(--radius);
   background: transparent;

@@ -195,7 +195,7 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
 .divider {
   flex: none;
   width: 1px;
-  height: 25px;
+  height: calc(25 * var(--px));
   margin: 0 var(--space-1);
   background: var(--color-border);
 }

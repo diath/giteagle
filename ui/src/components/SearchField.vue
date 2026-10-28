@@ -65,6 +65,6 @@ defineExpose({ focus: () => input.value?.focus() })
 
 .clear {
   position: absolute;
-  right: 3px;
+  right: calc(3 * var(--px));
 }
 </style>

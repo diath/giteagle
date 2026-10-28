@@ -9,12 +9,13 @@ export const DIFF_SCROLLER: InjectionKey<Ref<HTMLElement | null>> = Symbol('diff
 import { computed, inject, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 
 import type { ChangeKind, FileDiff } from '../api'
+import { scaled } from '../theme/scale'
 import { buildSegments, layoutRows, splitLines } from '../utils/diff'
 import { languageFor, tokenizeFile, type Token } from '../utils/highlight'
 import AppIcon from './AppIcon.vue'
 
 /** Highlighting starts a little before a file scrolls into view. */
-const HIGHLIGHT_MARGIN_PX = 1000
+const HIGHLIGHT_MARGIN_PX = scaled(1000)
 
 const props = defineProps<{ file: FileDiff; highlighted: boolean }>()
 
@@ -372,12 +373,12 @@ defineExpose({ element: root })
 }
 
 .line--added .changed {
-  border-radius: 3px;
+  border-radius: calc(3 * var(--px));
   background: var(--color-diff-added-word);
 }
 
 .line--removed .changed {
-  border-radius: 3px;
+  border-radius: calc(3 * var(--px));
   background: var(--color-diff-removed-word);
 }
 
@@ -390,7 +391,7 @@ defineExpose({ element: root })
 }
 
 .hunk-row td {
-  padding-block: 3px;
+  padding-block: calc(3 * var(--px));
   background: var(--color-diff-hunk-bg);
   color: var(--color-diff-hunk-fg);
 }
@@ -416,7 +417,7 @@ defineExpose({ element: root })
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  padding: 3px var(--space-3);
+  padding: calc(3 * var(--px)) var(--space-3);
   border: none;
   background: transparent;
   color: var(--color-link);

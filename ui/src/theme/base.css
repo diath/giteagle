@@ -1,34 +1,37 @@
 /* Global styles. Colors come from the custom properties that palette.ts
-   applies to the root element at startup. */
+   applies to the root element at startup, and sizes follow the scale that
+   scale.ts applies there. Write a length in design pixels as
+   `calc(16 * var(--px))`; only 1px hairlines and focus rings stay fixed. */
 
 :root {
+  --px: calc(1px * var(--ui-scale));
   --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono',
     Menlo, Consolas, monospace;
-  --font-size: 16px;
-  --font-size-small: 15px;
-  --font-size-tiny: 14px;
-  --font-size-large: 19px;
-  --font-size-title: 21px;
+  --font-size: calc(16 * var(--px));
+  --font-size-small: calc(15 * var(--px));
+  --font-size-tiny: calc(14 * var(--px));
+  --font-size-large: calc(19 * var(--px));
+  --font-size-title: calc(21 * var(--px));
   --line-height: 1.5;
   --line-height-dense: 1.38;
   --tracking: -0.015em;
 
-  --space-1: 5px;
-  --space-2: 10px;
-  --space-3: 15px;
-  --space-4: 20px;
-  --space-6: 30px;
-  --space-8: 40px;
+  --space-1: calc(5 * var(--px));
+  --space-2: calc(10 * var(--px));
+  --space-3: calc(15 * var(--px));
+  --space-4: calc(20 * var(--px));
+  --space-6: calc(30 * var(--px));
+  --space-8: calc(40 * var(--px));
 
-  --radius: 5px;
-  --radius-large: 8px;
+  --radius: calc(5 * var(--px));
+  --radius-large: calc(8 * var(--px));
   --transition: 140ms ease;
-  --control-height: 35px;
-  --icon-size: 20px;
-  --icon-size-large: 25px;
-  --icon-button-size: 30px;
+  --control-height: calc(35 * var(--px));
+  --icon-size: calc(20 * var(--px));
+  --icon-size-large: calc(25 * var(--px));
+  --icon-button-size: calc(30 * var(--px));
   /* The bars across the top of each view. */
-  --bar-height: 60px;
+  --bar-height: calc(60 * var(--px));
 }
 
 *,
@@ -80,8 +83,8 @@ input {
 }
 
 ::-webkit-scrollbar {
-  width: 13px;
-  height: 13px;
+  width: calc(13 * var(--px));
+  height: calc(13 * var(--px));
 }
 
 ::-webkit-scrollbar-track,
@@ -90,8 +93,8 @@ input {
 }
 
 ::-webkit-scrollbar-thumb {
-  border: 3px solid transparent;
-  border-radius: 8px;
+  border: calc(3 * var(--px)) solid transparent;
+  border-radius: calc(8 * var(--px));
   background: var(--color-scrollbar);
   background-clip: content-box;
 }

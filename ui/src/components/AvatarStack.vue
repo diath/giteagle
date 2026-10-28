@@ -21,7 +21,7 @@ const shown = computed(() =>
 </script>
 
 <template>
-  <span class="avatar-stack" :style="{ '--avatar-size': `${size}px` }">
+  <span class="avatar-stack" :style="{ '--avatar-size': `calc(${size} * var(--px))` }">
     <span
       v-for="avatar in shown"
       :key="avatar.key"
@@ -49,7 +49,7 @@ const shown = computed(() =>
   width: var(--avatar-size);
   height: var(--avatar-size);
   overflow: hidden;
-  border: 2px solid var(--color-bg-app);
+  border: calc(2 * var(--px)) solid var(--color-bg-app);
   border-radius: 50%;
   box-sizing: content-box;
 }

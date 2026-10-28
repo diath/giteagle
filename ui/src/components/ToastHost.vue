@@ -25,7 +25,7 @@ import AppIcon from './AppIcon.vue'
   flex-direction: column;
   align-items: flex-end;
   gap: var(--space-2);
-  max-width: min(700px, calc(100% - 2 * var(--space-4)));
+  max-width: min(calc(700 * var(--px)), calc(100% - 2 * var(--space-4)));
   pointer-events: none;
 }
 
@@ -37,7 +37,7 @@ import AppIcon from './AppIcon.vue'
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-large);
   background: var(--color-bg-raised);
-  box-shadow: 0 5px 18px var(--color-shadow);
+  box-shadow: 0 calc(5 * var(--px)) calc(18 * var(--px)) var(--color-shadow);
   pointer-events: auto;
 }
 
@@ -58,11 +58,11 @@ import AppIcon from './AppIcon.vue'
 }
 
 .icon {
-  margin-top: 4px;
+  margin-top: calc(4 * var(--px));
 }
 
 .message {
-  margin: 1px 0 0;
+  margin: calc(1 * var(--px)) 0 0;
   max-height: 40vh;
   overflow-y: auto;
   font-size: var(--font-size-small);

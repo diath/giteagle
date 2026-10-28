@@ -278,7 +278,7 @@ onMounted(async () => {
 
 .file-list {
   flex: none;
-  width: clamp(275px, 24%, 450px);
+  width: clamp(calc(275 * var(--px)), 24%, calc(450 * var(--px)));
   overflow-y: auto;
   border-right: 1px solid var(--color-border);
   background: var(--color-bg-panel);
@@ -294,9 +294,9 @@ onMounted(async () => {
   align-items: baseline;
   gap: var(--space-2);
   width: 100%;
-  padding: 4px var(--space-3);
+  padding: calc(4 * var(--px)) var(--space-3);
   border: none;
-  border-left: 3px solid transparent;
+  border-left: calc(3 * var(--px)) solid transparent;
   background: transparent;
   font-size: var(--font-size-small);
   text-align: left;
