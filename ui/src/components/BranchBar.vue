@@ -6,6 +6,7 @@ import { capabilities, refreshEverything, repo } from '../stores/repo'
 import { showToast } from '../stores/toasts'
 import { formatRelative } from '../utils/dates'
 import AppIcon from './AppIcon.vue'
+import ProjectInfo from './ProjectInfo.vue'
 
 defineEmits<{ openSwitcher: [] }>()
 
@@ -66,11 +67,13 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
 
 <template>
   <header class="branch-bar">
-    <div class="column column--left"></div>
+    <div class="column column--left">
+      <ProjectInfo />
+    </div>
 
     <div class="column column--center">
       <div class="controls">
-        <div class="current" :title="repo.overview?.workdir">
+        <div class="current" :title="branchLabel">
           <AppIcon name="branch" />
           <span class="branch-name ellipsis" :class="{ detached: head?.kind === 'detached' }">{{ branchLabel }}</span>
           <template v-if="head?.tip">
