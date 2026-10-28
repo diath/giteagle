@@ -151,7 +151,7 @@ onMounted(async () => {
           <dl class="meta">
             <dt>Commit</dt>
             <dd>
-              <span class="hash full-hash">{{ details.id }}</span>
+              <span class="hash commit-hash" :title="details.id">{{ details.shortId }}</span>
               <button class="icon-button copy" type="button" title="Copy the commit id" @click="copyId">
                 <AppIcon name="copy" />
               </button>
@@ -414,7 +414,7 @@ onMounted(async () => {
   margin: 0;
 }
 
-.full-hash {
+.commit-hash {
   user-select: text;
 }
 
