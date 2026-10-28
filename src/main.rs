@@ -6,6 +6,7 @@ use std::process::ExitCode;
 use giteagle_lib::{external_git, git};
 
 fn main() -> ExitCode {
+    use_compatible_webview_renderer();
     let start = std::env::args_os()
         .nth(1)
         .map(PathBuf::from)
@@ -22,6 +23,23 @@ fn main() -> ExitCode {
     giteagle_lib::run(repository);
     ExitCode::SUCCESS
 }
+
+/// WebKitGTK's DMA-BUF renderer leaves the window blank on some drivers,
+/// notably NVIDIA's proprietary one, which fails to allocate GBM buffers.
+/// The fallback renderer works everywhere and is plenty for this UI, so it is
+/// used unless the user has set the variable themselves.
+#[cfg(target_os = "linux")]
+fn use_compatible_webview_renderer() {
+    const DISABLE_DMABUF: &str = "WEBKIT_DISABLE_DMABUF_RENDERER";
+    if std::env::var_os(DISABLE_DMABUF).is_none() {
+        // SAFETY: this runs first thing in main, before any other thread
+        // exists that could read the environment concurrently.
+        unsafe { std::env::set_var(DISABLE_DMABUF, "1") };
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn use_compatible_webview_renderer() {}
 
 fn fail(message: &str) -> ExitCode {
     attach_parent_console();
