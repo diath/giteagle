@@ -175,16 +175,16 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
   color: var(--color-accent-bright);
 }
 
+/* Only the commit shrinks, and the branch name gives way only once the
+   commit is gone. */
 .branch-name {
-  min-width: 0;
+  flex: none;
+  max-width: calc(100% - var(--icon-size) - 2 * var(--space-2));
   color: var(--color-fg-strong);
   font-weight: 600;
 }
 
-/* The commit gives up nearly all of the space before the branch name loses
-   any. */
 .tip {
-  flex: 0 1000 auto;
   min-width: 0;
 }
 

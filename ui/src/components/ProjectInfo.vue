@@ -51,15 +51,14 @@ const pathParts = computed(() => {
   font-size: var(--font-size-small);
 }
 
-/* The start gives up nearly all of the space before the folder name loses
-   any, so a long path is cut in the middle and both of its ends stay. */
+/* Only the start shrinks, and the folder name gives way only once the start
+   is gone, so a long path is cut in the middle and both of its ends stay. */
 .path-start {
-  flex: 0 1000 auto;
   min-width: 0;
 }
 
 .path-end {
-  flex: 0 1 auto;
-  min-width: 0;
+  flex: none;
+  max-width: 100%;
 }
 </style>
