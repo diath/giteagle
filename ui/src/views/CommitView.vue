@@ -190,9 +190,12 @@ onMounted(async () => {
             </template>
             <dt>Changes</dt>
             <dd>
-              {{ details.stats.filesChanged }} {{ details.stats.filesChanged === 1 ? 'file' : 'files' }},
-              <span class="additions">+{{ details.stats.additions }}</span>
-              <span class="deletions">−{{ details.stats.deletions }}</span>
+              <!-- One span, so the commas aren't flex items set apart by the gap. -->
+              <span>
+                {{ details.stats.filesChanged }} {{ details.stats.filesChanged === 1 ? 'file' : 'files' }},
+                <span class="additions">+{{ details.stats.additions }}</span>,
+                <span class="deletions">−{{ details.stats.deletions }}</span>
+              </span>
             </dd>
           </dl>
 
