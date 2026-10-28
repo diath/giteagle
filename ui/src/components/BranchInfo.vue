@@ -75,7 +75,9 @@ function fetchNow(): void {
       </span>
       <template v-if="overview.head.kind === 'branch'">
         <span class="faint">→</span>
-        <span v-if="overview.head.upstream" class="item">{{ overview.head.upstream }}</span>
+        <span v-if="overview.head.upstream" class="upstream ellipsis" :title="overview.head.upstream">
+          {{ overview.head.upstream }}
+        </span>
         <span v-else class="item faint">no upstream</span>
       </template>
     </template>
@@ -123,6 +125,7 @@ function fetchNow(): void {
   gap: var(--space-2);
   min-width: 0;
   flex: 0 1 auto;
+  overflow: hidden;
   padding: 3px var(--space-2);
   margin-left: calc(var(--space-2) * -1);
   border: none;
@@ -158,6 +161,13 @@ function fetchNow(): void {
 
 .item {
   flex: none;
+}
+
+/* The branch name is already in the bar above, so a long upstream gives
+   way to the latest commit. */
+.upstream {
+  min-width: 0;
+  max-width: 24ch;
 }
 
 .ahead {
