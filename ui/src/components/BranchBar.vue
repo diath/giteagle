@@ -76,11 +76,11 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
         <div class="current" :title="branchLabel">
           <AppIcon name="branch" />
           <span class="branch-name ellipsis" :class="{ detached: head?.kind === 'detached' }">{{ branchLabel }}</span>
-          <template v-if="head?.tip">
+          <span v-if="head?.tip" class="tip ellipsis">
             <span class="hash">{{ head.tip.shortId }}</span>
-            <span class="faint">·</span>
-            <span class="muted date">{{ formatRelative(head.tip.authorTime) }}</span>
-          </template>
+            <span class="faint"> · </span>
+            <span class="muted">{{ formatRelative(head.tip.authorTime) }}</span>
+          </span>
           <span v-else-if="head?.kind === 'unborn'" class="faint">no commits yet</span>
         </div>
 
@@ -121,11 +121,12 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
 </template>
 
 <style scoped>
-/* The outer columns are equal, which keeps the middle one centered in the
-   window whatever they hold. */
+/* The middle column takes what its contents need, but the outer columns
+   always keep a share, so a long branch name can't push them out. They split
+   the rest equally, which keeps the middle one centered in the window. */
 .branch-bar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(15%, 1fr) minmax(0, max-content) minmax(15%, 1fr);
   align-items: center;
   gap: var(--space-4);
   min-height: 48px;
@@ -180,12 +181,15 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
   font-weight: 600;
 }
 
-.branch-name.detached {
-  color: var(--color-warning);
+/* The commit gives up nearly all of the space before the branch name loses
+   any. */
+.tip {
+  flex: 0 1000 auto;
+  min-width: 0;
 }
 
-.date {
-  flex: none;
+.branch-name.detached {
+  color: var(--color-warning);
 }
 
 .divider {
