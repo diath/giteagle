@@ -8,7 +8,7 @@ import CommitList from './CommitList.vue'
 import SearchField from './SearchField.vue'
 
 const SEARCH_DELAY_MS = 250
-const PLACEHOLDER = 'Search commits — author:"name" message:"text" since:-7d'
+const PLACEHOLDER = 'Search commits - author:"name" message:"text" since:-7d'
 
 defineProps<{ active: boolean }>()
 

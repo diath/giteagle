@@ -44,7 +44,7 @@ pub fn run(repository: Repository) {
         ])
         .setup(move |app| {
             if let Some(window) = app.get_webview_window("main") {
-                window.set_title(&format!("{} — GitEagle", setup_state.repo_name))?;
+                window.set_title(&format!("{} - GitEagle", setup_state.repo_name))?;
             }
             watcher::spawn(app.handle().clone(), Arc::clone(&setup_state));
             fetcher::spawn(app.handle().clone(), Arc::clone(&setup_state));

@@ -104,7 +104,7 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
 
     <span v-if="capabilities.notice" class="notice">
       <AppIcon name="warning" />
-      {{ capabilities.notice }} — finish it locally to switch, pull, or push.
+      {{ capabilities.notice }} - finish it locally to switch, pull, or push.
     </span>
   </header>
 </template>
