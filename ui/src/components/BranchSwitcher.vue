@@ -166,17 +166,19 @@ onMounted(async () => {
   position: absolute;
   inset: 0;
   z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--color-scrim);
 }
 
+/* A fixed height keeps the centered panel from jumping as the filter
+   shortens the list. */
 .switcher {
-  position: absolute;
-  top: calc(var(--bar-height) + var(--space-1));
-  left: var(--space-4);
   display: flex;
   flex-direction: column;
   width: min(calc(1250 * var(--px)), calc(100% - 2 * var(--space-4)));
-  max-height: calc(100% - var(--bar-height) - var(--space-1) - var(--space-6));
+  height: min(calc(640 * var(--px)), calc(100% - 2 * var(--space-6)));
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-large);
   background: var(--color-bg-panel);
@@ -189,6 +191,8 @@ onMounted(async () => {
 }
 
 .list {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding-bottom: var(--space-2);
 }
