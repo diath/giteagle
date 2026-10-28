@@ -409,6 +409,8 @@ onMounted(async () => {
   align-items: baseline;
   gap: var(--space-1) var(--space-4);
   margin: 0 0 var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
   font-size: var(--font-size-small);
 }
 
