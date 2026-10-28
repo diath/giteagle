@@ -53,7 +53,7 @@ function fetchNow(): void {
       title="Open the latest commit"
       @click="$emit('openCommit', tip.id)"
     >
-      <AvatarStack :authors="tip.authors" :size="24" />
+      <AvatarStack :authors="tip.authors" :size="20" />
       <span class="hash">{{ tip.shortId }}</span>
       <span class="subject ellipsis">{{ tip.subject }}</span>
       <span class="faint ellipsis author">{{ joinNames(tip.authors) }}</span>
@@ -111,7 +111,7 @@ function fetchNow(): void {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 51px;
+  min-height: 43px;
   padding: var(--space-1) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-app);
@@ -155,7 +155,7 @@ function fetchNow(): void {
 .separator {
   flex: none;
   width: 1px;
-  height: 21px;
+  height: 18px;
   background: var(--color-border);
 }
 

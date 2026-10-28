@@ -14,7 +14,7 @@ import { languageFor, tokenizeFile, type Token } from '../utils/highlight'
 import AppIcon from './AppIcon.vue'
 
 /** Highlighting starts a little before a file scrolls into view. */
-const HIGHLIGHT_MARGIN_PX = 1200
+const HIGHLIGHT_MARGIN_PX = 1000
 
 const props = defineProps<{ file: FileDiff; highlighted: boolean }>()
 

@@ -16,7 +16,7 @@
         "title": "GitEagle",
         "width": 1600,
         "height": 1000,
-        "minWidth": 1200,
+        "minWidth": 1125,
         "minHeight": 750,
         "backgroundColor": "#141210"
       }

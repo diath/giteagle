@@ -298,7 +298,7 @@ function relativeToDirectory(path: string): string {
   gap: var(--space-3);
   align-items: center;
   width: 100%;
-  min-height: 48px;
+  min-height: 40px;
   padding: var(--space-1) var(--space-4);
   border: none;
   border-bottom: 1px solid var(--color-border-subtle);
@@ -342,8 +342,8 @@ function relativeToDirectory(path: string): string {
 }
 
 .changes-dot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--color-status-modified);
 }

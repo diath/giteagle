@@ -102,7 +102,7 @@ const expanded = ref(false)
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  min-height: 33px;
+  min-height: 28px;
 }
 
 .subject {
@@ -111,8 +111,8 @@ const expanded = ref(false)
 }
 
 .expand {
-  width: 30px;
-  height: 30px;
+  width: 25px;
+  height: 25px;
   flex: none;
 }
 

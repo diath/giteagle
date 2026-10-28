@@ -175,12 +175,12 @@ onMounted(async () => {
   left: var(--space-4);
   display: flex;
   flex-direction: column;
-  width: min(1500px, calc(100% - 2 * var(--space-4)));
+  width: min(1250px, calc(100% - 2 * var(--space-4)));
   max-height: calc(100% - var(--bar-height) - var(--space-1) - var(--space-6));
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-large);
   background: var(--color-bg-panel);
-  box-shadow: 0 9px 27px var(--color-shadow);
+  box-shadow: 0 8px 23px var(--color-shadow);
 }
 
 .filter {

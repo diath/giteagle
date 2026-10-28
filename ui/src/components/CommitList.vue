@@ -6,7 +6,7 @@ import AppIcon from './AppIcon.vue'
 import CommitEntry from './CommitEntry.vue'
 
 /** How close to the bottom the next page starts loading. */
-const PRELOAD_MARGIN_PX = 900
+const PRELOAD_MARGIN_PX = 750
 
 const props = defineProps<{
   load: (cursor: HistoryCursor | null) => Promise<HistoryPage>
