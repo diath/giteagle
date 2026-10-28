@@ -32,7 +32,6 @@ const LABELS: Record<FileStatus, { letter: string; title: string }> = {
   border-radius: var(--radius);
   font-size: calc(13 * var(--px));
   font-weight: 600;
-  letter-spacing: 0;
   line-height: 1;
 }
 

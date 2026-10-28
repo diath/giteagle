@@ -14,7 +14,6 @@
   --font-size-title: calc(21 * var(--px));
   --line-height: 1.5;
   --line-height-dense: 1.38;
-  --tracking: -0.015em;
 
   --space-1: calc(5 * var(--px));
   --space-2: calc(10 * var(--px));
@@ -54,7 +53,6 @@ body {
   font-family: var(--font-mono);
   font-size: var(--font-size);
   line-height: var(--line-height);
-  letter-spacing: var(--tracking);
   text-rendering: optimizeLegibility;
 }
 

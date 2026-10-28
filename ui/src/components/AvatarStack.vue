@@ -67,7 +67,6 @@ const shown = computed(() =>
 .initials {
   font-size: calc(var(--avatar-size) * 0.42);
   font-weight: 600;
-  letter-spacing: 0;
   line-height: 1;
 }
 </style>

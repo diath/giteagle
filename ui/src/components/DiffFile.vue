@@ -323,7 +323,6 @@ defineExpose({ element: root })
   border-collapse: collapse;
   font-size: var(--font-size-small);
   line-height: 1.55;
-  letter-spacing: 0;
 }
 
 .gutter {
