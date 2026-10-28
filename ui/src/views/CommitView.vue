@@ -152,7 +152,7 @@ onMounted(async () => {
             <dt>Commit</dt>
             <dd>
               <span class="hash full-hash">{{ details.id }}</span>
-              <button class="icon-button" type="button" title="Copy the commit id" @click="copyId">
+              <button class="icon-button copy" type="button" title="Copy the commit id" @click="copyId">
                 <AppIcon name="copy" />
               </button>
             </dd>
@@ -396,6 +396,7 @@ onMounted(async () => {
 .meta {
   display: grid;
   grid-template-columns: max-content 1fr;
+  align-items: baseline;
   gap: var(--space-1) var(--space-4);
   margin: 0 0 var(--space-4);
   font-size: var(--font-size-small);
@@ -417,7 +418,15 @@ onMounted(async () => {
   user-select: text;
 }
 
+/* The button overhangs its row instead of making it taller than the rest. */
+.copy {
+  margin-block: calc((1lh - var(--icon-button-size)) / 2);
+}
+
+/* The margin cancels the padding, so the hash lines up with the other
+   values while its hover background keeps some room. */
 .parent {
+  margin-inline: calc(-1 * var(--space-1));
   padding: 0 var(--space-1);
   border: none;
   border-radius: var(--radius);
