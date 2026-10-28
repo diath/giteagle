@@ -42,7 +42,7 @@ const expanded = ref(false)
           @click.stop="expanded = !expanded"
           @keydown.enter.stop
         >
-          <AppIcon :name="expanded ? 'chevronDown' : 'chevronRight'" />
+          <AppIcon name="more" />
         </button>
       </div>
       <pre v-if="expanded" class="body" @click.stop>{{ commit.body }}</pre>
@@ -114,6 +114,12 @@ const expanded = ref(false)
   width: calc(25 * var(--px));
   height: calc(25 * var(--px));
   flex: none;
+}
+
+/* The icon stays the same, so the open state shows as a pressed button. */
+.expand[aria-expanded='true'] {
+  background: var(--color-bg-active);
+  color: var(--color-fg);
 }
 
 .body {
