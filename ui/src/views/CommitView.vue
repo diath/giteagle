@@ -192,14 +192,12 @@ onMounted(async () => {
           <h1 class="subject">{{ details.subject }}</h1>
           <pre v-if="details.body" class="body">{{ details.body }}</pre>
 
-          <div class="authors">
-            <AvatarStack :authors="details.authors" :size="30" />
-            <div class="author-names">
-              <span v-for="author in details.authors" :key="author.email" class="author">
-                {{ author.name }} <span class="faint">&lt;{{ author.email }}&gt;</span>
-              </span>
-            </div>
-          </div>
+          <ul class="authors">
+            <li v-for="author in details.authors" :key="author.email" class="author">
+              <AvatarStack :authors="[author]" :size="30" />
+              <span>{{ author.name }} <span class="faint">&lt;{{ author.email }}&gt;</span></span>
+            </li>
+          </ul>
         </header>
 
         <p v-if="details.files.length === 0" class="empty-state">This commit changes no files.</p>
@@ -380,18 +378,19 @@ onMounted(async () => {
 
 .authors {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.author-names {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-4);
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   color: var(--color-fg);
+  overflow-wrap: anywhere;
 }
 
 .meta {
