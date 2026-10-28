@@ -66,58 +66,96 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
 
 <template>
   <header class="branch-bar">
-    <div class="current" :title="repo.overview?.workdir">
-      <AppIcon name="branch" />
-      <span class="branch-name ellipsis" :class="{ detached: head?.kind === 'detached' }">{{ branchLabel }}</span>
-      <template v-if="head?.tip">
-        <span class="hash">{{ head.tip.shortId }}</span>
-        <span class="faint">·</span>
-        <span class="muted date">{{ formatRelative(head.tip.authorTime) }}</span>
-      </template>
-      <span v-else-if="head?.kind === 'unborn'" class="faint">no commits yet</span>
+    <div class="column column--left"></div>
+
+    <div class="column column--center">
+      <div class="controls">
+        <div class="current" :title="repo.overview?.workdir">
+          <AppIcon name="branch" />
+          <span class="branch-name ellipsis" :class="{ detached: head?.kind === 'detached' }">{{ branchLabel }}</span>
+          <template v-if="head?.tip">
+            <span class="hash">{{ head.tip.shortId }}</span>
+            <span class="faint">·</span>
+            <span class="muted date">{{ formatRelative(head.tip.authorTime) }}</span>
+          </template>
+          <span v-else-if="head?.kind === 'unborn'" class="faint">no commits yet</span>
+        </div>
+
+        <button
+          class="button"
+          type="button"
+          :disabled="!capabilities.canSwitch"
+          title="Switch to another branch"
+          @click="$emit('openSwitcher')"
+        >
+          <AppIcon name="switch" />
+          Switch
+          <span class="count">{{ repo.overview?.branchCount ?? 0 }}</span>
+        </button>
+
+        <span class="divider" aria-hidden="true"></span>
+
+        <button class="button" type="button" :disabled="!capabilities.canPull" :title="pullTitle" @click="sync('pull')">
+          <AppIcon name="pull" />
+          {{ repo.busy === 'pull' ? 'Pulling…' : 'Pull' }}
+          <span v-if="head?.behind" class="count count--behind">↓{{ head.behind }}</span>
+        </button>
+        <button class="button" type="button" :disabled="!capabilities.canPush" :title="pushTitle" @click="sync('push')">
+          <AppIcon name="push" />
+          {{ repo.busy === 'push' ? 'Pushing…' : head?.kind === 'branch' && !head.upstream ? 'Publish' : 'Push' }}
+          <span v-if="head?.ahead" class="count count--ahead">↑{{ head.ahead }}</span>
+        </button>
+      </div>
+
+      <span v-if="capabilities.notice" class="notice">
+        <AppIcon name="warning" />
+        {{ capabilities.notice }} - finish it locally to switch, pull, or push.
+      </span>
     </div>
 
-    <button
-      class="button"
-      type="button"
-      :disabled="!capabilities.canSwitch"
-      title="Switch to another branch"
-      @click="$emit('openSwitcher')"
-    >
-      <AppIcon name="switch" />
-      Switch
-      <span class="count">{{ repo.overview?.branchCount ?? 0 }}</span>
-    </button>
-
-    <span class="divider" aria-hidden="true"></span>
-
-    <button class="button" type="button" :disabled="!capabilities.canPull" :title="pullTitle" @click="sync('pull')">
-      <AppIcon name="pull" />
-      {{ repo.busy === 'pull' ? 'Pulling…' : 'Pull' }}
-      <span v-if="head?.behind" class="count count--behind">↓{{ head.behind }}</span>
-    </button>
-    <button class="button" type="button" :disabled="!capabilities.canPush" :title="pushTitle" @click="sync('push')">
-      <AppIcon name="push" />
-      {{ repo.busy === 'push' ? 'Pushing…' : head?.kind === 'branch' && !head.upstream ? 'Publish' : 'Push' }}
-      <span v-if="head?.ahead" class="count count--ahead">↑{{ head.ahead }}</span>
-    </button>
-
-    <span v-if="capabilities.notice" class="notice">
-      <AppIcon name="warning" />
-      {{ capabilities.notice }} - finish it locally to switch, pull, or push.
-    </span>
+    <div class="column column--right"></div>
   </header>
 </template>
 
 <style scoped>
+/* The outer columns are equal, which keeps the middle one centered in the
+   window whatever they hold. */
 .branch-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-4);
   min-height: 48px;
   padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-panel);
+}
+
+.column {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.column--center {
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.column--right {
+  justify-content: flex-end;
+}
+
+/* The controls never wrap; the branch name gives up its space first. */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+}
+
+.controls .button {
+  flex: none;
 }
 
 .current {
@@ -125,7 +163,6 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  max-width: 45%;
   height: var(--control-height);
   padding: 0 var(--space-3);
   border: 1px solid var(--color-border);
@@ -149,6 +186,7 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
 }
 
 .divider {
+  flex: none;
   width: 1px;
   height: 20px;
   margin: 0 var(--space-1);
@@ -175,8 +213,7 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-width: 0;
-  margin-left: auto;
+  max-width: 100%;
   padding: var(--space-1) var(--space-3);
   border: 1px solid var(--color-warning);
   border-radius: var(--radius);
