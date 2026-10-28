@@ -1,0 +1,30 @@
+[package]
+name = "giteagle"
+version = "0.1.0"
+description = "Desktop Git repository viewer"
+license = "MIT"
+edition = "2024"
+rust-version = "1.91"
+publish = false
+
+[lib]
+# A distinct library name avoids output file collisions with the binary on Windows.
+name = "giteagle_lib"
+
+[build-dependencies]
+tauri-build = { version = "2.7", features = [] }
+
+[dependencies]
+tauri = { version = "2.12", features = [] }
+git2 = { version = "0.21", default-features = false, features = ["vendored-libgit2"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ureq = "3"
+sha2 = "0.10"
+base64 = "0.22"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_System_Console", "Win32_System_SystemInformation"] }
+
+[dev-dependencies]
+tempfile = "3"
