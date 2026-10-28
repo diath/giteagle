@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted } from 'vue'
 
-import { api, events } from './api'
+import { api, errorMessage, events } from './api'
 import ReloadPrompt from './components/ReloadPrompt.vue'
 import ToastHost from './components/ToastHost.vue'
 import { goBack, navigation } from './stores/navigation'
 import { applyFetchStatus, refreshOverview, repo } from './stores/repo'
+import { showToast } from './stores/toasts'
 import { applyWorkingTreeStatus, refreshWorkingTree } from './stores/workingTree'
 import CommitView from './views/CommitView.vue'
 import FileHistoryView from './views/FileHistoryView.vue'
@@ -37,16 +38,22 @@ function viewKey(index: number): string {
 
 onMounted(async () => {
   window.addEventListener('mouseup', onMouseUp)
-  unlisteners.push(
-    await events.onRepoChanged(() => {
-      repo.reloadPromptVisible = true
-    }),
-    await events.onWorkingTreeChanged(applyWorkingTreeStatus),
-    await events.onFetchStatus(applyFetchStatus),
-  )
+  // The repository loads first, so a failure in the live updates below
+  // can't leave the window empty.
   await refreshOverview()
   void refreshWorkingTree()
-  applyFetchStatus(await api.fetchStatus())
+  try {
+    unlisteners.push(
+      await events.onRepoChanged(() => {
+        repo.reloadPromptVisible = true
+      }),
+      await events.onWorkingTreeChanged(applyWorkingTreeStatus),
+      await events.onFetchStatus(applyFetchStatus),
+    )
+    applyFetchStatus(await api.fetchStatus())
+  } catch (error) {
+    showToast('error', `Live updates are unavailable: ${errorMessage(error)}`)
+  }
 })
 
 onBeforeUnmount(() => {
@@ -78,6 +85,7 @@ onBeforeUnmount(() => {
       <CommitView v-else :id="view.id" :from-file="view.fromFile" />
     </div>
   </div>
+  <p v-else class="loading">Loading the repository…</p>
   <ReloadPrompt v-if="repo.reloadPromptVisible" />
   <ToastHost />
 </template>
@@ -97,6 +105,13 @@ onBeforeUnmount(() => {
 .view.covered {
   visibility: hidden;
   pointer-events: none;
+}
+
+.loading {
+  margin: 0;
+  padding: var(--space-8);
+  color: var(--color-fg-faint);
+  text-align: center;
 }
 
 .fatal {
