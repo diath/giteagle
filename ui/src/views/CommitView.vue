@@ -6,6 +6,7 @@ import AppIcon from '../components/AppIcon.vue'
 import AvatarStack from '../components/AvatarStack.vue'
 import DiffFile, { DIFF_SCROLLER } from '../components/DiffFile.vue'
 import { goBack, openCommit } from '../stores/navigation'
+import { showToast } from '../stores/toasts'
 import { formatAbsolute, formatRelative } from '../utils/dates'
 import { useEscape } from '../utils/escape'
 
@@ -83,8 +84,14 @@ function directoryName(path: string): string {
 }
 
 async function copyId(): Promise<void> {
-  if (details.value) {
+  if (!details.value) {
+    return
+  }
+  try {
     await navigator.clipboard.writeText(details.value.id)
+    showToast('success', 'Copied the commit hash to the clipboard.')
+  } catch (caught) {
+    showToast('error', `Couldn't copy the commit hash: ${errorMessage(caught)}`)
   }
 }
 
