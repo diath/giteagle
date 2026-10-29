@@ -12,8 +12,10 @@ const SECONDS_PER_DAY: i64 = 24 * SECONDS_PER_HOUR;
 pub enum Term {
     /// Matches the message or any author name.
     Text(String),
-    /// Matches any author's name or email.
+    /// Matches any author's name or email partially.
     Author(String),
+    /// Matches any author with exactly this email.
+    AuthorEmail(String),
     /// Matches the message only.
     Message(String),
     /// Matches commits authored within this many seconds before now.
@@ -80,6 +82,10 @@ impl Query {
                 author.name.to_lowercase().contains(text)
                     || author.email.to_lowercase().contains(text)
             }),
+            Term::AuthorEmail(email) => candidate
+                .authors
+                .iter()
+                .any(|author| author.email.to_lowercase() == *email),
             Term::Message(text) => message.contains(text),
             Term::Since(seconds) => candidate.author_time >= now.saturating_sub(*seconds),
         })
@@ -134,6 +140,9 @@ fn token_to_term(token: Token) -> Result<Option<Term>, ParseError> {
         return Ok(text_term(token.value, Term::Text));
     };
     match key.to_ascii_lowercase().as_str() {
+        "author" if is_email_address(token.value.trim()) => {
+            Ok(text_term(token.value, Term::AuthorEmail))
+        }
         "author" => Ok(text_term(token.value, Term::Author)),
         "message" => Ok(text_term(token.value, Term::Message)),
         "since" if token.value.trim().is_empty() => Ok(None),
@@ -141,6 +150,14 @@ fn token_to_term(token: Token) -> Result<Option<Term>, ParseError> {
         // Unknown keys are ordinary text, so searching for "fix:" still works.
         _ => Ok(text_term(format!("{key}:{}", token.value), Term::Text)),
     }
+}
+
+/// Whole addresses have text on both sides of the `@`; anything less, such
+/// as `@example.com`, is still a partial search.
+fn is_email_address(value: &str) -> bool {
+    value
+        .split_once('@')
+        .is_some_and(|(local, domain)| !local.is_empty() && !domain.is_empty())
 }
 
 fn text_term(value: String, make: fn(String) -> Term) -> Option<Term> {
@@ -212,6 +229,21 @@ mod tests {
                 Term::Author("jane doe".into()),
                 Term::Message("typo".into()),
                 Term::Since(7 * SECONDS_PER_DAY),
+            ]
+        );
+    }
+
+    #[test]
+    fn author_values_that_are_email_addresses_match_exactly() {
+        assert_eq!(
+            parse("author:Jane@Example.com"),
+            vec![Term::AuthorEmail("jane@example.com".into())]
+        );
+        assert_eq!(
+            parse("author:@example.com author:jane@"),
+            vec![
+                Term::Author("@example.com".into()),
+                Term::Author("jane@".into())
             ]
         );
     }
@@ -289,6 +321,22 @@ mod tests {
         assert!(!matches("message:jane"));
         assert!(matches("since:-7d"));
         assert!(!matches("since:-2d"));
+    }
+
+    #[test]
+    fn email_searches_skip_addresses_that_only_contain_them() {
+        let authors = [person("Mary Jane", "Mary.Jane@example.com")];
+        let candidate = Candidate {
+            message: "Fix the crash",
+            authors: &authors,
+            author_time: 0,
+        };
+        let matches = |input: &str| Query::parse(input).unwrap().matches(&candidate, 0);
+
+        assert!(matches("author:mary.jane@EXAMPLE.com"));
+        assert!(!matches("author:jane@example.com"));
+        assert!(matches("author:jane@"));
+        assert!(matches("author:@example.com"));
     }
 
     #[test]
