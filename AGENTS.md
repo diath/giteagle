@@ -45,9 +45,9 @@ every one passing.
 
 ## Product rules
 
-- **Out of scope:** rebase, blame, merge and conflict UI, staging and
-  committing, force push, submodules, LFS, bare repositories, multiple
-  repositories in one window, and a light theme.
+- **Out of scope:** rebasing onto another branch, blame, merge and conflict
+  UI, staging and committing, force push, submodules, LFS, bare
+  repositories, multiple repositories in one window, and a light theme.
 - **Switching branches** behaves like `git checkout`: non-conflicting changes
   carry over. If the switch would overwrite local changes or fails, nothing
   changes.
@@ -55,15 +55,23 @@ every one passing.
   applies cleanly. If anything is staged, the stash conflicts with HEAD, or it
   would overwrite local changes, nothing changes. Apply, pop, drop and
   stashing all ask for confirmation first.
-- **Cherry-pick and revert** are offered only on commits that have been
-  pushed, and both ask for confirmation first. Merge commits are taken
-  against their first parent.
+- **Cherry-pick and revert** are offered on the commits of a branch with an
+  upstream, pushed or not, and both ask for confirmation first. Merge
+  commits are taken against their first parent.
   - Cherry-pick copies the commit onto other local branches without checking
     them out. Branches that already have it or are checked out in a worktree
     can't be chosen. If any chosen branch conflicts, no branch changes.
   - Revert adds a revert commit, or reverts in the working tree and stages
     the result. If anything is staged, it conflicts, or it would overwrite
     local changes, nothing changes.
+- **Reword, squash and drop** are offered only on unpushed commits after the
+  last merge, and all ask for confirmation first. As in `git rebase -i`, the
+  commits after the changed one are recreated on top of it, in memory, and
+  only the current branch moves. If any commit conflicts or local changes
+  would be overwritten, nothing changes.
+  - Reword changes only the message and never touches the working tree.
+  - Squash folds the chosen commits into the one it was started from, which
+    keeps its place and its author.
 - **Pull** is fast-forward only.
 - **Push** pushes the current branch to its upstream. Without an upstream it
   runs `git push -u origin <branch>`, and with no `origin` it is disabled.
