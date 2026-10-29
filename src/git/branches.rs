@@ -1,12 +1,11 @@
 use std::cmp::Reverse;
 use std::collections::HashMap;
 
-use git2::build::CheckoutBuilder;
-use git2::{BranchType, CheckoutNotificationType, Commit, ErrorCode, Oid, Repository};
+use git2::{BranchType, Oid, Repository};
 use serde::Serialize;
 
 use super::overview::{ensure_clean_state, upstream_of};
-use super::{CommitBrief, list_paths};
+use super::{CommitBrief, checkout_safely, list_paths};
 use crate::error::{AppError, AppResult, ErrorKind};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -156,7 +155,9 @@ pub fn switch_branch(repository: &Repository, name: &str, is_remote: bool) -> Ap
     let commit = remote_branch.get().peel_to_commit()?;
     // The working tree is updated first: if that fails, no branch has been
     // created yet and nothing has changed.
-    checkout_commit(repository, &commit, local_name)?;
+    checkout_safely(repository, commit.as_object(), |conflicts| {
+        conflict_error(local_name, conflicts)
+    })?;
     let mut local_branch = repository.branch(local_name, &commit, false)?;
     local_branch.set_upstream(Some(name))?;
     repository.set_head(&reference_name(local_branch.get())?)?;
@@ -169,35 +170,11 @@ fn switch_to_local(repository: &Repository, name: &str) -> AppResult<String> {
         return Ok(name.to_string());
     }
     let commit = branch.get().peel_to_commit()?;
-    checkout_commit(repository, &commit, name)?;
+    checkout_safely(repository, commit.as_object(), |conflicts| {
+        conflict_error(name, conflicts)
+    })?;
     repository.set_head(&reference_name(branch.get())?)?;
     Ok(name.to_string())
-}
-
-/// Safe checkout keeps uncommitted changes that don't conflict with the
-/// target and refuses, before touching any file, when one would be lost.
-fn checkout_commit(repository: &Repository, commit: &Commit, target: &str) -> AppResult<()> {
-    let mut conflicts = Vec::new();
-    let result = {
-        let mut builder = CheckoutBuilder::new();
-        builder
-            .safe()
-            .notify_on(CheckoutNotificationType::CONFLICT)
-            .notify(|_, path, _, _, _| {
-                if let Some(path) = path {
-                    conflicts.push(path.to_string_lossy().replace('\\', "/"));
-                }
-                true
-            });
-        repository.checkout_tree(commit.as_object(), Some(&mut builder))
-    };
-    match result {
-        Ok(()) => Ok(()),
-        Err(error) if error.code() == ErrorCode::Conflict || !conflicts.is_empty() => {
-            Err(conflict_error(target, &conflicts))
-        }
-        Err(error) => Err(error.into()),
-    }
 }
 
 fn conflict_error(target: &str, conflicts: &[String]) -> AppError {

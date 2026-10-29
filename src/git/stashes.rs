@@ -18,7 +18,10 @@ use super::diff::{DiffStats, FileDiff, diff_tree_to_index, diff_tree_to_index_st
 use super::overview::ensure_clean_state;
 use super::pending::{PendingFile, PendingSummary};
 use super::status::changed_paths;
-use super::{CommitBrief, commit_message, head_commit, list_paths, path_to_string, short_id};
+use super::{
+    CommitBrief, commit_message, conflicted_paths, head_commit, list_paths, path_to_string,
+    short_id, user_signature,
+};
 use crate::error::{AppError, AppResult, ErrorKind};
 
 const STASH_REF: &str = "refs/stash";
@@ -243,13 +246,7 @@ pub fn save_stash(
             "There is no commit to stash the changes on yet.",
         ));
     }
-    let stasher = repository.signature().map_err(|error| match error.code() {
-        ErrorCode::NotFound => AppError::invalid_state(
-            "Stashing records your name and email. Set user.name and user.email in your Git \
-             configuration first.",
-        ),
-        _ => error.into(),
-    })?;
+    let stasher = user_signature(repository, "Stashing")?;
     let message = message.trim();
     let mut flags = StashFlags::DEFAULT;
     if include_untracked {
@@ -346,15 +343,9 @@ fn ensure_applies_cleanly(repository: &Repository, stash: &Stash) -> AppResult<(
     }
 
     let paths = stash.state_paths(repository)?;
-    let mut conflicts = Vec::new();
     let merged =
         repository.merge_trees(&stash.base_tree, &head_tree, &stash.worktree_tree, None)?;
-    for conflict in merged.conflicts()? {
-        let conflict = conflict?;
-        if let Some(entry) = conflict.our.or(conflict.their).or(conflict.ancestor) {
-            conflicts.push(path_to_string(&entry.path));
-        }
-    }
+    let mut conflicts = conflicted_paths(&merged)?;
     // Untracked files are merged into HEAD as new files, so one that HEAD
     // now tracks conflicts.
     for path in &paths.untracked {

@@ -6,8 +6,14 @@ use std::ffi::OsStr;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use git2::{Commit, ErrorCode, Oid, Repository, RepositoryOpenFlags};
+use git2::build::CheckoutBuilder;
+use git2::{
+    CheckoutNotificationType, Commit, ErrorCode, Index, Object, Oid, Repository,
+    RepositoryOpenFlags, Signature,
+};
 use serde::Serialize;
+
+use crate::error::{AppError, AppResult};
 
 pub mod authors;
 pub mod branches;
@@ -131,6 +137,12 @@ pub fn split_message(message: &str) -> (String, String) {
     (subject_lines.join(" "), rest.trim().to_string())
 }
 
+pub fn find_commit<'r>(repository: &'r Repository, id: &str) -> AppResult<Commit<'r>> {
+    let oid = Oid::from_str(id)
+        .map_err(|_| AppError::invalid_input(format!("{id} is not a commit id.")))?;
+    Ok(repository.find_commit(oid)?)
+}
+
 /// Returns the commit HEAD points to, or `None` for an unborn branch.
 pub fn head_commit(repository: &Repository) -> Result<Option<Commit<'_>>, git2::Error> {
     match repository.head() {
@@ -161,4 +173,59 @@ pub fn list_paths(paths: &[String]) -> String {
         listed.push_str(&format!(" and {} more", paths.len() - MAX_LISTED_PATHS));
     }
     listed
+}
+
+/// The paths an in-memory merge, cherry-pick or revert left conflicted.
+pub fn conflicted_paths(index: &Index) -> AppResult<Vec<String>> {
+    let mut paths = Vec::new();
+    for conflict in index.conflicts()? {
+        let conflict = conflict?;
+        if let Some(entry) = conflict.our.or(conflict.their).or(conflict.ancestor) {
+            paths.push(path_to_string(&entry.path));
+        }
+    }
+    Ok(paths)
+}
+
+/// Updates the working tree and index to `target`, keeping local changes that
+/// don't conflict with it. When one would be lost, nothing is touched and the
+/// error comes from `conflict_error`, given the paths in the way.
+pub fn checkout_safely(
+    repository: &Repository,
+    target: &Object,
+    conflict_error: impl FnOnce(&[String]) -> AppError,
+) -> AppResult<()> {
+    let mut conflicts = Vec::new();
+    let result = {
+        let mut builder = CheckoutBuilder::new();
+        builder
+            .safe()
+            .notify_on(CheckoutNotificationType::CONFLICT)
+            .notify(|_, path, _, _, _| {
+                if let Some(path) = path {
+                    conflicts.push(path.to_string_lossy().replace('\\', "/"));
+                }
+                true
+            });
+        repository.checkout_tree(target, Some(&mut builder))
+    };
+    match result {
+        Ok(()) => Ok(()),
+        Err(error) if error.code() == ErrorCode::Conflict || !conflicts.is_empty() => {
+            Err(conflict_error(&conflicts))
+        }
+        Err(error) => Err(error.into()),
+    }
+}
+
+/// The user's name and email from the Git configuration, for the commits and
+/// reflog entries `action` writes.
+pub fn user_signature(repository: &Repository, action: &str) -> AppResult<Signature<'static>> {
+    repository.signature().map_err(|error| match error.code() {
+        ErrorCode::NotFound => AppError::invalid_state(format!(
+            "{action} records your name and email. Set user.name and user.email in your Git \
+             configuration first."
+        )),
+        _ => error.into(),
+    })
 }

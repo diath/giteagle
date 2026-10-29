@@ -1,10 +1,10 @@
-use git2::{Oid, Repository};
+use git2::Repository;
 use serde::Serialize;
 
 use super::authors::{Person, commit_authors};
 use super::diff::{DiffStats, FileDiff, diff_trees};
-use super::{commit_message, short_id, split_message};
-use crate::error::{AppError, AppResult};
+use super::{commit_message, find_commit, short_id, split_message};
+use crate::error::AppResult;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,9 +32,7 @@ pub struct CommitDetails {
 /// Loads a commit with its diff. Merge commits are diffed against their
 /// first parent.
 pub fn commit_details(repository: &Repository, id: &str) -> AppResult<CommitDetails> {
-    let oid = Oid::from_str(id)
-        .map_err(|_| AppError::invalid_input(format!("{id} is not a commit id.")))?;
-    let commit = repository.find_commit(oid)?;
+    let commit = find_commit(repository, id)?;
     let parent_tree = match commit.parent_count() {
         0 => None,
         _ => Some(commit.parent(0)?.tree()?),
