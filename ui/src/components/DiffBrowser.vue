@@ -79,7 +79,7 @@ defineExpose({ scrollToFile })
       </div>
       <button
         v-for="(file, index) in files"
-        :key="file.path + index"
+        :key="file.path"
         class="file-entry"
         :class="{ current: index === currentFile, 'highlighted-entry': index === highlighted }"
         type="button"
@@ -105,7 +105,7 @@ defineExpose({ scrollToFile })
       <DiffFile
         v-for="(file, index) in files"
         :ref="(component) => setFileComponent(index, component)"
-        :key="file.path + index"
+        :key="file.path"
         :file="file"
         :highlighted="index === highlighted"
       />

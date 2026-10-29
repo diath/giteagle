@@ -1,4 +1,4 @@
-import { shallowRef } from 'vue'
+import { ref, shallowRef } from 'vue'
 
 import { api, type FileStatus, type PendingSummary, type StatusEntry } from '../api'
 
@@ -7,6 +7,9 @@ const changedDirectories = shallowRef(new Set<string>())
 
 /** What is uncommitted, staged or not; null until it first loads. */
 export const pendingSummary = shallowRef<PendingSummary | null>(null)
+/** Bumped on every update, even an unchanged one, since edits that keep the
+ * totals still change the diff. Views of the changes reload on it. */
+export const pendingRevision = ref(0)
 
 export function applyWorkingTreeStatus(entries: StatusEntry[]): void {
   const byPath = new Map<string, FileStatus>()
@@ -24,6 +27,7 @@ export function applyWorkingTreeStatus(entries: StatusEntry[]): void {
 
 export function applyPendingSummary(summary: PendingSummary): void {
   pendingSummary.value = summary
+  pendingRevision.value += 1
 }
 
 export async function refreshWorkingTree(): Promise<void> {

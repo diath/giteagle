@@ -6,7 +6,7 @@ export const DIFF_SCROLLER: InjectionKey<Ref<HTMLElement | null>> = Symbol('diff
 </script>
 
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
+import { computed, inject, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 
 import type { ChangeKind, FileDiff } from '../api'
 import { scaled } from '../theme/scale'
@@ -26,6 +26,8 @@ const expandedGaps = shallowRef(new Set<number>())
 const oldTokens = shallowRef<Token[][] | null>(null)
 const newTokens = shallowRef<Token[][] | null>(null)
 let observer: IntersectionObserver | null = null
+/** Set once the file has come near the view and been highlighted. */
+let seen = false
 
 const newLines = computed(() => splitLines(props.file.newContent))
 
@@ -133,15 +135,48 @@ async function highlight(): Promise<void> {
     file.oldContent !== null ? tokenizeFile(file.oldContent, languageFor(file.oldPath ?? file.path)) : null,
     file.newContent !== null ? tokenizeFile(file.newContent, languageFor(file.path)) : null,
   ])
+  // A newer version of the file arrived while this one was tokenized.
+  if (file !== props.file) {
+    return
+  }
   oldTokens.value = oldResult
   newTokens.value = newResult
 }
+
+/** Whether two versions of a file's diff look the same, so a refresh can keep its state. */
+function sameDiff(left: FileDiff, right: FileDiff): boolean {
+  return (
+    left.kind === right.kind &&
+    left.oldPath === right.oldPath &&
+    left.oldContent === right.oldContent &&
+    left.newContent === right.newContent &&
+    JSON.stringify(left.hunks) === JSON.stringify(right.hunks)
+  )
+}
+
+// Views of uncommitted changes refresh as files are edited. A file whose
+// diff changed starts over; the others keep their expanded regions.
+watch(
+  () => props.file,
+  (file, previous) => {
+    if (sameDiff(file, previous)) {
+      return
+    }
+    expandedGaps.value = new Set()
+    oldTokens.value = null
+    newTokens.value = null
+    if (seen) {
+      void highlight()
+    }
+  },
+)
 
 onMounted(() => {
   observer = new IntersectionObserver(
     (entries) => {
       if (entries.some((entry) => entry.isIntersecting)) {
         observer?.disconnect()
+        seen = true
         void highlight()
       }
     },

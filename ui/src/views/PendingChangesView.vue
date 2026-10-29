@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, shallowRef } from 'vue'
+import { computed, onMounted, ref, shallowRef, watch } from 'vue'
 
 import { api, errorMessage, type PendingChanges } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import DiffBrowser from '../components/DiffBrowser.vue'
 import { goBack } from '../stores/navigation'
 import { repo } from '../stores/repo'
+import { pendingRevision } from '../stores/workingTree'
 import { useEscape } from '../utils/escape'
 import { pendingCounts, statesOf, type PendingState } from '../utils/pending'
 
 const changes = shallowRef<PendingChanges | null>(null)
 const error = ref<string | null>(null)
+let generation = 0
 
 useEscape(goBack)
 
@@ -26,15 +28,24 @@ function statesFor(path: string): PendingState[] {
 }
 
 async function load(): Promise<void> {
+  generation += 1
+  const started = generation
   try {
-    changes.value = await api.pendingChanges()
-    error.value = null
+    const loaded = await api.pendingChanges()
+    if (started === generation) {
+      changes.value = loaded
+      error.value = null
+    }
   } catch (caught) {
-    error.value = errorMessage(caught)
+    if (started === generation) {
+      error.value = errorMessage(caught)
+    }
   }
 }
 
 onMounted(load)
+// Follows edits as they happen, and HEAD moving after a reload.
+watch(() => [pendingRevision.value, repo.revision], load)
 </script>
 
 <template>

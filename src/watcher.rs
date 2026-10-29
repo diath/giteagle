@@ -78,7 +78,6 @@ fn watch(app: &AppHandle, state: &AppState) {
     let mut last_announced = None;
     let mut last_status = None;
     let mut last_pending_fingerprint = None;
-    let mut last_pending = None;
     loop {
         thread::sleep(POLL_INTERVAL);
 
@@ -108,10 +107,9 @@ fn watch(app: &AppHandle, state: &AppState) {
         if last_pending_fingerprint.as_ref() != Some(&pending_fingerprint)
             && let Ok(summary) = pending_summary(&repository, &changed)
         {
-            if last_pending != Some(summary) {
-                let _ = app.emit(PENDING_CHANGED_EVENT, summary);
-                last_pending = Some(summary);
-            }
+            // Sent even when the totals are unchanged: an edit can swap one
+            // line for another, and an open view of the changes must reload.
+            let _ = app.emit(PENDING_CHANGED_EVENT, summary);
             last_pending_fingerprint = Some(pending_fingerprint);
         }
     }
