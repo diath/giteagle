@@ -5,12 +5,13 @@ export type View =
   | { kind: 'fileHistory'; path: string }
   | { kind: 'commit'; id: string; fromFile: string | null }
   | { kind: 'pending' }
+  | { kind: 'stash'; id: string }
 
-export type MainTab = 'commits' | 'files' | 'authors'
+export type MainTab = 'commits' | 'files' | 'stash' | 'authors'
 
 /**
  * Views stack inside the single window: the main view at the bottom, then
- * file history and commit views. Views below the top stay mounted, so going
+ * file history, commit and stash views. Views below the top stay mounted, so going
  * back restores their scroll position and state.
  */
 export const navigation = reactive({
@@ -33,6 +34,10 @@ export function openCommit(id: string, fromFile: string | null = null): void {
 
 export function openPendingChanges(): void {
   navigation.stack.push({ kind: 'pending' })
+}
+
+export function openStash(id: string): void {
+  navigation.stack.push({ kind: 'stash', id })
 }
 
 export function openFileHistory(path: string): void {

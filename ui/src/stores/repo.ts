@@ -4,7 +4,7 @@ import { api, errorMessage, type FetchStatus, type Overview } from '../api'
 import { showToast } from './toasts'
 import { refreshWorkingTree } from './workingTree'
 
-export type BusyOperation = 'switch' | 'pull' | 'push' | 'delete' | 'reload'
+export type BusyOperation = 'switch' | 'pull' | 'push' | 'delete' | 'reload' | 'stash'
 
 export const repo = reactive({
   overview: null as Overview | null,
@@ -15,6 +15,8 @@ export const repo = reactive({
   revision: 0,
   /** Bumped after a fetch, when branch metadata may have changed. */
   metadataRevision: 0,
+  /** Bumped when the stash changed, here or outside GitEagle. */
+  stashRevision: 0,
   reloadPromptVisible: false,
 })
 
@@ -75,7 +77,15 @@ export const capabilities = computed(() => {
   const overview = repo.overview
   const idle = repo.busy === null
   if (!overview) {
-    return { canSwitch: false, canPull: false, canPush: false, canDelete: false, notice: null }
+    return {
+      canSwitch: false,
+      canPull: false,
+      canPush: false,
+      canDelete: false,
+      canStash: false,
+      canDropStash: false,
+      notice: null,
+    }
   }
   const clean = overview.state === 'clean'
   const onBranch = overview.head.kind === 'branch'
@@ -86,6 +96,10 @@ export const capabilities = computed(() => {
     canPull: idle && clean && onBranch && hasRemotes && hasUpstream,
     canPush: idle && clean && onBranch && hasRemotes && (hasUpstream || overview.hasOrigin),
     canDelete: idle && clean && onBranch,
+    // Stashing, applying and popping need a commit to work against; dropping
+    // leaves the working tree alone.
+    canStash: idle && clean && overview.head.kind !== 'unborn',
+    canDropStash: idle,
     notice: overview.state === 'clean' ? null : NON_CLEAN_LABELS[overview.state],
   }
 })

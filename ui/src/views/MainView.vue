@@ -8,6 +8,7 @@ import BranchSwitcher from '../components/BranchSwitcher.vue'
 import CommitsTab from '../components/CommitsTab.vue'
 import FilesTab from '../components/FilesTab.vue'
 import GitHubLinks from '../components/GitHubLinks.vue'
+import StashTab from '../components/StashTab.vue'
 import { navigation, type MainTab } from '../stores/navigation'
 
 defineProps<{ active: boolean }>()
@@ -17,6 +18,7 @@ const switcherOpen = ref(false)
 const TABS: { id: MainTab; label: string }[] = [
   { id: 'commits', label: 'Commits' },
   { id: 'files', label: 'Files' },
+  { id: 'stash', label: 'Stash' },
   { id: 'authors', label: 'Authors' },
 ]
 </script>
@@ -49,6 +51,7 @@ const TABS: { id: MainTab; label: string }[] = [
            position and loaded data while another is shown. -->
       <CommitsTab class="pane" :class="{ hidden: navigation.tab !== 'commits' }" :active="active && navigation.tab === 'commits'" />
       <FilesTab class="pane" :class="{ hidden: navigation.tab !== 'files' }" />
+      <StashTab class="pane" :class="{ hidden: navigation.tab !== 'stash' }" :active="active && navigation.tab === 'stash'" />
       <AuthorsTab class="pane" :class="{ hidden: navigation.tab !== 'authors' }" :active="active && navigation.tab === 'authors'" />
     </div>
 

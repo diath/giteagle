@@ -244,6 +244,29 @@ export interface CommitDetails {
   files: FileDiff[]
 }
 
+export interface StashSummary {
+  /** The position in the stash, as in `stash@{0}`; the newest is 0. */
+  index: number
+  id: string
+  shortId: string
+  /** Null for a stash Git named "WIP on …" after its base commit. */
+  message: string | null
+  /** Null for a stash made on a detached HEAD. */
+  branch: string | null
+  /** The commit it was stashed on. */
+  base: CommitBrief
+  author: Person
+  authorTime: number
+  /** The stashed files in each state, and the lines they change in `base`. */
+  changes: PendingSummary
+}
+
+export interface StashDetails extends StashSummary {
+  states: PendingFile[]
+  stats: DiffStats
+  files: FileDiff[]
+}
+
 export interface FetchStatus {
   inProgress: boolean
   lastSuccess: number | null

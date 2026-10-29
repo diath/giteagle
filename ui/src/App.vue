@@ -12,6 +12,7 @@ import CommitView from './views/CommitView.vue'
 import FileHistoryView from './views/FileHistoryView.vue'
 import MainView from './views/MainView.vue'
 import PendingChangesView from './views/PendingChangesView.vue'
+import StashView from './views/StashView.vue'
 
 /** The "back" button found on many mice. */
 const MOUSE_BACK_BUTTON = 3
@@ -35,6 +36,8 @@ function viewKey(index: number): string {
       return `${index}:commit:${view.id}`
     case 'pending':
       return `${index}:pending`
+    case 'stash':
+      return `${index}:stash:${view.id}`
   }
   return String(index)
 }
@@ -52,6 +55,9 @@ onMounted(async () => {
       }),
       await events.onWorkingTreeChanged(applyWorkingTreeStatus),
       await events.onPendingChanged(applyPendingSummary),
+      await events.onStashesChanged(() => {
+        repo.stashRevision += 1
+      }),
       await events.onFetchStatus(applyFetchStatus),
     )
     applyFetchStatus(await api.fetchStatus())
@@ -87,6 +93,7 @@ onBeforeUnmount(() => {
         :active="index === navigation.stack.length - 1"
       />
       <PendingChangesView v-else-if="view.kind === 'pending'" />
+      <StashView v-else-if="view.kind === 'stash'" :id="view.id" />
       <CommitView v-else :id="view.id" :from-file="view.fromFile" />
     </div>
   </div>

@@ -18,6 +18,8 @@ import type {
   PendingChanges,
   PendingSummary,
   SearchTag,
+  StashDetails,
+  StashSummary,
   StatusEntry,
 } from './types'
 
@@ -50,6 +52,12 @@ export const api = {
   deleteInfo: (name: string) => invoke<DeleteInfo>('get_delete_info', { name }),
   deleteBranch: (name: string, deleteRemote: boolean) =>
     invoke<void>('delete_branch', { name, deleteRemote }),
+  stashes: () => invoke<StashSummary[]>('list_stashes'),
+  stash: (id: string) => invoke<StashDetails>('get_stash', { id }),
+  /** Resolves to the name the stash had, e.g. `stash@{1}`; likewise below. */
+  applyStash: (id: string) => invoke<string>('apply_stash', { id }),
+  popStash: (id: string) => invoke<string>('pop_stash', { id }),
+  dropStash: (id: string) => invoke<string>('drop_stash', { id }),
   pull: () => invoke<string>('pull'),
   push: () => invoke<string>('push'),
   avatar: (email: string) => invoke<string | null>('get_avatar', { email }),
@@ -62,6 +70,8 @@ export const events = {
     listen<StatusEntry[]>('working-tree-changed', (event) => handler(event.payload)),
   onPendingChanged: (handler: (summary: PendingSummary) => void): Promise<UnlistenFn> =>
     listen<PendingSummary>('pending-changed', (event) => handler(event.payload)),
+  onStashesChanged: (handler: () => void): Promise<UnlistenFn> =>
+    listen('stashes-changed', () => handler()),
   onFetchStatus: (handler: (status: FetchStatus) => void): Promise<UnlistenFn> =>
     listen<FetchStatus>('fetch-status', (event) => handler(event.payload)),
 }
