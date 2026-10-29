@@ -26,6 +26,7 @@ pub mod history;
 pub mod overview;
 pub mod pending;
 pub mod revert;
+pub mod rewrite;
 pub mod search;
 pub mod snapshot;
 pub mod stashes;
