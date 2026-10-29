@@ -15,6 +15,7 @@ pub mod files;
 pub mod history;
 pub mod pending;
 pub mod repository;
+pub mod revert;
 pub mod stashes;
 pub mod sync;
 
