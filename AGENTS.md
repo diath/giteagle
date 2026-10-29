@@ -45,19 +45,23 @@ every one passing.
 
 ## Product rules
 
-- **Out of scope:** rebase, blame, stash, merge and conflict UI, staging and
+- **Out of scope:** rebase, blame, merge and conflict UI, staging and
   committing, force push, submodules, LFS, bare repositories, multiple
   repositories in one window, and a light theme.
 - **Switching branches** behaves like `git checkout`: non-conflicting changes
   carry over. If the switch would overwrite local changes or fails, nothing
   changes.
+- **Applying a stash** behaves like `git stash apply`, but only when it
+  applies cleanly. If anything is staged, the stash conflicts with HEAD, or it
+  would overwrite local changes, nothing changes. Apply, pop, drop and
+  stashing all ask for confirmation first.
 - **Pull** is fast-forward only.
 - **Push** pushes the current branch to its upstream. Without an upstream it
   runs `git push -u origin <branch>`, and with no `origin` it is disabled.
 - **Background fetches never prompt.** A failed fetch is shown as a small
   indicator, not a dialog.
 - **Outside changes** to HEAD or branches show a non-blocking reload prompt.
-  Working tree changes update silently.
+  Working tree and stash changes update silently.
 - **Dates** are shown in the local timezone, and lists show the author date.
 
 ## UI rules
