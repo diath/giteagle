@@ -2,15 +2,19 @@
 import { ref } from 'vue'
 
 import type { CommitSummary } from '../api'
+import { capabilities } from '../stores/repo'
 import { joinNames } from '../utils/authors'
 import { formatAbsolute, formatRelative } from '../utils/dates'
 import AppIcon from './AppIcon.vue'
 import AvatarStack from './AvatarStack.vue'
+import CherryPickDialog from './CherryPickDialog.vue'
+import RevertDialog from './RevertDialog.vue'
 
 defineProps<{ commit: CommitSummary }>()
 const emit = defineEmits<{ open: [] }>()
 
 const expanded = ref(false)
+const dialog = ref<'cherryPick' | 'revert' | null>(null)
 </script>
 
 <template>
@@ -47,6 +51,32 @@ const expanded = ref(false)
       </div>
       <pre v-if="expanded" class="body" @click.stop>{{ commit.body }}</pre>
     </div>
+
+    <div v-if="commit.isPushed === true" class="actions">
+      <button
+        class="button button--icon"
+        type="button"
+        :disabled="!capabilities.canCherryPick"
+        title="Cherry-pick to other branches"
+        @click.stop="dialog = 'cherryPick'"
+        @keydown.enter.stop
+      >
+        <AppIcon name="cherryPick" />
+      </button>
+      <button
+        class="button button--icon"
+        type="button"
+        :disabled="!capabilities.canRevert"
+        title="Revert this commit"
+        @click.stop="dialog = 'revert'"
+        @keydown.enter.stop
+      >
+        <AppIcon name="revert" />
+      </button>
+    </div>
+
+    <CherryPickDialog v-if="dialog === 'cherryPick'" :commit="commit" @close="dialog = null" />
+    <RevertDialog v-else-if="dialog === 'revert'" :commit="commit" @close="dialog = null" />
   </div>
 </template>
 
@@ -108,6 +138,13 @@ const expanded = ref(false)
 .subject {
   min-width: 0;
   color: var(--color-fg-strong);
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  align-self: center;
+  gap: var(--space-2);
 }
 
 .expand {

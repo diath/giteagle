@@ -4,7 +4,15 @@ import { api, errorMessage, type FetchStatus, type Overview } from '../api'
 import { showToast } from './toasts'
 import { refreshWorkingTree } from './workingTree'
 
-export type BusyOperation = 'switch' | 'pull' | 'push' | 'delete' | 'reload' | 'stash'
+export type BusyOperation =
+  | 'switch'
+  | 'pull'
+  | 'push'
+  | 'delete'
+  | 'reload'
+  | 'stash'
+  | 'cherryPick'
+  | 'revert'
 
 export const repo = reactive({
   overview: null as Overview | null,
@@ -84,6 +92,8 @@ export const capabilities = computed(() => {
       canDelete: false,
       canStash: false,
       canDropStash: false,
+      canCherryPick: false,
+      canRevert: false,
       notice: null,
     }
   }
@@ -100,6 +110,9 @@ export const capabilities = computed(() => {
     // leaves the working tree alone.
     canStash: idle && clean && overview.head.kind !== 'unborn',
     canDropStash: idle,
+    // Both act on the pushed commits of the checked-out branch.
+    canCherryPick: idle && clean && onBranch,
+    canRevert: idle && clean && onBranch,
     notice: overview.state === 'clean' ? null : NON_CLEAN_LABELS[overview.state],
   }
 })

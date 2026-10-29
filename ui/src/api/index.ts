@@ -17,6 +17,8 @@ import type {
   Overview,
   PendingChanges,
   PendingSummary,
+  PickTarget,
+  RevertMode,
   SearchTag,
   StashDetails,
   StashSummary,
@@ -52,6 +54,9 @@ export const api = {
   deleteInfo: (name: string) => invoke<DeleteInfo>('get_delete_info', { name }),
   deleteBranch: (name: string, deleteRemote: boolean) =>
     invoke<void>('delete_branch', { name, deleteRemote }),
+  pickTargets: (id: string) => invoke<PickTarget[]>('list_pick_targets', { id }),
+  cherryPick: (id: string, branches: string[]) => invoke<void>('cherry_pick', { id, branches }),
+  revertCommit: (id: string, mode: RevertMode) => invoke<void>('revert_commit', { id, mode }),
   stashes: () => invoke<StashSummary[]>('list_stashes'),
   stash: (id: string) => invoke<StashDetails>('get_stash', { id }),
   saveStash: (message: string, includeUntracked: boolean) =>

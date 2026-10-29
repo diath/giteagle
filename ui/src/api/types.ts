@@ -131,6 +131,20 @@ export interface DeleteInfo {
   lostCommitsWithRemote: number
 }
 
+export interface PickTarget {
+  name: string
+  isCurrent: boolean
+  /** The commit is already in the branch's history. */
+  hasCommit: boolean
+  inOtherWorktree: boolean
+}
+
+/**
+ * `newCommit` adds a commit that undoes the changes, and `workingTree` undoes
+ * them in the working tree and stages them.
+ */
+export type RevertMode = 'newCommit' | 'workingTree'
+
 export type EntryKind = 'directory' | 'file' | 'symlink' | 'submodule'
 
 export interface DirectoryEntry {

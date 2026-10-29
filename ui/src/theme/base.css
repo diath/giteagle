@@ -143,6 +143,13 @@ input {
   border-color: transparent;
 }
 
+/* A square button with only an icon; its title names the action. */
+.button--icon {
+  justify-content: center;
+  width: var(--control-height);
+  padding: 0;
+}
+
 .button--danger {
   border-color: var(--color-danger);
   background: var(--color-danger-muted);
