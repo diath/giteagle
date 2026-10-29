@@ -54,6 +54,8 @@ export const api = {
     invoke<void>('delete_branch', { name, deleteRemote }),
   stashes: () => invoke<StashSummary[]>('list_stashes'),
   stash: (id: string) => invoke<StashDetails>('get_stash', { id }),
+  saveStash: (message: string, includeUntracked: boolean) =>
+    invoke<void>('save_stash', { message, includeUntracked }),
   /** Resolves to the name the stash had, e.g. `stash@{1}`; likewise below. */
   applyStash: (id: string) => invoke<string>('apply_stash', { id }),
   popStash: (id: string) => invoke<string>('pop_stash', { id }),
