@@ -17,6 +17,7 @@ use crate::error::{AppError, AppResult};
 
 pub mod authors;
 pub mod branches;
+pub mod cherry_pick;
 pub mod commit;
 pub mod diff;
 pub mod files;
@@ -185,6 +186,13 @@ pub fn conflicted_paths(index: &Index) -> AppResult<Vec<String>> {
         }
     }
     Ok(paths)
+}
+
+/// Which parent a commit's changes are taken against when it is cherry-picked
+/// or reverted. For a merge it is the first, as with `-m 1` in Git; libgit2
+/// expects 0 for any other commit.
+pub fn mainline(commit: &Commit) -> u32 {
+    if commit.parent_count() > 1 { 1 } else { 0 }
 }
 
 /// Updates the working tree and index to `target`, keeping local changes that

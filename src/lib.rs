@@ -50,6 +50,8 @@ pub fn run(repository: Repository) {
             commands::branches::switch_branch,
             commands::branches::get_delete_info,
             commands::branches::delete_branch,
+            commands::cherry_pick::list_pick_targets,
+            commands::cherry_pick::cherry_pick,
             commands::stashes::list_stashes,
             commands::stashes::get_stash,
             commands::stashes::save_stash,

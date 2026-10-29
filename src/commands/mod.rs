@@ -9,6 +9,7 @@ use crate::error::{AppError, AppResult, ErrorKind};
 pub mod authors;
 pub mod avatars;
 pub mod branches;
+pub mod cherry_pick;
 pub mod commit;
 pub mod files;
 pub mod history;
