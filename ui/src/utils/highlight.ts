@@ -1,8 +1,7 @@
-import type { HighlighterCore, LanguageInput } from 'shiki/core'
+import type { TokenizeRequest, TokenizeResponse } from './highlight.worker'
 
-import { SYNTAX_THEME_NAME, syntaxTheme } from '../theme/syntax-theme'
-
-/** Larger files render as plain text; tokenizing them would stall the UI. */
+/** Larger files render as plain text; tokenizing them would hold up the
+ * highlighting of every file after them. */
 const MAX_HIGHLIGHT_CHARACTERS = 300_000
 
 export interface Token {
@@ -10,45 +9,6 @@ export interface Token {
   color?: string
   /** Shiki's FontStyle bit flags: 1 italic, 2 bold, 4 underline. */
   fontStyle?: number
-}
-
-const GRAMMARS: Record<string, () => LanguageInput> = {
-  bash: () => import('@shikijs/langs/bash'),
-  c: () => import('@shikijs/langs/c'),
-  cmake: () => import('@shikijs/langs/cmake'),
-  cpp: () => import('@shikijs/langs/cpp'),
-  csharp: () => import('@shikijs/langs/csharp'),
-  css: () => import('@shikijs/langs/css'),
-  dart: () => import('@shikijs/langs/dart'),
-  diff: () => import('@shikijs/langs/diff'),
-  docker: () => import('@shikijs/langs/docker'),
-  go: () => import('@shikijs/langs/go'),
-  graphql: () => import('@shikijs/langs/graphql'),
-  html: () => import('@shikijs/langs/html'),
-  ini: () => import('@shikijs/langs/ini'),
-  java: () => import('@shikijs/langs/java'),
-  javascript: () => import('@shikijs/langs/javascript'),
-  json: () => import('@shikijs/langs/json'),
-  jsx: () => import('@shikijs/langs/jsx'),
-  kotlin: () => import('@shikijs/langs/kotlin'),
-  less: () => import('@shikijs/langs/less'),
-  lua: () => import('@shikijs/langs/lua'),
-  make: () => import('@shikijs/langs/make'),
-  markdown: () => import('@shikijs/langs/markdown'),
-  php: () => import('@shikijs/langs/php'),
-  powershell: () => import('@shikijs/langs/powershell'),
-  python: () => import('@shikijs/langs/python'),
-  ruby: () => import('@shikijs/langs/ruby'),
-  rust: () => import('@shikijs/langs/rust'),
-  scss: () => import('@shikijs/langs/scss'),
-  sql: () => import('@shikijs/langs/sql'),
-  swift: () => import('@shikijs/langs/swift'),
-  toml: () => import('@shikijs/langs/toml'),
-  tsx: () => import('@shikijs/langs/tsx'),
-  typescript: () => import('@shikijs/langs/typescript'),
-  vue: () => import('@shikijs/langs/vue'),
-  xml: () => import('@shikijs/langs/xml'),
-  yaml: () => import('@shikijs/langs/yaml'),
 }
 
 const LANGUAGES_BY_EXTENSION: Record<string, string> = {
@@ -130,30 +90,27 @@ export function languageFor(path: string): string | null {
   return LANGUAGES_BY_EXTENSION[fileName.slice(dot + 1)] ?? null
 }
 
-let highlighter: Promise<HighlighterCore> | null = null
-const loadedLanguages = new Map<string, Promise<void>>()
+let worker: Worker | null = null
+let workerFailed = false
+let nextRequestId = 0
+const pendingRequests = new Map<number, (tokens: Token[][] | null) => void>()
 
-function getHighlighter(): Promise<HighlighterCore> {
-  // Shiki is loaded on first use so it doesn't slow down startup. The
-  // JavaScript regex engine avoids shipping and instantiating WASM.
-  highlighter ??= Promise.all([import('shiki/core'), import('shiki/engine/javascript')]).then(
-    ([{ createHighlighterCore }, { createJavaScriptRegexEngine }]) =>
-      createHighlighterCore({
-        themes: [syntaxTheme],
-        langs: [],
-        engine: createJavaScriptRegexEngine({ forgiving: true }),
-      }),
-  )
-  return highlighter
-}
-
-function ensureLanguage(instance: HighlighterCore, language: string): Promise<void> {
-  let loading = loadedLanguages.get(language)
-  if (!loading) {
-    loading = instance.loadLanguage(GRAMMARS[language]())
-    loadedLanguages.set(language, loading)
+function getWorker(): Worker {
+  if (!worker) {
+    worker = new Worker(new URL('./highlight.worker.ts', import.meta.url), { type: 'module' })
+    worker.addEventListener('message', (event: MessageEvent<TokenizeResponse>) => {
+      pendingRequests.get(event.data.id)?.(event.data.tokens)
+      pendingRequests.delete(event.data.id)
+    })
+    // The worker catches its own errors, so this means it couldn't start.
+    // Files then stay plain text instead of waiting for it forever.
+    worker.addEventListener('error', () => {
+      workerFailed = true
+      pendingRequests.forEach((resolve) => resolve(null))
+      pendingRequests.clear()
+    })
   }
-  return loading
+  return worker
 }
 
 /**
@@ -161,21 +118,14 @@ function ensureLanguage(instance: HighlighterCore, language: string): Promise<vo
  * comments are colored correctly, and returns the tokens per line. Resolves
  * to `null` when the file can't or shouldn't be highlighted.
  */
-export async function tokenizeFile(code: string, language: string | null): Promise<Token[][] | null> {
-  if (!language || !(language in GRAMMARS) || code.length > MAX_HIGHLIGHT_CHARACTERS) {
-    return null
+export function tokenizeFile(code: string, language: string | null): Promise<Token[][] | null> {
+  if (!language || workerFailed || code.length > MAX_HIGHLIGHT_CHARACTERS) {
+    return Promise.resolve(null)
   }
-  try {
-    const instance = await getHighlighter()
-    await ensureLanguage(instance, language)
-    const { tokens } = instance.codeToTokens(code.replace(/\r\n/g, '\n'), {
-      lang: language,
-      theme: SYNTAX_THEME_NAME,
-    })
-    return tokens.map((line) =>
-      line.map((token) => ({ content: token.content, color: token.color, fontStyle: token.fontStyle })),
-    )
-  } catch {
-    return null
-  }
+  const id = (nextRequestId += 1)
+  return new Promise((resolve) => {
+    pendingRequests.set(id, resolve)
+    const request: TokenizeRequest = { id, code, language }
+    getWorker().postMessage(request)
+  })
 }

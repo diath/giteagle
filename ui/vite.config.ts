@@ -14,4 +14,9 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 1500,
   },
+  // The highlighting worker loads grammars on demand, which needs a module
+  // worker; the default classic format can't split code.
+  worker: {
+    format: 'es',
+  },
 })
