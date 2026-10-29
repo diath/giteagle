@@ -14,6 +14,7 @@ pub mod files;
 pub mod history;
 pub mod pending;
 pub mod repository;
+pub mod stashes;
 pub mod sync;
 
 pub type SharedState<'a> = tauri::State<'a, Arc<AppState>>;

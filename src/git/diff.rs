@@ -2,7 +2,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use git2::{
-    Delta, Diff, DiffFile, DiffFindOptions, DiffOptions, FileMode, Oid, Patch, Repository, Tree,
+    Delta, Diff, DiffFile, DiffFindOptions, DiffOptions, FileMode, Index, Oid, Patch, Repository,
+    Tree,
 };
 use serde::Serialize;
 
@@ -121,11 +122,43 @@ pub fn diff_tree_stats(
     old: Option<&Tree>,
     new: &Tree,
 ) -> AppResult<DiffStats> {
+    let mut diff = repository.diff_tree_to_tree(old, Some(new), Some(&mut stats_options()))?;
+    totals(&mut diff)
+}
+
+/// Diffs a tree against an index with rename detection. The index may be
+/// one built in memory, but every file in it must be a blob in the object
+/// database.
+pub fn diff_tree_to_index(
+    repository: &Repository,
+    old: Option<&Tree>,
+    new: &Index,
+) -> AppResult<Vec<FileDiff>> {
+    let mut diff = repository.diff_tree_to_index(old, Some(new), Some(&mut diff_options()))?;
+    diff.find_similar(Some(DiffFindOptions::new().renames(true)))?;
+    file_diffs(repository, &diff, NewSide::Blobs)
+}
+
+/// The totals of `diff_tree_to_index`, for when the changes themselves
+/// aren't shown.
+pub fn diff_tree_to_index_stats(
+    repository: &Repository,
+    old: Option<&Tree>,
+    new: &Index,
+) -> AppResult<DiffStats> {
+    let mut diff = repository.diff_tree_to_index(old, Some(new), Some(&mut stats_options()))?;
+    totals(&mut diff)
+}
+
+/// Options for diffs that are only counted. Bigger files count as binary
+/// and add no lines, like the files the Commit View doesn't diff.
+fn stats_options() -> DiffOptions {
     let mut options = diff_options();
-    // Bigger files count as binary and add no lines, like the files the
-    // Commit View doesn't diff.
     options.max_size(MAX_DIFF_BYTES as i64);
-    let mut diff = repository.diff_tree_to_tree(old, Some(new), Some(&mut options))?;
+    options
+}
+
+fn totals(diff: &mut Diff) -> AppResult<DiffStats> {
     diff.find_similar(Some(DiffFindOptions::new().renames(true)))?;
     let stats = diff.stats()?;
     Ok(DiffStats {

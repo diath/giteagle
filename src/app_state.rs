@@ -72,6 +72,15 @@ impl AppState {
         task(&lock(&self.repository))
     }
 
+    /// For the few git2 operations that need exclusive access, such as the
+    /// stash ones.
+    pub fn with_repo_mut<T>(
+        &self,
+        task: impl FnOnce(&mut Repository) -> AppResult<T>,
+    ) -> AppResult<T> {
+        task(&mut lock(&self.repository))
+    }
+
     /// Runs a slow read, such as a scan of the working tree, on a handle of
     /// its own, so commands that hold the shared one only briefly, like
     /// opening a commit, don't queue behind it.

@@ -20,6 +20,7 @@ pub mod overview;
 pub mod pending;
 pub mod search;
 pub mod snapshot;
+pub mod stashes;
 pub mod status;
 pub mod sync;
 
