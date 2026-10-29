@@ -7,7 +7,7 @@ import ToastHost from './components/ToastHost.vue'
 import { goBack, navigation } from './stores/navigation'
 import { applyFetchStatus, refreshOverview, repo } from './stores/repo'
 import { showToast } from './stores/toasts'
-import { applyWorkingTreeStatus, refreshWorkingTree } from './stores/workingTree'
+import { applyPendingSummary, applyWorkingTreeStatus, refreshWorkingTree } from './stores/workingTree'
 import CommitView from './views/CommitView.vue'
 import FileHistoryView from './views/FileHistoryView.vue'
 import MainView from './views/MainView.vue'
@@ -51,6 +51,7 @@ onMounted(async () => {
         repo.reloadPromptVisible = true
       }),
       await events.onWorkingTreeChanged(applyWorkingTreeStatus),
+      await events.onPendingChanged(applyPendingSummary),
       await events.onFetchStatus(applyFetchStatus),
     )
     applyFetchStatus(await api.fetchStatus())

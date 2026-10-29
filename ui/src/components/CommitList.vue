@@ -205,6 +205,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
 <template>
   <div ref="scroller" class="commit-list">
+    <slot name="top" />
     <template v-for="row in rows" :key="row.key">
       <div v-if="row.type === 'marker'" class="marker" :class="row.pushed ? 'marker--pushed' : 'marker--unpushed'">
         <AppIcon :name="row.pushed ? 'check' : 'push'" />

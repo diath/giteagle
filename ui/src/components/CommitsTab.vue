@@ -2,9 +2,12 @@
 import { computed, ref, watch } from 'vue'
 
 import { api, type HistoryCursor } from '../api'
-import { openCommit } from '../stores/navigation'
+import { openCommit, openPendingChanges } from '../stores/navigation'
 import { repo } from '../stores/repo'
+import { pendingSummary } from '../stores/workingTree'
+import { hasPendingChanges } from '../utils/pending'
 import CommitList from './CommitList.vue'
+import PendingEntry from './PendingEntry.vue'
 import SearchField from './SearchField.vue'
 
 const SEARCH_DELAY_MS = 250
@@ -25,6 +28,9 @@ watch(query, (value) => {
 
 const sourceKey = computed(() => `${repo.revision}\n${appliedQuery.value}`)
 const load = (cursor: HistoryCursor | null) => api.history(cursor, appliedQuery.value)
+
+// Hidden while searching, since uncommitted changes match no query.
+const showPending = computed(() => !appliedQuery.value && hasPendingChanges(pendingSummary.value))
 
 const emptyText = computed(() => {
   if (appliedQuery.value) {
@@ -48,7 +54,11 @@ const emptyText = computed(() => {
       :upstream="repo.overview?.head.upstream ?? null"
       :empty-text="emptyText"
       @open="(commit) => openCommit(commit.id)"
-    />
+    >
+      <template #top>
+        <PendingEntry v-if="showPending && pendingSummary" :summary="pendingSummary" @open="openPendingChanges" />
+      </template>
+    </CommitList>
   </div>
 </template>
 

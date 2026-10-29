@@ -52,6 +52,8 @@ export const events = {
     listen('repo-changed', () => handler()),
   onWorkingTreeChanged: (handler: (entries: StatusEntry[]) => void): Promise<UnlistenFn> =>
     listen<StatusEntry[]>('working-tree-changed', (event) => handler(event.payload)),
+  onPendingChanged: (handler: (summary: PendingSummary) => void): Promise<UnlistenFn> =>
+    listen<PendingSummary>('pending-changed', (event) => handler(event.payload)),
   onFetchStatus: (handler: (status: FetchStatus) => void): Promise<UnlistenFn> =>
     listen<FetchStatus>('fetch-status', (event) => handler(event.payload)),
 }

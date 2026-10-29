@@ -1,9 +1,12 @@
 import { shallowRef } from 'vue'
 
-import { api, type FileStatus, type StatusEntry } from '../api'
+import { api, type FileStatus, type PendingSummary, type StatusEntry } from '../api'
 
 const statusByPath = shallowRef(new Map<string, FileStatus>())
 const changedDirectories = shallowRef(new Set<string>())
+
+/** What is uncommitted, staged or not; null until it first loads. */
+export const pendingSummary = shallowRef<PendingSummary | null>(null)
 
 export function applyWorkingTreeStatus(entries: StatusEntry[]): void {
   const byPath = new Map<string, FileStatus>()
@@ -19,11 +22,19 @@ export function applyWorkingTreeStatus(entries: StatusEntry[]): void {
   changedDirectories.value = directories
 }
 
+export function applyPendingSummary(summary: PendingSummary): void {
+  pendingSummary.value = summary
+}
+
 export async function refreshWorkingTree(): Promise<void> {
-  try {
-    applyWorkingTreeStatus(await api.workingTreeStatus())
-  } catch {
-    // The watcher pushes a fresh status every few seconds anyway.
+  // Failures are left alone; the watcher pushes fresh copies of both every
+  // few seconds anyway.
+  const [entries, summary] = await Promise.allSettled([api.workingTreeStatus(), api.pendingSummary()])
+  if (entries.status === 'fulfilled') {
+    applyWorkingTreeStatus(entries.value)
+  }
+  if (summary.status === 'fulfilled') {
+    applyPendingSummary(summary.value)
   }
 }
 
