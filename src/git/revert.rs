@@ -11,7 +11,7 @@ use serde::Deserialize;
 use super::overview::ensure_clean_state;
 use super::{
     checkout_safely, commit_message, conflicted_paths, find_commit, head_commit, list_paths,
-    mainline, short_id, split_message, user_signature,
+    mainline, overwrite_error, short_id, split_message, user_signature,
 };
 use crate::error::{AppError, AppResult, ErrorKind};
 
@@ -56,13 +56,13 @@ pub fn revert(repository: &Repository, id: &str, mode: RevertMode) -> AppResult<
             // The working tree goes first: if it can't be updated, the new
             // commit is left unreferenced and nothing has changed.
             checkout_safely(repository, tree.as_object(), |paths| {
-                overwrite_error(&short, paths)
+                overwrite_error(&format!("Reverting {short}"), paths)
             })?;
             let subject = split_message(&message).0;
             move_head(repository, head.id(), revert, &format!("revert: {subject}"))
         }
         RevertMode::WorkingTree => checkout_safely(repository, tree.as_object(), |paths| {
-            overwrite_error(&short, paths)
+            overwrite_error(&format!("Reverting {short}"), paths)
         }),
     }
 }
@@ -120,19 +120,4 @@ fn move_head(repository: &Repository, from: Oid, to: Oid, message: &str) -> AppR
     let head = repository.head()?;
     repository.reference_matching(head.name()?, to, true, from, message)?;
     Ok(())
-}
-
-fn overwrite_error(short: &str, paths: &[String]) -> AppError {
-    let details = if paths.is_empty() {
-        String::new()
-    } else {
-        format!(" ({})", list_paths(paths))
-    };
-    AppError::new(
-        ErrorKind::Conflict,
-        format!(
-            "Reverting {short} would overwrite local changes{details}. Commit or stash them \
-             first, then try again."
-        ),
-    )
 }

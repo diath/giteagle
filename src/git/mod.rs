@@ -13,7 +13,7 @@ use git2::{
 };
 use serde::Serialize;
 
-use crate::error::{AppError, AppResult};
+use crate::error::{AppError, AppResult, ErrorKind};
 
 pub mod authors;
 pub mod branches;
@@ -225,6 +225,23 @@ pub fn checkout_safely(
         }
         Err(error) => Err(error.into()),
     }
+}
+
+/// The error for a working tree update that would lose the local changes to
+/// `paths`. `action` says what was attempted, e.g. "Reverting abc1234".
+pub fn overwrite_error(action: &str, paths: &[String]) -> AppError {
+    let details = if paths.is_empty() {
+        String::new()
+    } else {
+        format!(" ({})", list_paths(paths))
+    };
+    AppError::new(
+        ErrorKind::Conflict,
+        format!(
+            "{action} would overwrite local changes{details}. Commit or stash them first, then \
+             try again."
+        ),
+    )
 }
 
 /// The user's name and email from the Git configuration, for the commits and

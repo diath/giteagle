@@ -5,8 +5,8 @@ use git2::{BranchType, Oid, Repository};
 use serde::Serialize;
 
 use super::overview::{ensure_clean_state, upstream_of};
-use super::{CommitBrief, checkout_safely, list_paths};
-use crate::error::{AppError, AppResult, ErrorKind};
+use super::{CommitBrief, checkout_safely, overwrite_error};
+use crate::error::{AppError, AppResult};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -156,7 +156,7 @@ pub fn switch_branch(repository: &Repository, name: &str, is_remote: bool) -> Ap
     // The working tree is updated first: if that fails, no branch has been
     // created yet and nothing has changed.
     checkout_safely(repository, commit.as_object(), |conflicts| {
-        conflict_error(local_name, conflicts)
+        overwrite_error(&format!("Switching to {local_name}"), conflicts)
     })?;
     let mut local_branch = repository.branch(local_name, &commit, false)?;
     local_branch.set_upstream(Some(name))?;
@@ -171,25 +171,10 @@ fn switch_to_local(repository: &Repository, name: &str) -> AppResult<String> {
     }
     let commit = branch.get().peel_to_commit()?;
     checkout_safely(repository, commit.as_object(), |conflicts| {
-        conflict_error(name, conflicts)
+        overwrite_error(&format!("Switching to {name}"), conflicts)
     })?;
     repository.set_head(&reference_name(branch.get())?)?;
     Ok(name.to_string())
-}
-
-fn conflict_error(target: &str, conflicts: &[String]) -> AppError {
-    let details = if conflicts.is_empty() {
-        String::new()
-    } else {
-        format!(" ({})", list_paths(conflicts))
-    };
-    AppError::new(
-        ErrorKind::Conflict,
-        format!(
-            "Switching to {target} would overwrite local changes{details}. \
-             Commit or stash them locally first, then try again."
-        ),
-    )
 }
 
 fn local_tracking_branch(repository: &Repository, remote_name: &str) -> AppResult<Option<String>> {

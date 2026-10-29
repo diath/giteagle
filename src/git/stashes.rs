@@ -19,8 +19,8 @@ use super::overview::ensure_clean_state;
 use super::pending::{PendingFile, PendingSummary};
 use super::status::changed_paths;
 use super::{
-    CommitBrief, commit_message, conflicted_paths, head_commit, list_paths, path_to_string,
-    short_id, user_signature,
+    CommitBrief, commit_message, conflicted_paths, head_commit, list_paths, overwrite_error,
+    path_to_string, short_id, user_signature,
 };
 use crate::error::{AppError, AppResult, ErrorKind};
 
@@ -313,9 +313,9 @@ fn apply(repository: &mut Repository, id: &str, then_drop: bool) -> AppResult<St
     };
     match result {
         Ok(()) => Ok(stash_name(index)),
-        Err(error) if error.code() == ErrorCode::Conflict || !conflicts.is_empty() => {
-            Err(overwrite_error(index, &conflicts))
-        }
+        Err(error) if error.code() == ErrorCode::Conflict || !conflicts.is_empty() => Err(
+            overwrite_error(&format!("Applying {}", stash_name(index)), &conflicts),
+        ),
         Err(error) => Err(error.into()),
     }
 }
@@ -374,7 +374,10 @@ fn ensure_applies_cleanly(repository: &Repository, stash: &Stash) -> AppResult<(
         .map(|changed| changed.current_path)
         .collect();
     if !overwritten.is_empty() {
-        return Err(overwrite_error(stash.index, &overwritten));
+        return Err(overwrite_error(
+            &format!("Applying {}", stash_name(stash.index)),
+            &overwritten,
+        ));
     }
     Ok(())
 }
@@ -410,22 +413,6 @@ fn changed_between(
 
 fn stash_name(index: usize) -> String {
     format!("stash@{{{index}}}")
-}
-
-fn overwrite_error(index: usize, paths: &[String]) -> AppError {
-    let details = if paths.is_empty() {
-        String::new()
-    } else {
-        format!(" ({})", list_paths(paths))
-    };
-    AppError::new(
-        ErrorKind::Conflict,
-        format!(
-            "Applying {} would overwrite local changes{details}. Commit or stash them first, \
-             then try again.",
-            stash_name(index)
-        ),
-    )
 }
 
 #[cfg(test)]
