@@ -1,5 +1,6 @@
 import type { Person } from '../api'
 import { accentVar, avatarAccents, cssVar } from '../theme/palette'
+import { joinWithAnd } from './lists'
 
 export function initials(name: string): string {
   const words = name
@@ -34,9 +35,5 @@ export function placeholderColors(email: string): { background: string; foregrou
 
 /** "Ann", "Ann and Bo", "Ann, Bo and Cy". */
 export function joinNames(people: Person[]): string {
-  const names = people.map((person) => person.name)
-  if (names.length <= 1) {
-    return names.join('')
-  }
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+  return joinWithAnd(people.map((person) => person.name))
 }
