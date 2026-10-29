@@ -19,6 +19,7 @@ import type {
   PendingSummary,
   PickTarget,
   RevertMode,
+  RewritableCommit,
   SearchTag,
   StashDetails,
   StashSummary,
@@ -57,6 +58,12 @@ export const api = {
   pickTargets: (id: string) => invoke<PickTarget[]>('list_pick_targets', { id }),
   cherryPick: (id: string, branches: string[]) => invoke<void>('cherry_pick', { id, branches }),
   revertCommit: (id: string, mode: RevertMode) => invoke<void>('revert_commit', { id, mode }),
+  /** The commits that can be reworded, squashed or dropped together with `id`, newest first. */
+  rewritableCommits: (id: string) => invoke<RewritableCommit[]>('list_rewritable_commits', { id }),
+  rewordCommit: (id: string, message: string) => invoke<void>('reword_commit', { id, message }),
+  squashCommits: (id: string, others: string[], message: string) =>
+    invoke<void>('squash_commits', { id, others, message }),
+  dropCommit: (id: string) => invoke<void>('drop_commit', { id }),
   stashes: () => invoke<StashSummary[]>('list_stashes'),
   stash: (id: string) => invoke<StashDetails>('get_stash', { id }),
   saveStash: (message: string, includeUntracked: boolean) =>

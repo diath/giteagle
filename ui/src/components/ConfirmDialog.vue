@@ -17,8 +17,10 @@ const props = withDefaults(
     warning?: string | null
     danger?: boolean
     disabled?: boolean
+    /** Room for a commit message's 72 columns. */
+    wide?: boolean
   }>(),
-  { warning: null, danger: false, disabled: false },
+  { warning: null, danger: false, disabled: false, wide: false },
 )
 
 const emit = defineEmits<{ confirm: []; close: [] }>()
@@ -51,7 +53,15 @@ onMounted(async () => {
        row it was opened from. -->
   <Teleport to="body">
     <div class="dialog-layer" @mousedown.self="!working && emit('close')">
-      <form ref="form" class="dialog" role="dialog" aria-modal="true" :aria-label="title" @submit.prevent="confirm">
+      <form
+        ref="form"
+        class="dialog"
+        :class="{ 'dialog--wide': wide }"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="title"
+        @submit.prevent="confirm"
+      >
         <h2 class="title">
           <AppIcon :name="icon" large />
           {{ title }}
@@ -96,6 +106,10 @@ onMounted(async () => {
   border-radius: var(--radius-large);
   background: var(--color-bg-panel);
   box-shadow: 0 calc(10 * var(--px)) calc(30 * var(--px)) var(--color-shadow);
+}
+
+.dialog--wide {
+  width: min(calc(800 * var(--px)), calc(100% - 2 * var(--space-6)));
 }
 
 .title {

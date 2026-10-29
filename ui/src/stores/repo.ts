@@ -13,6 +13,9 @@ export type BusyOperation =
   | 'stash'
   | 'cherryPick'
   | 'revert'
+  | 'reword'
+  | 'squash'
+  | 'drop'
 
 export const repo = reactive({
   overview: null as Overview | null,
@@ -94,6 +97,7 @@ export const capabilities = computed(() => {
       canDropStash: false,
       canCherryPick: false,
       canRevert: false,
+      canRewrite: false,
       notice: null,
     }
   }
@@ -113,6 +117,8 @@ export const capabilities = computed(() => {
     // Both act on the pushed commits of the checked-out branch.
     canCherryPick: idle && clean && onBranch,
     canRevert: idle && clean && onBranch,
+    // Rewording, squashing and dropping act on its unpushed commits.
+    canRewrite: idle && clean && onBranch,
     notice: overview.state === 'clean' ? null : NON_CLEAN_LABELS[overview.state],
   }
 })

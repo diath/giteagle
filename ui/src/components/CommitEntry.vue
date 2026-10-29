@@ -8,13 +8,16 @@ import { formatAbsolute, formatRelative } from '../utils/dates'
 import AppIcon from './AppIcon.vue'
 import AvatarStack from './AvatarStack.vue'
 import CherryPickDialog from './CherryPickDialog.vue'
+import DropDialog from './DropDialog.vue'
 import RevertDialog from './RevertDialog.vue'
+import RewordDialog from './RewordDialog.vue'
+import SquashDialog from './SquashDialog.vue'
 
 defineProps<{ commit: CommitSummary }>()
 const emit = defineEmits<{ open: [] }>()
 
 const expanded = ref(false)
-const dialog = ref<'cherryPick' | 'revert' | null>(null)
+const dialog = ref<'reword' | 'squash' | 'drop' | 'cherryPick' | 'revert' | null>(null)
 </script>
 
 <template>
@@ -52,7 +55,42 @@ const dialog = ref<'cherryPick' | 'revert' | null>(null)
       <pre v-if="expanded" class="body" @click.stop>{{ commit.body }}</pre>
     </div>
 
-    <div v-if="commit.isPushed === true" class="actions">
+    <!-- Cherry-pick and Revert come last, so they line up across pushed and
+         unpushed commits. -->
+    <div v-if="commit.isPushed !== null" class="actions">
+      <template v-if="commit.isPushed === false">
+        <button
+          class="button button--icon"
+          type="button"
+          :disabled="!capabilities.canRewrite"
+          title="Reword this commit"
+          @click.stop="dialog = 'reword'"
+          @keydown.enter.stop
+        >
+          <AppIcon name="pencil" />
+        </button>
+        <button
+          class="button button--icon"
+          type="button"
+          :disabled="!capabilities.canRewrite"
+          title="Squash other commits into this one"
+          @click.stop="dialog = 'squash'"
+          @keydown.enter.stop
+        >
+          <AppIcon name="squash" />
+        </button>
+        <button
+          class="button button--icon"
+          type="button"
+          :disabled="!capabilities.canRewrite"
+          title="Drop this commit"
+          @click.stop="dialog = 'drop'"
+          @keydown.enter.stop
+        >
+          <AppIcon name="trash" />
+        </button>
+        <span class="divider" aria-hidden="true"></span>
+      </template>
       <button
         class="button button--icon"
         type="button"
@@ -75,7 +113,10 @@ const dialog = ref<'cherryPick' | 'revert' | null>(null)
       </button>
     </div>
 
-    <CherryPickDialog v-if="dialog === 'cherryPick'" :commit="commit" @close="dialog = null" />
+    <RewordDialog v-if="dialog === 'reword'" :commit="commit" @close="dialog = null" />
+    <SquashDialog v-else-if="dialog === 'squash'" :commit="commit" @close="dialog = null" />
+    <DropDialog v-else-if="dialog === 'drop'" :commit="commit" @close="dialog = null" />
+    <CherryPickDialog v-else-if="dialog === 'cherryPick'" :commit="commit" @close="dialog = null" />
     <RevertDialog v-else-if="dialog === 'revert'" :commit="commit" @close="dialog = null" />
   </div>
 </template>
@@ -144,7 +185,17 @@ const dialog = ref<'cherryPick' | 'revert' | null>(null)
   display: flex;
   flex: none;
   align-self: center;
+  align-items: center;
   gap: var(--space-2);
+}
+
+/* Sets the commit's own actions apart from Cherry-pick and Revert. */
+.divider {
+  flex: none;
+  width: 1px;
+  height: calc(25 * var(--px));
+  margin: 0 var(--space-1);
+  background: var(--color-border);
 }
 
 .expand {

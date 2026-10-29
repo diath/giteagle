@@ -145,6 +145,15 @@ export interface PickTarget {
  */
 export type RevertMode = 'newCommit' | 'workingTree'
 
+export interface RewritableCommit {
+  id: string
+  shortId: string
+  subject: string
+  /** The full message, for editing. */
+  message: string
+  authorTime: number
+}
+
 export type EntryKind = 'directory' | 'file' | 'symlink' | 'submodule'
 
 export interface DirectoryEntry {
