@@ -97,6 +97,10 @@ const roles = {
   statusRenamed: accents.blue.base,
   statusTypeChange: accents.purple.base,
   statusConflicted: accents.orange.bright,
+  statusUntracked: accents.teal.base,
+
+  pending: accents.yellow.bright,
+  pendingMuted: accents.yellow.muted,
 
   diffAddedBg: '#1f2a19',
   diffAddedWord: '#36492a',

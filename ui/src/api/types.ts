@@ -164,6 +164,31 @@ export interface DiffStats {
   deletions: number
 }
 
+/** A partly staged file counts as both staged and unstaged. */
+export interface PendingSummary {
+  staged: number
+  unstaged: number
+  untracked: number
+  conflicted: number
+  additions: number
+  deletions: number
+}
+
+export interface PendingFile {
+  path: string
+  staged: boolean
+  unstaged: boolean
+  untracked: boolean
+  conflicted: boolean
+}
+
+export interface PendingChanges {
+  summary: PendingSummary
+  states: PendingFile[]
+  stats: DiffStats
+  files: FileDiff[]
+}
+
 export interface ParentRef {
   id: string
   shortId: string

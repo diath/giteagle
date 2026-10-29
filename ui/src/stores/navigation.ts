@@ -4,6 +4,7 @@ export type View =
   | { kind: 'main' }
   | { kind: 'fileHistory'; path: string }
   | { kind: 'commit'; id: string; fromFile: string | null }
+  | { kind: 'pending' }
 
 export type MainTab = 'commits' | 'files'
 
@@ -20,6 +21,10 @@ export const navigation = reactive({
 
 export function openCommit(id: string, fromFile: string | null = null): void {
   navigation.stack.push({ kind: 'commit', id, fromFile })
+}
+
+export function openPendingChanges(): void {
+  navigation.stack.push({ kind: 'pending' })
 }
 
 export function openFileHistory(path: string): void {

@@ -222,6 +222,47 @@ input {
   color: var(--color-fg-faint);
 }
 
+/* Labels and values above a diff, with a rule underneath. */
+.detail-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-4);
+  margin: 0 0 var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-small);
+}
+
+.detail-list dt {
+  color: var(--color-fg-faint);
+}
+
+.detail-list dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+/* The states of an uncommitted file, named as in utils/pending.ts. */
+.state-staged {
+  color: var(--color-status-staged);
+}
+
+.state-unstaged {
+  color: var(--color-status-modified);
+}
+
+.state-untracked {
+  color: var(--color-status-untracked);
+}
+
+.state-conflicted {
+  color: var(--color-status-conflicted);
+}
+
 .ellipsis {
   overflow: hidden;
   text-overflow: ellipsis;

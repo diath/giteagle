@@ -13,6 +13,8 @@ import type {
   HistoryCursor,
   HistoryPage,
   Overview,
+  PendingChanges,
+  PendingSummary,
   StatusEntry,
 } from './types'
 
@@ -32,6 +34,8 @@ export const api = {
   searchFiles: (path: string, query: string) =>
     invoke<FileSearchResult>('search_files', { path, query }),
   workingTreeStatus: () => invoke<StatusEntry[]>('get_working_tree_status'),
+  pendingSummary: () => invoke<PendingSummary>('get_pending_summary'),
+  pendingChanges: () => invoke<PendingChanges>('get_pending_changes'),
   branches: () => invoke<BranchList>('list_branches'),
   switchBranch: (name: string, isRemote: boolean) =>
     invoke<string>('switch_branch', { name, isRemote }),

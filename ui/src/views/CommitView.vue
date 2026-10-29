@@ -94,7 +94,7 @@ onMounted(async () => {
     >
       <template #header>
         <header class="commit-header">
-          <dl class="meta">
+          <dl class="detail-list">
             <dt>Commit</dt>
             <dd>
               <span class="hash commit-hash" :title="details.id">{{ details.shortId }}</span>
@@ -253,29 +253,6 @@ onMounted(async () => {
   gap: var(--space-3);
   color: var(--color-fg);
   overflow-wrap: anywhere;
-}
-
-.meta {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  align-items: baseline;
-  gap: var(--space-1) var(--space-4);
-  margin: 0 0 var(--space-4);
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  font-size: var(--font-size-small);
-}
-
-.meta dt {
-  color: var(--color-fg-faint);
-}
-
-.meta dd {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
 }
 
 .commit-hash {

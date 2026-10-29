@@ -11,6 +11,7 @@ import { applyWorkingTreeStatus, refreshWorkingTree } from './stores/workingTree
 import CommitView from './views/CommitView.vue'
 import FileHistoryView from './views/FileHistoryView.vue'
 import MainView from './views/MainView.vue'
+import PendingChangesView from './views/PendingChangesView.vue'
 
 /** The "back" button found on many mice. */
 const MOUSE_BACK_BUTTON = 3
@@ -32,6 +33,8 @@ function viewKey(index: number): string {
       return `${index}:history:${view.path}`
     case 'commit':
       return `${index}:commit:${view.id}`
+    case 'pending':
+      return `${index}:pending`
   }
   return String(index)
 }
@@ -82,6 +85,7 @@ onBeforeUnmount(() => {
         :path="view.path"
         :active="index === navigation.stack.length - 1"
       />
+      <PendingChangesView v-else-if="view.kind === 'pending'" />
       <CommitView v-else :id="view.id" :from-file="view.fromFile" />
     </div>
   </div>
