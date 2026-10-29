@@ -15,6 +15,7 @@ pub mod diff;
 pub mod files;
 pub mod history;
 pub mod overview;
+pub mod pending;
 pub mod search;
 pub mod snapshot;
 pub mod status;

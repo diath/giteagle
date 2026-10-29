@@ -38,6 +38,8 @@ pub fn run(repository: Repository) {
             commands::files::directory_last_commits,
             commands::files::search_files,
             commands::files::get_working_tree_status,
+            commands::pending::get_pending_summary,
+            commands::pending::get_pending_changes,
             commands::branches::list_branches,
             commands::branches::switch_branch,
             commands::branches::get_delete_info,

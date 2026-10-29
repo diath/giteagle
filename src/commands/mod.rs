@@ -11,6 +11,7 @@ pub mod branches;
 pub mod commit;
 pub mod files;
 pub mod history;
+pub mod pending;
 pub mod repository;
 pub mod sync;
 
