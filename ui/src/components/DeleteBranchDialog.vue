@@ -6,6 +6,7 @@ import { repo } from '../stores/repo'
 import { showToast } from '../stores/toasts'
 import { useEscape } from '../utils/escape'
 import AppIcon from './AppIcon.vue'
+import TypeToConfirm from './TypeToConfirm.vue'
 
 const props = defineProps<{ name: string }>()
 const emit = defineEmits<{ close: []; deleted: [] }>()
@@ -15,7 +16,7 @@ const loadError = ref<string | null>(null)
 const alsoRemote = ref(false)
 const confirmation = ref('')
 const working = ref(false)
-const input = ref<HTMLInputElement | null>(null)
+const confirmField = ref<InstanceType<typeof TypeToConfirm> | null>(null)
 
 const expected = computed(() => `delete ${props.name}`)
 const confirmed = computed(() => confirmation.value === expected.value)
@@ -52,7 +53,7 @@ async function confirm(): Promise<void> {
 
 onMounted(async () => {
   await nextTick()
-  input.value?.focus()
+  confirmField.value?.focus()
   try {
     info.value = await api.deleteInfo(props.name)
   } catch (error) {
@@ -83,20 +84,7 @@ onMounted(async () => {
         <span>Also delete <strong>{{ info.remoteBranch.displayName }}</strong> on the remote</span>
       </label>
 
-      <label class="confirm">
-        <span class="muted">
-          Type <code>{{ expected }}</code> to confirm
-        </span>
-        <input
-          ref="input"
-          v-model="confirmation"
-          class="text-input"
-          type="text"
-          spellcheck="false"
-          autocomplete="off"
-          :disabled="working"
-        />
-      </label>
+      <TypeToConfirm ref="confirmField" v-model="confirmation" :expected="expected" :disabled="working" />
 
       <div class="actions">
         <button class="button" type="button" :disabled="working" @click="emit('close')">Cancel</button>
@@ -166,20 +154,6 @@ onMounted(async () => {
 
 .checkbox input {
   accent-color: var(--color-danger);
-}
-
-.confirm {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-code {
-  padding: 0 var(--space-1);
-  border-radius: var(--radius);
-  background: var(--color-bg-active);
-  color: var(--color-fg-strong);
-  font: inherit;
 }
 
 .actions {

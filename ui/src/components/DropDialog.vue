@@ -5,6 +5,7 @@ import { api, errorMessage, type CommitSummary } from '../api'
 import { refreshEverything, repo } from '../stores/repo'
 import { showToast } from '../stores/toasts'
 import ConfirmDialog from './ConfirmDialog.vue'
+import TypeToConfirm from './TypeToConfirm.vue'
 
 const props = defineProps<{ commit: CommitSummary }>()
 const emit = defineEmits<{ close: [] }>()
@@ -81,19 +82,7 @@ onMounted(async () => {
     <p v-else class="muted">{{ description }}</p>
 
     <template v-if="!loadError" #confirmation>
-      <label class="confirm">
-        <span class="muted">
-          Type <code>{{ expected }}</code> to confirm
-        </span>
-        <input
-          v-model="confirmation"
-          class="text-input"
-          type="text"
-          spellcheck="false"
-          autocomplete="off"
-          :disabled="working"
-        />
-      </label>
+      <TypeToConfirm v-model="confirmation" :expected="expected" :disabled="working" />
     </template>
   </ConfirmDialog>
 </template>
@@ -106,19 +95,5 @@ onMounted(async () => {
 .error {
   color: var(--color-danger-bright);
   white-space: pre-wrap;
-}
-
-.confirm {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-code {
-  padding: 0 var(--space-1);
-  border-radius: var(--radius);
-  background: var(--color-bg-active);
-  color: var(--color-fg-strong);
-  font: inherit;
 }
 </style>
