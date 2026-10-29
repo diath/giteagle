@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, provide, ref, shallowRef } from 'vue'
+import { computed, nextTick, onMounted, ref, shallowRef } from 'vue'
 
 import { api, errorMessage, type CommitDetails } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import AvatarStack from '../components/AvatarStack.vue'
-import DiffFile, { DIFF_SCROLLER } from '../components/DiffFile.vue'
+import DiffBrowser from '../components/DiffBrowser.vue'
 import { goBack, openCommit } from '../stores/navigation'
 import { showToast } from '../stores/toasts'
 import { formatAbsolute, formatRelative } from '../utils/dates'
@@ -14,11 +14,7 @@ const props = defineProps<{ id: string; fromFile: string | null }>()
 
 const details = shallowRef<CommitDetails | null>(null)
 const error = ref<string | null>(null)
-const scroller = ref<HTMLElement | null>(null)
-// Component instances, not elements: a child's own template ref is only
-// filled in after this function ref runs, so elements are read on use.
-const fileComponents: (InstanceType<typeof DiffFile> | null)[] = []
-const currentFile = ref(0)
+const browser = ref<InstanceType<typeof DiffBrowser> | null>(null)
 
 useEscape(goBack)
 
@@ -43,46 +39,6 @@ const fromFileIndex = computed(() => {
   )
 })
 
-provide(DIFF_SCROLLER, scroller)
-
-function setFileComponent(index: number, component: unknown): void {
-  fileComponents[index] = component as InstanceType<typeof DiffFile> | null
-}
-
-// The diff area is the sections' offset parent, so offsetTop is already
-// relative to its scroll position.
-function scrollToFile(index: number): void {
-  const element = fileComponents[index]?.element
-  if (element && scroller.value) {
-    scroller.value.scrollTo({ top: element.offsetTop })
-    currentFile.value = index
-  }
-}
-
-/** Marks the file whose header is at the top of the diff as current. */
-function trackCurrentFile(): void {
-  if (!scroller.value) {
-    return
-  }
-  const top = scroller.value.scrollTop + 1
-  let index = 0
-  fileComponents.forEach((component, elementIndex) => {
-    const element = component?.element
-    if (element && element.offsetTop <= top) {
-      index = elementIndex
-    }
-  })
-  currentFile.value = index
-}
-
-function baseName(path: string): string {
-  return path.slice(path.lastIndexOf('/') + 1)
-}
-
-function directoryName(path: string): string {
-  return path.slice(0, Math.max(path.lastIndexOf('/'), 0))
-}
-
 async function copyId(): Promise<void> {
   if (!details.value) {
     return
@@ -104,7 +60,7 @@ onMounted(async () => {
   }
   await nextTick()
   if (fromFileIndex.value !== -1) {
-    scrollToFile(fromFileIndex.value)
+    browser.value?.scrollToFile(fromFileIndex.value)
   }
 })
 </script>
@@ -128,32 +84,15 @@ onMounted(async () => {
     <p v-if="error" class="error">{{ error }}</p>
     <p v-else-if="!details" class="loading faint">Loading commit…</p>
 
-    <div v-else class="layout">
-      <aside class="file-list" aria-label="Changed files">
-        <div class="file-list-header faint">
-          {{ details.stats.filesChanged }} {{ details.stats.filesChanged === 1 ? 'file' : 'files' }} changed
-        </div>
-        <button
-          v-for="(file, index) in details.files"
-          :key="file.path + index"
-          class="file-entry"
-          :class="{ current: index === currentFile, 'from-file-entry': index === fromFileIndex }"
-          type="button"
-          :title="file.oldPath ? `${file.oldPath} → ${file.path}` : file.path"
-          @click="scrollToFile(index)"
-        >
-          <span class="file-path ellipsis">
-            <span class="file-name">{{ baseName(file.path) }}</span>
-            <span class="file-directory faint">{{ directoryName(file.path) }}</span>
-          </span>
-          <span class="file-delta">
-            (<span class="additions">+{{ file.additions }}</span>
-            <span class="deletions">−{{ file.deletions }}</span>)
-          </span>
-        </button>
-      </aside>
-
-      <div ref="scroller" class="diff-area" @scroll.passive="trackCurrentFile">
+    <DiffBrowser
+      v-else
+      ref="browser"
+      :files="details.files"
+      :stats="details.stats"
+      :highlighted="fromFileIndex"
+      empty-text="This commit changes no files."
+    >
+      <template #header>
         <header class="commit-header">
           <dl class="meta">
             <dt>Commit</dt>
@@ -209,17 +148,8 @@ onMounted(async () => {
             </li>
           </ul>
         </header>
-
-        <p v-if="details.files.length === 0" class="empty-state">This commit changes no files.</p>
-        <DiffFile
-          v-for="(file, index) in details.files"
-          :ref="(component) => setFileComponent(index, component)"
-          :key="file.path + index"
-          :file="file"
-          :highlighted="index === fromFileIndex"
-        />
-      </div>
-    </div>
+      </template>
+    </DiffBrowser>
   </div>
 </template>
 
@@ -278,90 +208,12 @@ onMounted(async () => {
   padding: var(--space-4);
 }
 
-.layout {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-}
-
-.file-list {
-  flex: none;
-  width: clamp(calc(275 * var(--px)), 24%, calc(450 * var(--px)));
-  overflow-y: auto;
-  border-right: 1px solid var(--color-border);
-  background: var(--color-bg-panel);
-}
-
-.file-list-header {
-  padding: var(--space-3) var(--space-3) var(--space-2);
-  font-size: var(--font-size-small);
-}
-
-.file-entry {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  width: 100%;
-  padding: calc(4 * var(--px)) var(--space-3);
-  border: none;
-  border-left: calc(3 * var(--px)) solid transparent;
-  background: transparent;
-  font-size: var(--font-size-small);
-  text-align: left;
-  cursor: pointer;
-  transition: background-color var(--transition);
-}
-
-.file-entry:hover {
-  background: var(--color-bg-hover);
-}
-
-.file-entry.current {
-  border-left-color: var(--color-accent);
-  background: var(--color-bg-raised);
-}
-
-.file-entry.from-file-entry .file-name {
-  color: var(--color-accent-bright);
-}
-
-.file-entry:focus-visible {
-  outline-offset: -2px;
-}
-
-.file-path {
-  flex: 1;
-  min-width: 0;
-}
-
-.file-name {
-  color: var(--color-fg);
-}
-
-/* A margin, because Vue drops a space that starts an element. */
-.file-directory {
-  margin-left: 1ch;
-}
-
-.file-delta {
-  flex: none;
-  color: var(--color-fg-faint);
-}
-
 .additions {
   color: var(--color-diff-added-sign);
 }
 
 .deletions {
   color: var(--color-diff-removed-sign);
-}
-
-.diff-area {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  overflow-y: auto;
-  padding: 0 var(--space-4) var(--space-4);
 }
 
 .commit-header {
