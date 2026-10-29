@@ -1,12 +1,54 @@
-//! The commit search query language: plain words plus `key:value` tokens,
-//! where values may be double-quoted to include spaces.
+//! The commit search query language: plain words plus `tag:value` tokens,
+//! where values may be double-quoted to include spaces. The tags are listed
+//! in `SEARCH_TAGS`, which also feeds the search help in the UI.
 
 use std::fmt;
+
+use serde::Serialize;
 
 use super::authors::Person;
 
 const SECONDS_PER_HOUR: i64 = 60 * 60;
 const SECONDS_PER_DAY: i64 = 24 * SECONDS_PER_HOUR;
+
+/// Every tag the query language understands, in the order the help shows
+/// them.
+pub const SEARCH_TAGS: &[SearchTag] = &[
+    SearchTag {
+        name: "author",
+        description: "Commits by an author or co-author whose name or email contains the text. \
+            A full email address, or a comma-separated list of them, matches those emails exactly.",
+        example: "author:\"Jane Doe\"",
+        parse: author_term,
+    },
+    SearchTag {
+        name: "message",
+        description: "Commits whose message contains the text.",
+        example: "message:\"fix crash\"",
+        parse: message_term,
+    },
+    SearchTag {
+        name: "since",
+        description: "Commits authored within the given time, in hours (h), days (d), \
+            weeks (w), months (m) or years (y).",
+        example: "since:7d",
+        parse: since_term,
+    },
+];
+
+/// A `tag:value` filter. Values reach `parse` with their quotes removed.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchTag {
+    /// Lowercase ASCII letters only, since the tokenizer reads nothing else
+    /// as a tag.
+    pub name: &'static str,
+    pub description: &'static str,
+    pub example: &'static str,
+    /// Returns `None` for a value that is still empty while the user types.
+    #[serde(skip)]
+    parse: fn(&str) -> Result<Option<Term>, ParseError>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Term {
@@ -137,15 +179,15 @@ fn tokenize(input: &str) -> Vec<Token> {
 
 fn token_to_term(token: Token) -> Result<Option<Term>, ParseError> {
     let Some(key) = token.key else {
-        return Ok(text_term(token.value, Term::Text));
+        return Ok(text_term(&token.value, Term::Text));
     };
-    match key.to_ascii_lowercase().as_str() {
-        "author" => Ok(author_term(token.value)),
-        "message" => Ok(text_term(token.value, Term::Message)),
-        "since" if token.value.trim().is_empty() => Ok(None),
-        "since" => parse_relative_age(&token.value).map(|seconds| Some(Term::Since(seconds))),
+    match SEARCH_TAGS
+        .iter()
+        .find(|tag| tag.name.eq_ignore_ascii_case(&key))
+    {
+        Some(tag) => (tag.parse)(&token.value),
         // Unknown keys are ordinary text, so searching for "fix:" still works.
-        _ => Ok(text_term(format!("{key}:{}", token.value), Term::Text)),
+        None => Ok(text_term(&format!("{key}:{}", token.value), Term::Text)),
     }
 }
 
@@ -153,16 +195,27 @@ fn token_to_term(token: Token) -> Result<Option<Term>, ParseError> {
 /// counts as emails once any part is a whole address, since Git allows
 /// emails that aren't. Anything else is a partial search of names and
 /// emails.
-fn author_term(value: String) -> Option<Term> {
+fn author_term(value: &str) -> Result<Option<Term>, ParseError> {
     let emails: Vec<String> = value
         .split(',')
         .map(|part| part.trim().to_lowercase())
         .filter(|part| !part.is_empty())
         .collect();
     if emails.iter().any(|email| is_email_address(email)) {
-        return Some(Term::AuthorEmails(emails));
+        return Ok(Some(Term::AuthorEmails(emails)));
     }
-    text_term(value, Term::Author)
+    Ok(text_term(value, Term::Author))
+}
+
+fn message_term(value: &str) -> Result<Option<Term>, ParseError> {
+    Ok(text_term(value, Term::Message))
+}
+
+fn since_term(value: &str) -> Result<Option<Term>, ParseError> {
+    if value.trim().is_empty() {
+        return Ok(None);
+    }
+    parse_relative_age(value).map(|seconds| Some(Term::Since(seconds)))
 }
 
 /// Whole addresses have text on both sides of the `@`; anything less, such
@@ -173,7 +226,7 @@ fn is_email_address(value: &str) -> bool {
         .is_some_and(|(local, domain)| !local.is_empty() && !domain.is_empty())
 }
 
-fn text_term(value: String, make: fn(String) -> Term) -> Option<Term> {
+fn text_term(value: &str, make: fn(String) -> Term) -> Option<Term> {
     let value = value.trim().to_lowercase();
     (!value.is_empty()).then(|| make(value))
 }
@@ -277,6 +330,37 @@ mod tests {
                 Term::Author("jane@".into())
             ]
         );
+    }
+
+    #[test]
+    fn tag_names_are_unique_lowercase_words() {
+        for (index, tag) in SEARCH_TAGS.iter().enumerate() {
+            assert!(
+                !tag.name.is_empty() && tag.name.chars().all(|letter| letter.is_ascii_lowercase()),
+                "{} would not be read as a tag",
+                tag.name
+            );
+            assert!(
+                SEARCH_TAGS[..index]
+                    .iter()
+                    .all(|other| other.name != tag.name),
+                "{} is listed twice",
+                tag.name
+            );
+        }
+    }
+
+    #[test]
+    fn every_tag_example_parses_into_one_term_of_that_tag() {
+        for tag in SEARCH_TAGS {
+            let value = tag
+                .example
+                .strip_prefix(&format!("{}:", tag.name))
+                .unwrap_or_else(|| panic!("{} does not start with its tag", tag.example));
+            let expected = (tag.parse)(value.trim_matches('"')).expect("example should parse");
+            assert!(expected.is_some(), "{} is empty", tag.example);
+            assert_eq!(parse(tag.example), Vec::from_iter(expected));
+        }
     }
 
     #[test]
