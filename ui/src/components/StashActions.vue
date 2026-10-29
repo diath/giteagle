@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import { api, errorMessage, type StashSummary } from '../api'
 import type { IconName } from '../icons/paths'
@@ -10,6 +10,7 @@ import { pendingCounts } from '../utils/pending'
 import { stashName } from '../utils/stashes'
 import AppIcon from './AppIcon.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
+import TypeToConfirm from './TypeToConfirm.vue'
 
 type Action = 'apply' | 'pop' | 'drop'
 
@@ -50,9 +51,18 @@ const props = defineProps<{ stash: StashSummary }>()
 const emit = defineEmits<{ done: [action: Action] }>()
 
 const confirming = ref<Action | null>(null)
+const confirmation = ref('')
 const working = ref(false)
 
 const name = computed(() => stashName(props.stash.index))
+
+// Deleting can't be undone, so it waits until the stash's name is typed.
+const expected = computed(() => `delete ${name.value}`)
+const confirmed = computed(() => confirming.value !== 'drop' || confirmation.value === expected.value)
+
+watch(confirming, () => {
+  confirmation.value = ''
+})
 
 const contents = computed(() => {
   const changes = props.stash.changes
@@ -64,7 +74,7 @@ const contents = computed(() => {
 
 async function confirm(): Promise<void> {
   const action = confirming.value
-  if (action === null || working.value) {
+  if (action === null || !confirmed.value || working.value) {
     return
   }
   working.value = true
@@ -130,6 +140,7 @@ async function confirm(): Promise<void> {
       :confirm-label="ACTIONS[confirming].verb"
       :working-label="ACTIONS[confirming].working"
       :working="working"
+      :disabled="!confirmed"
       :danger="confirming === 'drop'"
       :warning="confirming === 'drop' ? 'The stashed changes will be lost for good.' : null"
       @confirm="confirm"
@@ -147,6 +158,10 @@ async function confirm(): Promise<void> {
           Staged changes come back unstaged, except for new files.
         </template>
       </p>
+
+      <template v-if="confirming === 'drop'" #confirmation>
+        <TypeToConfirm v-model="confirmation" :expected="expected" :disabled="working" />
+      </template>
     </ConfirmDialog>
   </div>
 </template>
