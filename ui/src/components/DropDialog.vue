@@ -12,7 +12,11 @@ const emit = defineEmits<{ close: [] }>()
 /** How many commits come after this one and are recreated without it, once checked. */
 const later = ref<number | null>(null)
 const loadError = ref<string | null>(null)
+const confirmation = ref('')
 const working = ref(false)
+
+const expected = computed(() => `delete ${props.commit.shortId}`)
+const confirmed = computed(() => confirmation.value === expected.value)
 
 const branch = computed(() => repo.overview?.head.name ?? 'the branch')
 
@@ -27,7 +31,7 @@ const description = computed(() => {
 })
 
 async function confirm(): Promise<void> {
-  if (later.value === null || working.value) {
+  if (later.value === null || !confirmed.value || working.value) {
     return
   }
   working.value = true
@@ -65,7 +69,7 @@ onMounted(async () => {
     confirm-label="Drop"
     working-label="Dropping…"
     :working="working"
-    :disabled="later === null"
+    :disabled="later === null || !confirmed"
     danger
     :warning="later === null ? null : 'The commit and its changes will be lost for good.'"
     @confirm="confirm"
@@ -75,6 +79,22 @@ onMounted(async () => {
     <p v-if="loadError" class="error">{{ loadError }}</p>
     <p v-else-if="later === null" class="faint">Checking the commit…</p>
     <p v-else class="muted">{{ description }}</p>
+
+    <template v-if="!loadError" #confirmation>
+      <label class="confirm">
+        <span class="muted">
+          Type <code>{{ expected }}</code> to confirm
+        </span>
+        <input
+          v-model="confirmation"
+          class="text-input"
+          type="text"
+          spellcheck="false"
+          autocomplete="off"
+          :disabled="working"
+        />
+      </label>
+    </template>
   </ConfirmDialog>
 </template>
 
@@ -86,5 +106,19 @@ onMounted(async () => {
 .error {
   color: var(--color-danger-bright);
   white-space: pre-wrap;
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+code {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius);
+  background: var(--color-bg-active);
+  color: var(--color-fg-strong);
+  font: inherit;
 }
 </style>

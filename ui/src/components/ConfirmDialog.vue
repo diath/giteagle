@@ -25,7 +25,11 @@ const props = withDefaults(
 
 const emit = defineEmits<{ confirm: []; close: [] }>()
 
-defineSlots<{ default?: () => unknown }>()
+defineSlots<{
+  default?: () => unknown
+  /** Comes after the warning, e.g. a field to type a confirmation into. */
+  confirmation?: () => unknown
+}>()
 
 const form = ref<HTMLFormElement | null>(null)
 
@@ -73,6 +77,8 @@ onMounted(async () => {
           <AppIcon name="warning" />
           <span>{{ warning }}</span>
         </p>
+
+        <slot name="confirmation" />
 
         <div class="actions">
           <button class="button" type="button" :disabled="working" @click="emit('close')">Cancel</button>
