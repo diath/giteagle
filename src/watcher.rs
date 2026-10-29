@@ -1,6 +1,7 @@
 //! Polls the repository for changes made outside GitEagle. Ref changes are
-//! announced so the UI can offer a reload; working tree status changes and
-//! the summary of uncommitted changes are pushed straight to the UI.
+//! announced so the UI can offer a reload; working tree status changes, the
+//! summary of uncommitted changes and changes to the stash are pushed
+//! straight to the UI.
 
 use std::fs;
 use std::path::Path;
@@ -14,12 +15,14 @@ use tauri::{AppHandle, Emitter};
 use crate::app_state::AppState;
 use crate::git::pending::pending_summary;
 use crate::git::snapshot::fingerprint;
+use crate::git::stashes::stash_ids;
 use crate::git::status::{ChangedPath, changed_paths, tracked_changes};
 
 const POLL_INTERVAL: Duration = Duration::from_secs(3);
 pub const REPO_CHANGED_EVENT: &str = "repo-changed";
 pub const WORKING_TREE_CHANGED_EVENT: &str = "working-tree-changed";
 pub const PENDING_CHANGED_EVENT: &str = "pending-changed";
+pub const STASHES_CHANGED_EVENT: &str = "stashes-changed";
 
 /// What the summary of uncommitted changes depends on: HEAD, which paths
 /// changed and how, and when each was last written. Lines are only counted
@@ -78,6 +81,7 @@ fn watch(app: &AppHandle, state: &AppState) {
     let mut last_announced = None;
     let mut last_status = None;
     let mut last_pending_fingerprint = None;
+    let mut last_stashes = stash_ids(&repository).ok();
     loop {
         thread::sleep(POLL_INTERVAL);
 
@@ -92,6 +96,13 @@ fn watch(app: &AppHandle, state: &AppState) {
                     last_announced = Some(current);
                 }
             }
+        }
+
+        if let Ok(stashes) = stash_ids(&repository)
+            && last_stashes.as_ref() != Some(&stashes)
+        {
+            let _ = app.emit(STASHES_CHANGED_EVENT, ());
+            last_stashes = Some(stashes);
         }
 
         let Ok(changed) = changed_paths(&repository) else {
