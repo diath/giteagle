@@ -72,6 +72,13 @@ impl AppState {
         task(&lock(&self.repository))
     }
 
+    /// Runs a slow read, such as a scan of the working tree, on a handle of
+    /// its own, so commands that hold the shared one only briefly, like
+    /// opening a commit, don't queue behind it.
+    pub fn with_own_repo<T>(&self, task: impl FnOnce(&Repository) -> AppResult<T>) -> AppResult<T> {
+        task(&Repository::open(&self.workdir)?)
+    }
+
     /// Runs an operation of our own that changes refs (switch, pull, delete…)
     /// and records the result as the new baseline. The baseline stays locked
     /// throughout so the watcher can't observe the half-finished change.

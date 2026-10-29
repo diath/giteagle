@@ -56,7 +56,7 @@ pub async fn search_files(
 #[tauri::command]
 pub async fn get_working_tree_status(state: SharedState<'_>) -> AppResult<Vec<StatusEntry>> {
     blocking(&state, |state| {
-        state.with_repo(|repository| Ok(working_tree_status(repository)?))
+        state.with_own_repo(|repository| Ok(working_tree_status(repository)?))
     })
     .await
 }

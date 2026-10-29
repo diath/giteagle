@@ -6,12 +6,12 @@ use crate::git::status::changed_paths;
 #[tauri::command]
 pub async fn get_pending_summary(state: SharedState<'_>) -> AppResult<PendingSummary> {
     blocking(&state, |state| {
-        state.with_repo(|repository| pending_summary(repository, &changed_paths(repository)?))
+        state.with_own_repo(|repository| pending_summary(repository, &changed_paths(repository)?))
     })
     .await
 }
 
 #[tauri::command]
 pub async fn get_pending_changes(state: SharedState<'_>) -> AppResult<PendingChanges> {
-    blocking(&state, |state| state.with_repo(pending_changes)).await
+    blocking(&state, |state| state.with_own_repo(pending_changes)).await
 }
