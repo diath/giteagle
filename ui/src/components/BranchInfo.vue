@@ -3,15 +3,10 @@ import { computed } from 'vue'
 
 import { api } from '../api'
 import { repo } from '../stores/repo'
-import { joinNames } from '../utils/authors'
 import { formatRelative } from '../utils/dates'
 import AppIcon from './AppIcon.vue'
-import AvatarStack from './AvatarStack.vue'
-
-defineEmits<{ openCommit: [id: string] }>()
 
 const overview = computed(() => repo.overview)
-const tip = computed(() => overview.value?.head.tip ?? null)
 
 const commitCountLabel = computed(() => {
   const count = overview.value?.commitCount ?? 0
@@ -46,22 +41,6 @@ function fetchNow(): void {
 
 <template>
   <div v-if="overview" class="branch-info">
-    <button
-      v-if="tip"
-      class="latest"
-      type="button"
-      title="Open the latest commit"
-      @click="$emit('openCommit', tip.id)"
-    >
-      <AvatarStack :authors="tip.authors" :size="20" />
-      <span class="hash">{{ tip.shortId }}</span>
-      <span class="subject ellipsis">{{ tip.subject }}</span>
-      <span class="faint ellipsis author">{{ joinNames(tip.authors) }}</span>
-      <span class="faint date">{{ formatRelative(tip.authorTime) }}</span>
-    </button>
-    <span v-else class="faint">No commits yet</span>
-
-    <span class="separator" aria-hidden="true"></span>
     <span class="item">{{ commitCountLabel }}</span>
     <template v-if="overview.isShallow">
       <span class="item faint">(shallow)</span>
@@ -119,39 +98,6 @@ function fetchNow(): void {
   white-space: nowrap;
 }
 
-.latest {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-  flex: 0 1 auto;
-  overflow: hidden;
-  padding: calc(3 * var(--px)) var(--space-2);
-  margin-left: calc(var(--space-2) * -1);
-  border: none;
-  border-radius: var(--radius);
-  background: transparent;
-  cursor: pointer;
-  transition: background-color var(--transition);
-}
-
-.latest:hover {
-  background: var(--color-bg-hover);
-}
-
-.subject {
-  min-width: 0;
-}
-
-.author {
-  min-width: 0;
-  max-width: 18ch;
-}
-
-.date {
-  flex: none;
-}
-
 .separator {
   flex: none;
   width: 1px;
@@ -163,11 +109,9 @@ function fetchNow(): void {
   flex: none;
 }
 
-/* The branch name is already in the bar above, so a long upstream gives
-   way to the latest commit. */
+/* Everything else keeps its width, so a narrow window cuts the upstream. */
 .upstream {
   min-width: 0;
-  max-width: 24ch;
 }
 
 .ahead {

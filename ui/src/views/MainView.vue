@@ -6,7 +6,7 @@ import BranchInfo from '../components/BranchInfo.vue'
 import BranchSwitcher from '../components/BranchSwitcher.vue'
 import CommitsTab from '../components/CommitsTab.vue'
 import FilesTab from '../components/FilesTab.vue'
-import { navigation, openCommit, type MainTab } from '../stores/navigation'
+import { navigation, type MainTab } from '../stores/navigation'
 
 defineProps<{ active: boolean }>()
 
@@ -21,7 +21,7 @@ const TABS: { id: MainTab; label: string }[] = [
 <template>
   <div class="main-view">
     <BranchBar @open-switcher="switcherOpen = true" />
-    <BranchInfo @open-commit="openCommit" />
+    <BranchInfo />
 
     <nav class="tabs" role="tablist">
       <button
