@@ -3,8 +3,8 @@ use tauri::AppHandle;
 use super::{SharedState, blocking};
 use crate::app_state::{FetchStatus, lock};
 use crate::error::AppResult;
-use crate::fetcher;
 use crate::git::overview::{Overview, overview};
+use crate::{fetcher, file_manager};
 
 #[tauri::command]
 pub async fn get_overview(state: SharedState<'_>) -> AppResult<Overview> {
@@ -28,4 +28,9 @@ pub async fn fetch_now(app: AppHandle, state: SharedState<'_>) -> AppResult<()> 
         Ok(())
     })
     .await
+}
+
+#[tauri::command]
+pub async fn open_workdir(state: SharedState<'_>) -> AppResult<()> {
+    file_manager::open(&state.workdir)
 }

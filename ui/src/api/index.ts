@@ -23,6 +23,7 @@ export const api = {
   reload: () => invoke<void>('reload'),
   fetchStatus: () => invoke<FetchStatus>('get_fetch_status'),
   fetchNow: () => invoke<void>('fetch_now'),
+  openWorkdir: () => invoke<void>('open_workdir'),
   history: (cursor: HistoryCursor | null, query: string) =>
     invoke<HistoryPage>('load_history', { cursor, query }),
   fileHistory: (path: string, cursor: HistoryCursor | null) =>

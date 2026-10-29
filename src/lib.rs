@@ -10,6 +10,7 @@ mod commands;
 pub mod error;
 pub mod external_git;
 mod fetcher;
+mod file_manager;
 pub mod git;
 mod watcher;
 
@@ -31,6 +32,7 @@ pub fn run(repository: Repository) {
             commands::repository::reload,
             commands::repository::get_fetch_status,
             commands::repository::fetch_now,
+            commands::repository::open_workdir,
             commands::history::load_history,
             commands::history::load_file_history,
             commands::commit::get_commit,
