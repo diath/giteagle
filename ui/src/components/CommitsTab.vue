@@ -6,17 +6,20 @@ import { navigation, openCommit, openPendingChanges } from '../stores/navigation
 import { repo } from '../stores/repo'
 import { pendingSummary } from '../stores/workingTree'
 import { hasPendingChanges } from '../utils/pending'
+import AppIcon from './AppIcon.vue'
 import CommitList from './CommitList.vue'
 import PendingEntry from './PendingEntry.vue'
 import SearchField from './SearchField.vue'
+import SearchHelpDialog from './SearchHelpDialog.vue'
 
 const SEARCH_DELAY_MS = 250
-const PLACEHOLDER = 'Search commits - author:"name" message:"text" since:-7d'
+const PLACEHOLDER = 'Search commits… (try: author:"name", message:"text", since:7d)'
 
 defineProps<{ active: boolean }>()
 
 const query = ref('')
 const appliedQuery = ref('')
+const helpOpen = ref(false)
 let searchTimer: number | undefined
 
 watch(query, (value) => {
@@ -58,7 +61,10 @@ const emptyText = computed(() => {
 <template>
   <div class="commits-tab">
     <div class="toolbar">
-      <SearchField v-model="query" :placeholder="PLACEHOLDER" />
+      <SearchField v-model="query" class="search" :placeholder="PLACEHOLDER" />
+      <button class="icon-button" type="button" title="Search tags" @click="helpOpen = true">
+        <AppIcon name="help" />
+      </button>
     </div>
     <CommitList
       class="list"
@@ -74,6 +80,7 @@ const emptyText = computed(() => {
         <PendingEntry v-if="showPending && pendingSummary" :summary="pendingSummary" @open="openPendingChanges" />
       </template>
     </CommitList>
+    <SearchHelpDialog v-if="helpOpen" @close="helpOpen = false" />
   </div>
 </template>
 
@@ -85,8 +92,16 @@ const emptyText = computed(() => {
 }
 
 .toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--color-border);
+}
+
+.search {
+  flex: 1;
+  min-width: 0;
 }
 
 .list {

@@ -35,6 +35,7 @@ pub fn run(repository: Repository) {
             commands::repository::open_workdir,
             commands::history::load_history,
             commands::history::load_file_history,
+            commands::history::list_search_tags,
             commands::authors::list_authors,
             commands::authors::count_author_lines,
             commands::commit::get_commit,

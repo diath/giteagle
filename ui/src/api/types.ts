@@ -35,6 +35,13 @@ export interface HistoryPage {
   truncated: boolean
 }
 
+/** A `tag:value` filter of the commit search, as listed by the backend. */
+export interface SearchTag {
+  name: string
+  description: string
+  example: string
+}
+
 export interface LineCounts {
   additions: number
   deletions: number

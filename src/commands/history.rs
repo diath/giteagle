@@ -6,7 +6,7 @@ use crate::fetcher::unix_now;
 use crate::git::history::{
     Filter, HistoryCursor, HistoryPage, PAGE_SIZE, load_history as load_page,
 };
-use crate::git::search::Query;
+use crate::git::search::{Query, SEARCH_TAGS, SearchTag};
 
 #[tauri::command]
 pub async fn load_history(
@@ -40,4 +40,9 @@ pub async fn load_file_history(
         })
     })
     .await
+}
+
+#[tauri::command]
+pub fn list_search_tags() -> &'static [SearchTag] {
+    SEARCH_TAGS
 }

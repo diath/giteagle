@@ -16,6 +16,7 @@ import type {
   Overview,
   PendingChanges,
   PendingSummary,
+  SearchTag,
   StatusEntry,
 } from './types'
 
@@ -27,6 +28,7 @@ export const api = {
   openWorkdir: () => invoke<void>('open_workdir'),
   history: (cursor: HistoryCursor | null, query: string) =>
     invoke<HistoryPage>('load_history', { cursor, query }),
+  searchTags: () => invoke<SearchTag[]>('list_search_tags'),
   fileHistory: (path: string, cursor: HistoryCursor | null) =>
     invoke<HistoryPage>('load_file_history', { path, cursor }),
   authors: () => invoke<AuthorList>('list_authors'),
