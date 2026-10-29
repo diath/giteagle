@@ -14,8 +14,8 @@ pub enum Term {
     Text(String),
     /// Matches any author's name or email partially.
     Author(String),
-    /// Matches any author with exactly this email.
-    AuthorEmail(String),
+    /// Matches any author whose email is exactly one of these.
+    AuthorEmails(Vec<String>),
     /// Matches the message only.
     Message(String),
     /// Matches commits authored within this many seconds before now.
@@ -82,10 +82,10 @@ impl Query {
                 author.name.to_lowercase().contains(text)
                     || author.email.to_lowercase().contains(text)
             }),
-            Term::AuthorEmail(email) => candidate
+            Term::AuthorEmails(emails) => candidate
                 .authors
                 .iter()
-                .any(|author| author.email.to_lowercase() == *email),
+                .any(|author| emails.contains(&author.email.to_lowercase())),
             Term::Message(text) => message.contains(text),
             Term::Since(seconds) => candidate.author_time >= now.saturating_sub(*seconds),
         })
@@ -140,16 +140,29 @@ fn token_to_term(token: Token) -> Result<Option<Term>, ParseError> {
         return Ok(text_term(token.value, Term::Text));
     };
     match key.to_ascii_lowercase().as_str() {
-        "author" if is_email_address(token.value.trim()) => {
-            Ok(text_term(token.value, Term::AuthorEmail))
-        }
-        "author" => Ok(text_term(token.value, Term::Author)),
+        "author" => Ok(author_term(token.value)),
         "message" => Ok(text_term(token.value, Term::Message)),
         "since" if token.value.trim().is_empty() => Ok(None),
         "since" => parse_relative_age(&token.value).map(|seconds| Some(Term::Since(seconds))),
         // Unknown keys are ordinary text, so searching for "fix:" still works.
         _ => Ok(text_term(format!("{key}:{}", token.value), Term::Text)),
     }
+}
+
+/// Email addresses, separated by commas, match any of them exactly. A list
+/// counts as emails once any part is a whole address, since Git allows
+/// emails that aren't. Anything else is a partial search of names and
+/// emails.
+fn author_term(value: String) -> Option<Term> {
+    let emails: Vec<String> = value
+        .split(',')
+        .map(|part| part.trim().to_lowercase())
+        .filter(|part| !part.is_empty())
+        .collect();
+    if emails.iter().any(|email| is_email_address(email)) {
+        return Some(Term::AuthorEmails(emails));
+    }
+    text_term(value, Term::Author)
 }
 
 /// Whole addresses have text on both sides of the `@`; anything less, such
@@ -237,7 +250,25 @@ mod tests {
     fn author_values_that_are_email_addresses_match_exactly() {
         assert_eq!(
             parse("author:Jane@Example.com"),
-            vec![Term::AuthorEmail("jane@example.com".into())]
+            vec![Term::AuthorEmails(vec!["jane@example.com".into()])]
+        );
+        assert_eq!(
+            parse("author:\"jane@example.com, Jane@Work.example,\""),
+            vec![Term::AuthorEmails(vec![
+                "jane@example.com".into(),
+                "jane@work.example".into()
+            ])]
+        );
+        assert_eq!(
+            parse("author:\"jane@example.com, jdoe\""),
+            vec![Term::AuthorEmails(vec![
+                "jane@example.com".into(),
+                "jdoe".into()
+            ])]
+        );
+        assert_eq!(
+            parse("author:\"Doe, Jane\""),
+            vec![Term::Author("doe, jane".into())]
         );
         assert_eq!(
             parse("author:@example.com author:jane@"),
@@ -334,6 +365,9 @@ mod tests {
         let matches = |input: &str| Query::parse(input).unwrap().matches(&candidate, 0);
 
         assert!(matches("author:mary.jane@EXAMPLE.com"));
+        assert!(matches(
+            "author:\"jane@example.com, mary.jane@example.com\""
+        ));
         assert!(!matches("author:jane@example.com"));
         assert!(matches("author:jane@"));
         assert!(matches("author:@example.com"));
