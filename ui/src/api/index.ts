@@ -3,6 +3,7 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 
 import type {
   AppError,
+  AuthorList,
   BranchList,
   CommitBrief,
   CommitDetails,
@@ -28,6 +29,8 @@ export const api = {
     invoke<HistoryPage>('load_history', { cursor, query }),
   fileHistory: (path: string, cursor: HistoryCursor | null) =>
     invoke<HistoryPage>('load_file_history', { path, cursor }),
+  authors: () => invoke<AuthorList>('list_authors'),
+  authorLines: (head: string) => invoke<AuthorList>('count_author_lines', { head }),
   commit: (id: string) => invoke<CommitDetails>('get_commit', { id }),
   listDirectory: (path: string) => invoke<DirectoryEntry[]>('list_directory', { path }),
   lastCommits: (path: string) =>

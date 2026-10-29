@@ -6,6 +6,7 @@ use std::sync::Arc;
 use crate::app_state::AppState;
 use crate::error::{AppError, AppResult, ErrorKind};
 
+pub mod authors;
 pub mod avatars;
 pub mod branches;
 pub mod commit;

@@ -2,10 +2,11 @@
 //! whole layer can be exercised from integration tests with temporary
 //! repositories.
 
+use std::ffi::OsStr;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use git2::{Commit, ErrorCode, Oid, Repository};
+use git2::{Commit, ErrorCode, Oid, Repository, RepositoryOpenFlags};
 use serde::Serialize;
 
 pub mod authors;
@@ -64,6 +65,17 @@ pub fn open_repository(path: &Path) -> Result<Repository, OpenError> {
         return Err(OpenError::Bare(repository.path().to_path_buf()));
     }
     Ok(repository)
+}
+
+/// Opens the repository at `git_dir` as if it were bare. Diffs then read
+/// attributes from the index instead of looking for `.gitattributes` files
+/// on disk for every path, which is slow on network and FUSE filesystems.
+pub fn open_without_workdir(git_dir: &Path) -> Result<Repository, git2::Error> {
+    Repository::open_ext(
+        git_dir,
+        RepositoryOpenFlags::BARE | RepositoryOpenFlags::NO_SEARCH,
+        std::iter::empty::<&OsStr>(),
+    )
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

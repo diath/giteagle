@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 
 import { api, type HistoryCursor } from '../api'
-import { openCommit, openPendingChanges } from '../stores/navigation'
+import { navigation, openCommit, openPendingChanges } from '../stores/navigation'
 import { repo } from '../stores/repo'
 import { pendingSummary } from '../stores/workingTree'
 import { hasPendingChanges } from '../utils/pending'
@@ -25,6 +25,21 @@ watch(query, (value) => {
     appliedQuery.value = value.trim()
   }, SEARCH_DELAY_MS)
 })
+
+// Searches started from other tabs run at once instead of waiting for a
+// pause in typing.
+watch(
+  () => navigation.commitSearch,
+  (search) => {
+    if (search === null) {
+      return
+    }
+    navigation.commitSearch = null
+    window.clearTimeout(searchTimer)
+    query.value = search
+    appliedQuery.value = search.trim()
+  },
+)
 
 const sourceKey = computed(() => `${repo.revision}\n${appliedQuery.value}`)
 const load = (cursor: HistoryCursor | null) => api.history(cursor, appliedQuery.value)

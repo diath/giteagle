@@ -115,6 +115,26 @@ pub fn diff_trees(
     file_diffs(repository, &diff, NewSide::Blobs)
 }
 
+/// The totals of `diff_trees`, for when the changes themselves aren't shown.
+pub fn diff_tree_stats(
+    repository: &Repository,
+    old: Option<&Tree>,
+    new: &Tree,
+) -> AppResult<DiffStats> {
+    let mut options = diff_options();
+    // Bigger files count as binary and add no lines, like the files the
+    // Commit View doesn't diff.
+    options.max_size(MAX_DIFF_BYTES as i64);
+    let mut diff = repository.diff_tree_to_tree(old, Some(new), Some(&mut options))?;
+    diff.find_similar(Some(DiffFindOptions::new().renames(true)))?;
+    let stats = diff.stats()?;
+    Ok(DiffStats {
+        files_changed: stats.files_changed(),
+        additions: stats.insertions(),
+        deletions: stats.deletions(),
+    })
+}
+
 /// Diffs `head` against the working tree, so staged and unstaged changes
 /// show as one, along with untracked files. `head` is `None` before the
 /// first commit.

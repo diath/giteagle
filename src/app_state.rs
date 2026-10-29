@@ -8,6 +8,7 @@ use serde::Serialize;
 use crate::avatars::AvatarStore;
 use crate::error::AppResult;
 use crate::git::CommitBrief;
+use crate::git::authors::LineCounts;
 use crate::git::snapshot::{Fingerprint, fingerprint};
 
 /// Results of `last_commits` per (HEAD, directory); the walk behind them is
@@ -26,6 +27,7 @@ pub struct FetchStatus {
 
 pub struct AppState {
     pub workdir: PathBuf,
+    pub git_dir: PathBuf,
     pub repo_name: String,
     repository: Mutex<Repository>,
     /// The repository state the UI last loaded; the watcher reports anything
@@ -36,6 +38,9 @@ pub struct AppState {
     pub fetch_status: Mutex<FetchStatus>,
     pub avatars: AvatarStore,
     last_commits: Mutex<HashMap<(Oid, String), LastCommits>>,
+    /// Lines added and removed per commit. A commit's changes never change,
+    /// so these are kept until the app closes.
+    line_counts: Mutex<HashMap<Oid, LineCounts>>,
 }
 
 impl AppState {
@@ -51,6 +56,7 @@ impl AppState {
         let baseline = fingerprint(&repository).ok();
         Self {
             workdir,
+            git_dir: repository.path().to_path_buf(),
             repo_name,
             repository: Mutex::new(repository),
             baseline: Mutex::new(baseline),
@@ -58,6 +64,7 @@ impl AppState {
             fetch_status: Mutex::new(FetchStatus::default()),
             avatars: AvatarStore::new(),
             last_commits: Mutex::new(HashMap::new()),
+            line_counts: Mutex::new(HashMap::new()),
         }
     }
 
@@ -94,6 +101,10 @@ impl AppState {
 
     pub fn lock_network(&self) -> MutexGuard<'_, ()> {
         lock(&self.network)
+    }
+
+    pub fn lock_line_counts(&self) -> MutexGuard<'_, HashMap<Oid, LineCounts>> {
+        lock(&self.line_counts)
     }
 
     pub fn cached_last_commits(&self, head: Oid, directory: &str) -> Option<LastCommits> {

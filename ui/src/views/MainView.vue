@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+import AuthorsTab from '../components/AuthorsTab.vue'
 import BranchBar from '../components/BranchBar.vue'
 import BranchInfo from '../components/BranchInfo.vue'
 import BranchSwitcher from '../components/BranchSwitcher.vue'
@@ -15,6 +16,7 @@ const switcherOpen = ref(false)
 const TABS: { id: MainTab; label: string }[] = [
   { id: 'commits', label: 'Commits' },
   { id: 'files', label: 'Files' },
+  { id: 'authors', label: 'Authors' },
 ]
 </script>
 
@@ -39,10 +41,11 @@ const TABS: { id: MainTab; label: string }[] = [
     </nav>
 
     <div class="tab-panes">
-      <!-- Both tabs stay mounted and only hide, so each keeps its scroll
-           position and loaded data while the other is shown. -->
+      <!-- Every tab stays mounted and only hides, so each keeps its scroll
+           position and loaded data while another is shown. -->
       <CommitsTab class="pane" :class="{ hidden: navigation.tab !== 'commits' }" :active="active && navigation.tab === 'commits'" />
       <FilesTab class="pane" :class="{ hidden: navigation.tab !== 'files' }" />
+      <AuthorsTab class="pane" :class="{ hidden: navigation.tab !== 'authors' }" :active="active && navigation.tab === 'authors'" />
     </div>
 
     <BranchSwitcher v-if="switcherOpen" @close="switcherOpen = false" />

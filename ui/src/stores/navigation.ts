@@ -6,7 +6,7 @@ export type View =
   | { kind: 'commit'; id: string; fromFile: string | null }
   | { kind: 'pending' }
 
-export type MainTab = 'commits' | 'files'
+export type MainTab = 'commits' | 'files' | 'authors'
 
 /**
  * Views stack inside the single window: the main view at the bottom, then
@@ -17,7 +17,15 @@ export const navigation = reactive({
   stack: [{ kind: 'main' }] as View[],
   tab: 'commits' as MainTab,
   directory: '',
+  /** A search started outside the Commits tab, which runs and clears it. */
+  commitSearch: null as string | null,
 })
+
+/** Shows the Commits tab with `query` in its search field, already run. */
+export function searchCommits(query: string): void {
+  navigation.commitSearch = query
+  navigation.tab = 'commits'
+}
 
 export function openCommit(id: string, fromFile: string | null = null): void {
   navigation.stack.push({ kind: 'commit', id, fromFile })

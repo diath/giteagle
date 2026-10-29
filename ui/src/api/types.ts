@@ -35,6 +35,26 @@ export interface HistoryPage {
   truncated: boolean
 }
 
+export interface LineCounts {
+  additions: number
+  deletions: number
+}
+
+export interface AuthorStats {
+  person: Person
+  /** Newest first, so starting with `person.email`. */
+  emails: string[]
+  commits: number
+  lastCommitTime: number
+  /** Null until lines are counted. */
+  lines: LineCounts | null
+}
+
+export interface AuthorList {
+  head: string | null
+  authors: AuthorStats[]
+}
+
 export type RepoState =
   | 'clean'
   | 'merge'
