@@ -1,7 +1,7 @@
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::path::Path;
 
-use git2::{Commit, ErrorCode, Oid, Repository, Sort};
+use git2::{Commit, ErrorCode, ObjectType, Oid, Repository, Sort, Tree, TreeEntry};
 use serde::{Deserialize, Serialize};
 
 use super::authors::{Person, commit_authors};
@@ -101,7 +101,7 @@ pub fn load_history(
         let oid = oid?;
         walked += 1;
         let commit = repository.find_commit(oid)?;
-        if !filter_matches(filter, &commit)? {
+        if !filter_matches(repository, filter, &commit)? {
             continue;
         }
         let is_pushed = unpushed.as_ref().map(|unpushed| !unpushed.contains(&oid));
@@ -123,7 +123,7 @@ pub fn load_history(
     })
 }
 
-fn filter_matches(filter: &Filter, commit: &Commit) -> AppResult<bool> {
+fn filter_matches(repository: &Repository, filter: &Filter, commit: &Commit) -> AppResult<bool> {
     match filter {
         Filter::All => Ok(true),
         Filter::Query { query, now } => {
@@ -132,10 +132,16 @@ fn filter_matches(filter: &Filter, commit: &Commit) -> AppResult<bool> {
             }
             let message = commit_message(commit);
             let authors = commit_authors(commit);
+            let changed_paths = if query.needs_changed_paths() {
+                changed_paths(repository, commit)?
+            } else {
+                Vec::new()
+            };
             let candidate = Candidate {
                 message: &message,
                 authors: &authors,
                 author_time: commit.author().when().seconds(),
+                changed_paths: &changed_paths,
             };
             Ok(query.matches(&candidate, *now))
         }
@@ -157,6 +163,120 @@ pub fn changes_path(commit: &Commit, path: &Path) -> Result<bool, git2::Error> {
         }
     }
     Ok(true)
+}
+
+/// The paths a commit changes, sorted, decided as `changes_path` decides
+/// for one path: a merge only changes the paths that differ from every
+/// parent.
+pub fn changed_paths(repository: &Repository, commit: &Commit) -> Result<Vec<String>, git2::Error> {
+    let tree = commit.tree()?;
+    let mut parents = commit.parents();
+    let Some(first_parent) = parents.next() else {
+        return Ok(paths_between(repository, None, &tree)?
+            .into_iter()
+            .collect());
+    };
+    let mut changed = paths_between(repository, Some(&first_parent.tree()?), &tree)?;
+    for parent in parents {
+        let changed_from_parent = paths_between(repository, Some(&parent.tree()?), &tree)?;
+        changed.retain(|path| changed_from_parent.contains(path));
+    }
+    Ok(changed.into_iter().collect())
+}
+
+/// Every path that differs between two trees, so a moved file counts at
+/// its old and its new path. Only subtrees whose ids differ are opened:
+/// libgit2's tree diff was many times slower when searching a long history.
+fn paths_between(
+    repository: &Repository,
+    old: Option<&Tree>,
+    new: &Tree,
+) -> Result<BTreeSet<String>, git2::Error> {
+    let mut paths = BTreeSet::new();
+    collect_changed_paths(repository, "", old, Some(new), &mut paths)?;
+    Ok(paths)
+}
+
+fn collect_changed_paths(
+    repository: &Repository,
+    folder: &str,
+    old: Option<&Tree>,
+    new: Option<&Tree>,
+    paths: &mut BTreeSet<String>,
+) -> Result<(), git2::Error> {
+    for new_entry in new.into_iter().flat_map(Tree::iter) {
+        let old_entry = old.and_then(|old| old.get_name_bytes(new_entry.name_bytes()));
+        if old_entry.as_ref().is_some_and(|old_entry| {
+            old_entry.id() == new_entry.id() && old_entry.filemode() == new_entry.filemode()
+        }) {
+            continue;
+        }
+        let path = join_path(folder, new_entry.name_bytes());
+        record_change(
+            repository,
+            path,
+            old_entry.as_ref(),
+            Some(&new_entry),
+            paths,
+        )?;
+    }
+    for old_entry in old.into_iter().flat_map(Tree::iter) {
+        if new.is_none_or(|new| new.get_name_bytes(old_entry.name_bytes()).is_none()) {
+            let path = join_path(folder, old_entry.name_bytes());
+            record_change(repository, path, Some(&old_entry), None, paths)?;
+        }
+    }
+    Ok(())
+}
+
+/// Records a changed entry, which is missing on one side when it was added
+/// or removed. Folders are compared in turn; anything else, such as a file
+/// that replaced a folder, is a path of its own.
+fn record_change(
+    repository: &Repository,
+    path: String,
+    old: Option<&TreeEntry>,
+    new: Option<&TreeEntry>,
+    paths: &mut BTreeSet<String>,
+) -> Result<(), git2::Error> {
+    let old_folder = folder_tree(repository, old)?;
+    let new_folder = folder_tree(repository, new)?;
+    if old_folder.is_some() || new_folder.is_some() {
+        collect_changed_paths(
+            repository,
+            &path,
+            old_folder.as_ref(),
+            new_folder.as_ref(),
+            paths,
+        )?;
+    }
+    let old_is_not_folder = old.is_some() && old_folder.is_none();
+    let new_is_not_folder = new.is_some() && new_folder.is_none();
+    if old_is_not_folder || new_is_not_folder {
+        paths.insert(path);
+    }
+    Ok(())
+}
+
+fn folder_tree<'repo>(
+    repository: &'repo Repository,
+    entry: Option<&TreeEntry>,
+) -> Result<Option<Tree<'repo>>, git2::Error> {
+    match entry {
+        Some(entry) if entry.kind() == Some(ObjectType::Tree) => {
+            repository.find_tree(entry.id()).map(Some)
+        }
+        _ => Ok(None),
+    }
+}
+
+fn join_path(folder: &str, name: &[u8]) -> String {
+    let name = String::from_utf8_lossy(name);
+    if folder.is_empty() {
+        name.into_owned()
+    } else {
+        format!("{folder}/{name}")
+    }
 }
 
 fn entry_id(commit: &Commit, path: &Path) -> Result<Option<Oid>, git2::Error> {

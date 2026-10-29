@@ -193,33 +193,9 @@ fn file_history_skips_merges_that_take_one_side() {
     repo.checkout("main");
     repo.commit_file("b.txt", "main", "Change b on main");
 
-    // Merge by hand: the merged tree is main's tree plus feature's a.txt.
+    // The merged tree is main's tree plus feature's a.txt.
     repo.write("a.txt", "feature");
-    let mut index = repo.repository.index().unwrap();
-    index.add_path(Path::new("a.txt")).unwrap();
-    index.write().unwrap();
-    let tree = repo
-        .repository
-        .find_tree(index.write_tree().unwrap())
-        .unwrap();
-    let signature = git2::Signature::new(
-        "Test User",
-        "test@example.com",
-        &git2::Time::new(repo.next_time(), 0),
-    )
-    .unwrap();
-    let main_tip = repo.repository.find_commit(repo.head_id()).unwrap();
-    let feature = repo.repository.find_commit(feature_tip).unwrap();
-    repo.repository
-        .commit(
-            Some("HEAD"),
-            &signature,
-            &signature,
-            "Merge feature",
-            &tree,
-            &[&main_tip, &feature],
-        )
-        .unwrap();
+    repo.commit_merge("Merge feature", feature_tip);
 
     let page = load_history(
         &repo.repository,
@@ -229,6 +205,85 @@ fn file_history_skips_merges_that_take_one_side() {
     )
     .unwrap();
     assert_eq!(subjects(&page), ["Change a on feature", "Base"]);
+}
+
+/// The subjects of the commits a search finds, newest first.
+fn search(repo: &TempRepo, input: &str) -> Vec<String> {
+    let query = Query::parse(input).unwrap();
+    let filter = Filter::Query {
+        query: &query,
+        now: 0,
+    };
+    let page = load_history(&repo.repository, None, 10, &filter).unwrap();
+    page.commits
+        .into_iter()
+        .map(|commit| commit.subject)
+        .collect()
+}
+
+#[test]
+fn file_search_matches_changed_paths_partially() {
+    let repo = TempRepo::new();
+    repo.commit_file("src/utils/dates.ts", "1", "Add date helpers");
+    repo.commit_file("src/App.vue", "1", "Add the app");
+    repo.commit_file("src/utils/nested/format.ts", "1", "Add formatting");
+    repo.remove("src/App.vue");
+    repo.commit("Remove the app");
+    repo.remove("src/utils/dates.ts");
+    repo.commit_file("lib/dates.ts", "1", "Move date helpers");
+
+    assert_eq!(
+        search(&repo, "file:src/utils"),
+        ["Move date helpers", "Add formatting", "Add date helpers"]
+    );
+    assert_eq!(
+        search(&repo, "file:app.VUE"),
+        ["Remove the app", "Add the app"]
+    );
+    assert_eq!(search(&repo, "file:lib/"), ["Move date helpers"]);
+    assert_eq!(
+        search(&repo, "file:utils message:add"),
+        ["Add formatting", "Add date helpers"]
+    );
+    assert!(search(&repo, "file:missing").is_empty());
+}
+
+#[test]
+fn file_search_only_finds_merges_by_their_own_changes() {
+    let repo = TempRepo::new();
+    let base = repo.commit_file("a.txt", "1", "Base");
+    repo.create_branch("feature", base);
+    repo.checkout("feature");
+    repo.commit_file("a.txt", "feature", "Change a on feature");
+    let feature_tip = repo.head_id();
+    repo.checkout("main");
+    repo.commit_file("b.txt", "main", "Change b on main");
+
+    // a.txt comes from feature and b.txt from main, while c.txt is new in
+    // the merge itself.
+    repo.write("a.txt", "feature");
+    repo.write("c.txt", "merge");
+    repo.commit_merge("Merge feature", feature_tip);
+
+    assert_eq!(search(&repo, "file:a.txt"), ["Change a on feature", "Base"]);
+    assert_eq!(search(&repo, "file:b.txt"), ["Change b on main"]);
+    assert_eq!(search(&repo, "file:c.txt"), ["Merge feature"]);
+}
+
+#[test]
+fn file_search_treats_a_shallow_cut_off_as_a_root() {
+    let source = TempRepo::new();
+    source.commit_file("old.txt", "1", "Add old");
+    source.commit_file("new.txt", "1", "Add new");
+    let clone_directory = TempDir::new().unwrap();
+    let url = file_url(source.path());
+    git(
+        &["clone", "--quiet", "--depth", "1", &url, "."],
+        clone_directory.path(),
+    );
+    let clone = TempRepo::open(clone_directory);
+
+    assert_eq!(search(&clone, "file:old.txt"), ["Add new"]);
 }
 
 #[test]

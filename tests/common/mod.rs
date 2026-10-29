@@ -95,6 +95,22 @@ impl TempRepo {
     }
 
     pub fn commit_as(&self, message: &str, name: &str, email: &str) -> Oid {
+        self.commit_with_parent(message, name, email, None)
+    }
+
+    /// Like `commit`, but records `merged` as a second parent, so the
+    /// working tree stands for how the merge was resolved.
+    pub fn commit_merge(&self, message: &str, merged: Oid) -> Oid {
+        self.commit_with_parent(message, "Test User", "test@example.com", Some(merged))
+    }
+
+    fn commit_with_parent(
+        &self,
+        message: &str,
+        name: &str,
+        email: &str,
+        merged: Option<Oid>,
+    ) -> Oid {
         let mut index = self.repository.index().unwrap();
         index.add_all(["*"], IndexAddOption::DEFAULT, None).unwrap();
         index.update_all(["*"], None).unwrap();
@@ -102,10 +118,13 @@ impl TempRepo {
         let tree_id = index.write_tree().unwrap();
         let tree = self.repository.find_tree(tree_id).unwrap();
         let signature = Signature::new(name, email, &Time::new(self.next_time(), 0)).unwrap();
-        let parents = match self.repository.head() {
+        let mut parents = match self.repository.head() {
             Ok(head) => vec![head.peel_to_commit().unwrap()],
             Err(_) => Vec::new(),
         };
+        if let Some(merged) = merged {
+            parents.push(self.repository.find_commit(merged).unwrap());
+        }
         let parent_refs: Vec<_> = parents.iter().collect();
         self.repository
             .commit(

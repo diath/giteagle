@@ -28,6 +28,13 @@ pub const SEARCH_TAGS: &[SearchTag] = &[
         parse: message_term,
     },
     SearchTag {
+        name: "file",
+        description: "Commits that change a file whose path contains the text, so a folder \
+            finds the commits that change anything in it.",
+        example: "file:src/utils",
+        parse: file_term,
+    },
+    SearchTag {
         name: "since",
         description: "Commits authored within the given time, in hours (h), days (d), \
             weeks (w), months (m) or years (y).",
@@ -60,6 +67,8 @@ pub enum Term {
     AuthorEmails(Vec<String>),
     /// Matches the message only.
     Message(String),
+    /// Matches commits that change a path containing this.
+    File(String),
     /// Matches commits authored within this many seconds before now.
     Since(i64),
 }
@@ -86,6 +95,8 @@ pub struct Candidate<'a> {
     pub message: &'a str,
     pub authors: &'a [Person],
     pub author_time: i64,
+    /// May be left empty when `Query::needs_changed_paths` is false.
+    pub changed_paths: &'a [String],
 }
 
 struct Token {
@@ -106,6 +117,12 @@ impl Query {
 
     pub fn is_empty(&self) -> bool {
         self.terms.is_empty()
+    }
+
+    /// Listing the paths a commit changes takes a diff, so callers only do
+    /// it for queries that look at them.
+    pub fn needs_changed_paths(&self) -> bool {
+        self.terms.iter().any(|term| matches!(term, Term::File(_)))
     }
 
     /// All terms must match. Text comparisons are case-insensitive.
@@ -129,6 +146,10 @@ impl Query {
                 .iter()
                 .any(|author| emails.contains(&author.email.to_lowercase())),
             Term::Message(text) => message.contains(text),
+            Term::File(text) => candidate
+                .changed_paths
+                .iter()
+                .any(|path| path.to_lowercase().contains(text)),
             Term::Since(seconds) => candidate.author_time >= now.saturating_sub(*seconds),
         })
     }
@@ -209,6 +230,10 @@ fn author_term(value: &str) -> Result<Option<Term>, ParseError> {
 
 fn message_term(value: &str) -> Result<Option<Term>, ParseError> {
     Ok(text_term(value, Term::Message))
+}
+
+fn file_term(value: &str) -> Result<Option<Term>, ParseError> {
+    Ok(text_term(value, Term::File))
 }
 
 fn since_term(value: &str) -> Result<Option<Term>, ParseError> {
@@ -364,6 +389,20 @@ mod tests {
     }
 
     #[test]
+    fn only_file_terms_need_changed_paths() {
+        assert!(
+            !Query::parse("author:jane message:fix since:7d src")
+                .unwrap()
+                .needs_changed_paths()
+        );
+        assert!(
+            Query::parse("fix file:\"src/My File.rs\"")
+                .unwrap()
+                .needs_changed_paths()
+        );
+    }
+
+    #[test]
     fn keys_are_case_insensitive() {
         assert_eq!(parse("AUTHOR:jane"), vec![Term::Author("jane".into())]);
     }
@@ -420,6 +459,7 @@ mod tests {
             message: "Fix the crash on startup",
             authors: &authors,
             author_time: 1_000_000,
+            changed_paths: &["src/App.vue".into(), "src/utils/startup.ts".into()],
         };
         let now = 1_000_000 + 3 * SECONDS_PER_DAY;
         let matches = |input: &str| Query::parse(input).unwrap().matches(&candidate, now);
@@ -436,6 +476,10 @@ mod tests {
         assert!(!matches("message:jane"));
         assert!(matches("since:-7d"));
         assert!(!matches("since:-2d"));
+        assert!(matches("file:src/utils"));
+        assert!(matches("file:app.VUE"));
+        assert!(!matches("file:crash"));
+        assert!(!matches("file:src/utils/app"));
     }
 
     #[test]
@@ -445,6 +489,7 @@ mod tests {
             message: "Fix the crash",
             authors: &authors,
             author_time: 0,
+            changed_paths: &[],
         };
         let matches = |input: &str| Query::parse(input).unwrap().matches(&candidate, 0);
 
@@ -467,6 +512,7 @@ mod tests {
             message: "Pair on the parser",
             authors: &authors,
             author_time: 0,
+            changed_paths: &[],
         };
         assert!(Query::parse("author:sam").unwrap().matches(&candidate, 0));
         assert!(Query::parse("roe").unwrap().matches(&candidate, 0));
