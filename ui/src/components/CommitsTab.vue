@@ -62,7 +62,7 @@ const emptyText = computed(() => {
   <div class="commits-tab">
     <div class="toolbar">
       <SearchField v-model="query" class="search" :placeholder="PLACEHOLDER" />
-      <button class="icon-button" type="button" title="Search tags" @click="helpOpen = true">
+      <button class="button button--icon" type="button" title="Search tags" @click="helpOpen = true">
         <AppIcon name="help" />
       </button>
     </div>
