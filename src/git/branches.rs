@@ -5,11 +5,9 @@ use git2::build::CheckoutBuilder;
 use git2::{BranchType, CheckoutNotificationType, Commit, ErrorCode, Oid, Repository};
 use serde::Serialize;
 
-use super::CommitBrief;
 use super::overview::{ensure_clean_state, upstream_of};
+use super::{CommitBrief, list_paths};
 use crate::error::{AppError, AppResult, ErrorKind};
-
-const MAX_LISTED_CONFLICTS: usize = 5;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -203,22 +201,10 @@ fn checkout_commit(repository: &Repository, commit: &Commit, target: &str) -> Ap
 }
 
 fn conflict_error(target: &str, conflicts: &[String]) -> AppError {
-    let mut listed = conflicts
-        .iter()
-        .take(MAX_LISTED_CONFLICTS)
-        .cloned()
-        .collect::<Vec<_>>()
-        .join(", ");
-    if conflicts.len() > MAX_LISTED_CONFLICTS {
-        listed.push_str(&format!(
-            " and {} more",
-            conflicts.len() - MAX_LISTED_CONFLICTS
-        ));
-    }
-    let details = if listed.is_empty() {
+    let details = if conflicts.is_empty() {
         String::new()
     } else {
-        format!(" ({listed})")
+        format!(" ({})", list_paths(conflicts))
     };
     AppError::new(
         ErrorKind::Conflict,

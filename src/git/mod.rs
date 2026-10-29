@@ -24,6 +24,8 @@ pub mod status;
 pub mod sync;
 
 const SHORT_ID_LENGTH: usize = 7;
+/// Paths named in a message before the rest are only counted.
+const MAX_LISTED_PATHS: usize = 5;
 
 #[derive(Debug)]
 pub enum OpenError {
@@ -143,4 +145,19 @@ pub fn head_commit(repository: &Repository) -> Result<Option<Commit<'_>>, git2::
 /// throughout the UI.
 pub fn path_to_string(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
+}
+
+/// Names the first few paths for a message and counts the rest, as in
+/// "a.txt, b.txt and 4 more".
+pub fn list_paths(paths: &[String]) -> String {
+    let mut listed = paths
+        .iter()
+        .take(MAX_LISTED_PATHS)
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(", ");
+    if paths.len() > MAX_LISTED_PATHS {
+        listed.push_str(&format!(" and {} more", paths.len() - MAX_LISTED_PATHS));
+    }
+    listed
 }
