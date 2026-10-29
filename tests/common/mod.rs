@@ -75,6 +75,13 @@ impl TempRepo {
         fs::remove_file(self.file_path(relative)).unwrap();
     }
 
+    /// Adds one working tree file to the index, as `git add` would.
+    pub fn stage(&self, relative: &str) {
+        let mut index = self.repository.index().unwrap();
+        index.add_path(Path::new(relative)).unwrap();
+        index.write().unwrap();
+    }
+
     pub fn next_time(&self) -> i64 {
         let time = self.clock.get() + TIME_STEP;
         self.clock.set(time);

@@ -2,7 +2,7 @@ mod common;
 
 use common::TempRepo;
 use giteagle_lib::git::commit::commit_details;
-use giteagle_lib::git::diff::{ChangeKind, LineKind};
+use giteagle_lib::git::diff::{ChangeKind, LineKind, diff_working_tree};
 use giteagle_lib::git::files::{EntryKind, last_commits, list_directory, search_files};
 use giteagle_lib::git::status::{FileStatus, working_tree_status};
 
@@ -214,4 +214,60 @@ fn working_tree_status_classifies_local_changes() {
             ("staged.txt", FileStatus::Staged),
         ]
     );
+}
+
+#[test]
+fn working_tree_diff_covers_unstaged_deleted_and_untracked_files() {
+    let repo = TempRepo::new();
+    repo.write("kept.txt", "one\ntwo\n");
+    repo.write("gone.txt", "bye\n");
+    repo.commit("Add files");
+    repo.write("kept.txt", "one\nTWO\n");
+    repo.remove("gone.txt");
+    repo.write("new/fresh.txt", "hello\n");
+
+    let head = repo.repository.head().unwrap().peel_to_tree().unwrap();
+    let files = diff_working_tree(&repo.repository, Some(&head)).unwrap();
+    let paths: Vec<_> = files.iter().map(|file| file.path.as_str()).collect();
+    assert_eq!(paths, ["gone.txt", "kept.txt", "new/fresh.txt"]);
+
+    let [gone, kept, fresh] = &files[..] else {
+        unreachable!()
+    };
+    assert_eq!(gone.kind, ChangeKind::Deleted);
+    assert_eq!(gone.new_content, None);
+
+    assert_eq!(kept.kind, ChangeKind::Modified);
+    assert_eq!((kept.additions, kept.deletions), (1, 1));
+    assert_eq!(kept.old_content.as_deref(), Some("one\ntwo\n"));
+    assert_eq!(kept.new_content.as_deref(), Some("one\nTWO\n"));
+
+    assert_eq!(fresh.kind, ChangeKind::Added);
+    assert_eq!(fresh.old_mode, None);
+    assert_eq!(fresh.additions, 1);
+    assert_eq!(fresh.new_content.as_deref(), Some("hello\n"));
+}
+
+#[test]
+fn working_tree_diff_includes_staged_changes() {
+    let repo = TempRepo::new();
+    repo.commit_file("a.txt", "a\n", "Add a");
+    repo.write("a.txt", "a\nb\n");
+    repo.stage("a.txt");
+
+    let head = repo.repository.head().unwrap().peel_to_tree().unwrap();
+    let files = diff_working_tree(&repo.repository, Some(&head)).unwrap();
+    assert_eq!(files.len(), 1);
+    assert_eq!(files[0].additions, 1);
+}
+
+#[test]
+fn working_tree_diff_works_before_the_first_commit() {
+    let repo = TempRepo::new();
+    repo.write("a.txt", "a\n");
+    repo.stage("a.txt");
+
+    let files = diff_working_tree(&repo.repository, None).unwrap();
+    assert_eq!(files.len(), 1);
+    assert_eq!(files[0].kind, ChangeKind::Added);
 }

@@ -1,8 +1,13 @@
-use git2::{Delta, DiffFindOptions, DiffOptions, FileMode, Oid, Patch, Repository, Tree};
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use git2::{
+    Delta, Diff, DiffFile, DiffFindOptions, DiffOptions, FileMode, Oid, Patch, Repository, Tree,
+};
 use serde::Serialize;
 
 use super::path_to_string;
-use crate::error::AppResult;
+use crate::error::{AppError, AppResult};
 
 /// Files above this size are summarized instead of diffed.
 const MAX_DIFF_BYTES: usize = 4 * 1024 * 1024;
@@ -90,25 +95,78 @@ impl DiffStats {
     }
 }
 
+/// Where the new side of a diff is read from.
+#[derive(Clone, Copy)]
+enum NewSide<'a> {
+    /// Blobs in the object database, as in a diff between two trees.
+    Blobs,
+    /// Files on disk under this working directory, which have no blobs yet.
+    WorkingTree(&'a Path),
+}
+
 /// Diffs two trees with rename detection. `old` is `None` for root commits.
 pub fn diff_trees(
     repository: &Repository,
     old: Option<&Tree>,
     new: &Tree,
 ) -> AppResult<Vec<FileDiff>> {
+    let mut diff = repository.diff_tree_to_tree(old, Some(new), Some(&mut diff_options()))?;
+    diff.find_similar(Some(DiffFindOptions::new().renames(true)))?;
+    file_diffs(repository, &diff, NewSide::Blobs)
+}
+
+/// Diffs `head` against the working tree, so staged and unstaged changes
+/// show as one, along with untracked files. `head` is `None` before the
+/// first commit.
+pub fn diff_working_tree(repository: &Repository, head: Option<&Tree>) -> AppResult<Vec<FileDiff>> {
+    let workdir = repository
+        .workdir()
+        .ok_or_else(|| AppError::invalid_state("The repository has no working tree."))?;
+    let diff = working_tree_diff(repository, head)?;
+    file_diffs(repository, &diff, NewSide::WorkingTree(workdir))
+}
+
+/// The diff behind `diff_working_tree`, for when only its totals matter.
+pub fn working_tree_diff<'r>(
+    repository: &'r Repository,
+    head: Option<&Tree<'_>>,
+) -> AppResult<Diff<'r>> {
+    let mut options = diff_options();
+    options
+        .include_untracked(true)
+        .recurse_untracked_dirs(true)
+        .show_untracked_content(true)
+        .ignore_submodules(true)
+        // Bigger files count as binary, so totals leave out what is never
+        // diffed and huge untracked files aren't read just to count lines.
+        .max_size(MAX_DIFF_BYTES as i64);
+    let mut diff = repository.diff_tree_to_workdir_with_index(head, Some(&mut options))?;
+    diff.find_similar(Some(DiffFindOptions::new().renames(true)))?;
+    Ok(diff)
+}
+
+fn diff_options() -> DiffOptions {
     let mut options = DiffOptions::new();
     options
         .context_lines(CONTEXT_LINES)
         .include_typechange(true);
-    let mut diff = repository.diff_tree_to_tree(old, Some(new), Some(&mut options))?;
-    diff.find_similar(Some(DiffFindOptions::new().renames(true)))?;
+    options
+}
 
+fn file_diffs(repository: &Repository, diff: &Diff, new_side: NewSide) -> AppResult<Vec<FileDiff>> {
     let odb = repository.odb()?;
     let blob_size = |id: Oid| -> usize {
         if id.is_zero() {
             return 0;
         }
         odb.read_header(id).map(|(size, _)| size).unwrap_or(0)
+    };
+    let new_size = |file: &DiffFile| -> usize {
+        match new_side {
+            NewSide::Blobs => blob_size(file.id()),
+            NewSide::WorkingTree(root) => regular_file(root, file)
+                .map_or(0, |(_, size)| usize::try_from(size).unwrap_or(usize::MAX)),
+        }
     };
 
     let mut files = Vec::new();
@@ -121,7 +179,8 @@ pub fn diff_trees(
             .clone()
             .or_else(|| old_path.clone())
             .unwrap_or_default();
-        let old_mode = (delta.status() != Delta::Added).then(|| u32::from(old_file.mode()));
+        let added = matches!(delta.status(), Delta::Added | Delta::Untracked);
+        let old_mode = (!added).then(|| u32::from(old_file.mode()));
         let new_mode = (delta.status() != Delta::Deleted).then(|| u32::from(new_file.mode()));
         let is_submodule = [old_mode, new_mode].contains(&Some(u32::from(FileMode::Commit)));
 
@@ -141,14 +200,14 @@ pub fn diff_trees(
             new_content: None,
         };
 
-        let largest = blob_size(old_file.id()).max(blob_size(new_file.id()));
+        let largest = blob_size(old_file.id()).max(new_size(&new_file));
         if !is_submodule && largest > MAX_DIFF_BYTES {
             file.too_large = true;
             files.push(file);
             continue;
         }
 
-        if let Some(patch) = Patch::from_diff(&diff, index)? {
+        if let Some(patch) = Patch::from_diff(diff, index)? {
             file.is_binary = patch.delta().flags().is_binary();
             let (_, additions, deletions) = patch.line_stats()?;
             file.additions = additions;
@@ -160,7 +219,10 @@ pub fn diff_trees(
                     file.hunks = read_hunks(&patch)?;
                     if largest <= MAX_CONTENT_BYTES {
                         file.old_content = blob_text(repository, old_file.id())?;
-                        file.new_content = blob_text(repository, new_file.id())?;
+                        file.new_content = match new_side {
+                            NewSide::Blobs => blob_text(repository, new_file.id())?,
+                            NewSide::WorkingTree(root) => file_text(root, &new_file),
+                        };
                     }
                 }
             }
@@ -223,9 +285,23 @@ fn blob_text(repository: &Repository, id: Oid) -> AppResult<Option<String>> {
     Ok(Some(String::from_utf8_lossy(blob.content()).into_owned()))
 }
 
+/// A regular file on disk and its size. Symlinks and missing files have no
+/// readable contents of their own.
+fn regular_file(root: &Path, file: &DiffFile) -> Option<(PathBuf, u64)> {
+    let path = root.join(file.path()?);
+    let metadata = fs::symlink_metadata(&path).ok()?;
+    metadata.is_file().then_some((path, metadata.len()))
+}
+
+fn file_text(root: &Path, file: &DiffFile) -> Option<String> {
+    let (path, _) = regular_file(root, file)?;
+    let bytes = fs::read(path).ok()?;
+    Some(String::from_utf8_lossy(&bytes).into_owned())
+}
+
 fn change_kind(status: Delta) -> ChangeKind {
     match status {
-        Delta::Added => ChangeKind::Added,
+        Delta::Added | Delta::Untracked => ChangeKind::Added,
         Delta::Deleted => ChangeKind::Deleted,
         Delta::Renamed => ChangeKind::Renamed,
         Delta::Copied => ChangeKind::Copied,
