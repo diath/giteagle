@@ -7,6 +7,7 @@ import BranchInfo from '../components/BranchInfo.vue'
 import BranchSwitcher from '../components/BranchSwitcher.vue'
 import CommitsTab from '../components/CommitsTab.vue'
 import FilesTab from '../components/FilesTab.vue'
+import GitHubLinks from '../components/GitHubLinks.vue'
 import { navigation, type MainTab } from '../stores/navigation'
 
 defineProps<{ active: boolean }>()
@@ -25,20 +26,23 @@ const TABS: { id: MainTab; label: string }[] = [
     <BranchBar @open-switcher="switcherOpen = true" />
     <BranchInfo />
 
-    <nav class="tabs" role="tablist">
-      <button
-        v-for="tab in TABS"
-        :key="tab.id"
-        class="tab"
-        type="button"
-        role="tab"
-        :aria-selected="navigation.tab === tab.id"
-        :class="{ selected: navigation.tab === tab.id }"
-        @click="navigation.tab = tab.id"
-      >
-        {{ tab.label }}
-      </button>
-    </nav>
+    <div class="tab-bar">
+      <nav class="tabs" role="tablist">
+        <button
+          v-for="tab in TABS"
+          :key="tab.id"
+          class="tab"
+          type="button"
+          role="tab"
+          :aria-selected="navigation.tab === tab.id"
+          :class="{ selected: navigation.tab === tab.id }"
+          @click="navigation.tab = tab.id"
+        >
+          {{ tab.label }}
+        </button>
+      </nav>
+      <GitHubLinks />
+    </div>
 
     <div class="tab-panes">
       <!-- Every tab stays mounted and only hides, so each keeps its scroll
@@ -60,12 +64,22 @@ const TABS: { id: MainTab; label: string }[] = [
   height: 100%;
 }
 
-.tabs {
+.tab-bar {
   display: flex;
-  gap: var(--space-1);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
   padding: 0 var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-panel);
+}
+
+/* The tabs fill the bar's height, so the selected one's underline covers
+   its bottom border. */
+.tabs {
+  display: flex;
+  align-self: stretch;
+  gap: var(--space-1);
 }
 
 .tab {

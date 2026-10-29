@@ -2,6 +2,7 @@ use git2::{ErrorCode, Oid, Repository, RepositoryState};
 use serde::Serialize;
 
 use super::branches::branch_count;
+use super::github::{GitHubRepository, github_repository};
 use super::head_commit;
 use super::history::CommitSummary;
 use crate::error::AppResult;
@@ -69,6 +70,7 @@ pub struct Overview {
     pub remotes: Vec<String>,
     pub has_origin: bool,
     pub branch_count: usize,
+    pub github: Option<GitHubRepository>,
 }
 
 pub fn overview(repository: &Repository) -> AppResult<Overview> {
@@ -105,6 +107,7 @@ pub fn overview(repository: &Repository) -> AppResult<Overview> {
         has_origin: remotes.iter().any(|remote| remote == ORIGIN),
         remotes,
         branch_count: branch_count(repository)?,
+        github: github_repository(repository),
     })
 }
 

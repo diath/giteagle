@@ -92,7 +92,16 @@ export interface Overview {
   remotes: string[]
   hasOrigin: boolean
   branchCount: number
+  /** From the upstream of the current branch, or else of `master` or `main`. */
+  github: GitHubRepository | null
 }
+
+export interface GitHubRepository {
+  owner: string
+  name: string
+}
+
+export type GitHubPage = 'issues' | 'pullRequests'
 
 export interface BranchRow {
   name: string

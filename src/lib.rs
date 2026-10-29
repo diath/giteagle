@@ -7,10 +7,10 @@ use tauri::Manager;
 mod app_state;
 mod avatars;
 mod commands;
+mod desktop;
 pub mod error;
 pub mod external_git;
 mod fetcher;
-mod file_manager;
 pub mod git;
 mod watcher;
 
@@ -33,6 +33,7 @@ pub fn run(repository: Repository) {
             commands::repository::get_fetch_status,
             commands::repository::fetch_now,
             commands::repository::open_workdir,
+            commands::repository::open_github_page,
             commands::history::load_history,
             commands::history::load_file_history,
             commands::history::list_search_tags,

@@ -11,6 +11,7 @@ import type {
   DirectoryEntry,
   FetchStatus,
   FileSearchResult,
+  GitHubPage,
   HistoryCursor,
   HistoryPage,
   Overview,
@@ -26,6 +27,7 @@ export const api = {
   fetchStatus: () => invoke<FetchStatus>('get_fetch_status'),
   fetchNow: () => invoke<void>('fetch_now'),
   openWorkdir: () => invoke<void>('open_workdir'),
+  openGitHubPage: (page: GitHubPage) => invoke<void>('open_github_page', { page }),
   history: (cursor: HistoryCursor | null, query: string) =>
     invoke<HistoryPage>('load_history', { cursor, query }),
   searchTags: () => invoke<SearchTag[]>('list_search_tags'),
