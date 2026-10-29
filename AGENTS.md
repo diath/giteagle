@@ -55,6 +55,15 @@ every one passing.
   applies cleanly. If anything is staged, the stash conflicts with HEAD, or it
   would overwrite local changes, nothing changes. Apply, pop, drop and
   stashing all ask for confirmation first.
+- **Cherry-pick and revert** are offered only on commits that have been
+  pushed, and both ask for confirmation first. Merge commits are taken
+  against their first parent.
+  - Cherry-pick copies the commit onto other local branches without checking
+    them out. Branches that already have it or are checked out in a worktree
+    can't be chosen. If any chosen branch conflicts, no branch changes.
+  - Revert adds a revert commit, or reverts in the working tree and stages
+    the result. If anything is staged, it conflicts, or it would overwrite
+    local changes, nothing changes.
 - **Pull** is fast-forward only.
 - **Push** pushes the current branch to its upstream. Without an upstream it
   runs `git push -u origin <branch>`, and with no `origin` it is disabled.
