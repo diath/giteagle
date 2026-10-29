@@ -127,7 +127,10 @@ watch(
             </template>
           </div>
         </div>
-        <button class="button" type="button" @click="viewCommits(author)">View Commits</button>
+        <button class="button" type="button" @click="viewCommits(author)">
+          <AppIcon name="eye" />
+          View Commits
+        </button>
       </div>
 
       <div v-if="repo.overview?.isShallow && authors.length > 0" class="marker">
