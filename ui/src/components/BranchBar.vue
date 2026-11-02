@@ -73,7 +73,7 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
 
     <div class="column column--center">
       <div class="controls">
-        <div class="current" :title="branchLabel">
+        <div class="inset current" :title="branchLabel">
           <AppIcon name="branch" />
           <span class="branch-name ellipsis" :class="{ detached: head?.kind === 'detached' }">{{ branchLabel }}</span>
           <span v-if="head?.tip" class="tip ellipsis">
@@ -163,16 +163,7 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
 }
 
 .current {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
   height: var(--control-height);
-  padding: 0 var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-bg-sunken);
-  color: var(--color-accent-bright);
 }
 
 /* Only the commit shrinks, and the branch name gives way only once the

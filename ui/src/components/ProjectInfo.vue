@@ -24,7 +24,7 @@ async function openFolder(): Promise<void> {
 
 <template>
   <button
-    class="project"
+    class="inset project"
     type="button"
     :title="`${repo.overview?.workdir ?? ''}\n\nClick to open the folder in the file manager.`"
     @click="openFolder"
@@ -42,15 +42,7 @@ async function openFolder(): Promise<void> {
 
 <style scoped>
 .project {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
   padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-bg-sunken);
-  color: var(--color-accent-bright);
   text-align: left;
   cursor: pointer;
   transition:
