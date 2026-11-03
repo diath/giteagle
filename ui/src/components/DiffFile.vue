@@ -209,16 +209,16 @@ defineExpose({ element: root })
         <AppIcon :name="collapsed ? 'chevronRight' : 'chevronDown'" />
       </button>
       <span class="kind" :class="`kind--${file.kind}`">{{ KIND_LABELS[file.kind] }}</span>
+      <span class="stats">
+        <span class="additions">+{{ file.additions }}</span>
+        <span class="deletions">−{{ file.deletions }}</span>
+      </span>
       <span class="path ellipsis" :title="file.path">
         <template v-if="file.oldPath">
           <span class="muted">{{ file.oldPath }}</span>
           <span class="faint"> → </span>
         </template>
         {{ file.path }}
-      </span>
-      <span class="stats">
-        <span class="additions">+{{ file.additions }}</span>
-        <span class="deletions">−{{ file.deletions }}</span>
       </span>
     </header>
 
