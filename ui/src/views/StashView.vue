@@ -2,9 +2,9 @@
 import { computed, onMounted, ref, shallowRef, watch } from 'vue'
 
 import { api, errorMessage, type StashDetails } from '../api'
-import AppIcon from '../components/AppIcon.vue'
 import DiffBrowser from '../components/DiffBrowser.vue'
 import StashActions from '../components/StashActions.vue'
+import ViewBar from '../components/ViewBar.vue'
 import { goBack, openCommit } from '../stores/navigation'
 import { repo } from '../stores/repo'
 import { formatAbsolute, formatRelative } from '../utils/dates'
@@ -61,16 +61,14 @@ watch(() => [repo.stashRevision, repo.revision], load)
 
 <template>
   <div class="stash-view">
-    <div class="top-bar">
-      <button class="button button--quiet" type="button" title="Back (Esc)" @click="goBack">
-        <AppIcon name="back" />
-        Back
-      </button>
-      <span class="title">
+    <ViewBar icon="stash">
+      <template #title>
         Stashed changes <span v-if="details" class="hash">{{ stashName(details.index) }}</span>
-      </span>
-      <StashActions v-if="details && !error" class="actions" :stash="details" @done="onActionDone" />
-    </div>
+      </template>
+      <template #end>
+        <StashActions v-if="details && !error" :stash="details" @done="onActionDone" />
+      </template>
+    </ViewBar>
 
     <p v-if="error" class="error">{{ error }}</p>
     <p v-else-if="!details" class="loading faint">Loading stash…</p>
@@ -142,25 +140,6 @@ watch(() => [repo.stashRevision, repo.revision], load)
   display: flex;
   flex-direction: column;
   height: 100%;
-}
-
-.top-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: var(--bar-height);
-  padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-panel);
-}
-
-.title {
-  color: var(--color-fg-strong);
-  font-weight: 600;
-}
-
-.actions {
-  margin-left: auto;
 }
 
 .error {

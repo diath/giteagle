@@ -4,6 +4,7 @@ import { computed, onMounted, ref, shallowRef, watch } from 'vue'
 import { api, errorMessage, type PendingChanges } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import DiffBrowser from '../components/DiffBrowser.vue'
+import ViewBar from '../components/ViewBar.vue'
 import { goBack } from '../stores/navigation'
 import { repo } from '../stores/repo'
 import { pendingRevision } from '../stores/workingTree'
@@ -50,13 +51,14 @@ watch(() => [pendingRevision.value, repo.revision], load)
 
 <template>
   <div class="pending-view">
-    <div class="top-bar">
-      <button class="button button--quiet" type="button" title="Back (Esc)" @click="goBack">
-        <AppIcon name="back" />
-        Back
-      </button>
-      <span class="title">Uncommitted changes</span>
-    </div>
+    <ViewBar>
+      <template #title>
+        <span class="title">
+          <AppIcon name="pencil" />
+          Uncommitted changes
+        </span>
+      </template>
+    </ViewBar>
 
     <p v-if="error" class="error">{{ error }}</p>
     <p v-else-if="!changes" class="loading faint">Loading uncommitted changes…</p>
@@ -111,19 +113,13 @@ watch(() => [pendingRevision.value, repo.revision], load)
   height: 100%;
 }
 
-.top-bar {
+/* The icon is part of the title, so both take the color that marks
+   uncommitted changes in the commit list. */
+.title {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  min-height: var(--bar-height);
-  padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-panel);
-}
-
-.title {
+  gap: var(--space-2);
   color: var(--color-pending);
-  font-weight: 600;
 }
 
 .error {

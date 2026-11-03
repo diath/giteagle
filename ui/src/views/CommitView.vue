@@ -5,6 +5,7 @@ import { api, errorMessage, type CommitDetails } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import AvatarStack from '../components/AvatarStack.vue'
 import DiffBrowser from '../components/DiffBrowser.vue'
+import ViewBar from '../components/ViewBar.vue'
 import { goBack, openCommit } from '../stores/navigation'
 import { showToast } from '../stores/toasts'
 import { formatAbsolute, formatRelative } from '../utils/dates'
@@ -67,19 +68,17 @@ onMounted(async () => {
 
 <template>
   <div class="commit-view">
-    <div class="top-bar">
-      <button class="button button--quiet" type="button" title="Back (Esc)" @click="goBack">
-        <AppIcon name="back" />
-        Back
-      </button>
-      <span class="title">
+    <ViewBar icon="commit">
+      <template #title>
         Commit <span class="hash">{{ details?.shortId ?? id.slice(0, 7) }}</span>
-      </span>
-      <span v-if="fromFile" class="from-file">
-        <AppIcon name="history" />
-        Opened from file history: <span class="path">{{ fromFile }}</span>
-      </span>
-    </div>
+      </template>
+      <template #end>
+        <span v-if="fromFile" class="from-file" :title="fromFile">
+          <AppIcon name="history" />
+          Opened from file history: <span class="path">{{ fromFile }}</span>
+        </span>
+      </template>
+    </ViewBar>
 
     <p v-if="error" class="error">{{ error }}</p>
     <p v-else-if="!details" class="loading faint">Loading commit…</p>
@@ -160,27 +159,11 @@ onMounted(async () => {
   height: 100%;
 }
 
-.top-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: var(--bar-height);
-  padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-bg-panel);
-}
-
-.title {
-  color: var(--color-fg-strong);
-  font-weight: 600;
-}
-
 .from-file {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  margin-left: auto;
   padding: var(--space-1) var(--space-3);
   border: 1px solid var(--color-accent);
   border-radius: var(--radius);
