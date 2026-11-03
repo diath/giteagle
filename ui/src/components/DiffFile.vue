@@ -306,13 +306,18 @@ defineExpose({ element: root })
   background: var(--color-bg-raised);
 }
 
-.kind {
+/* The kind of change and the line counts sit in matching chips. */
+.kind,
+.stats {
   flex: none;
   padding: 0 var(--space-1);
   border-radius: var(--radius);
   background: var(--color-bg-active);
   font-size: var(--font-size-tiny);
   font-weight: 600;
+}
+
+.kind {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -346,9 +351,7 @@ defineExpose({ element: root })
 
 .stats {
   display: flex;
-  flex: none;
-  gap: var(--space-2);
-  font-size: var(--font-size-small);
+  gap: 1ch;
 }
 
 /* Short enough to fit the header without making it taller. */
