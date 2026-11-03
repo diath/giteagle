@@ -135,15 +135,6 @@ textarea {
   cursor: default;
 }
 
-.button--quiet {
-  border-color: transparent;
-  background: transparent;
-}
-
-.button--quiet:hover:not(:disabled) {
-  border-color: transparent;
-}
-
 /* A square button with only an icon; its title names the action. */
 .button--icon {
   justify-content: center;

@@ -8,7 +8,7 @@ import AppIcon from './AppIcon.vue'
     <AppIcon name="refresh" />
     <span>The repository has changed outside GitEagle. Reload?</span>
     <button class="button" type="button" :disabled="repo.busy !== null" @click="reloadRepository">Reload</button>
-    <button class="button button--quiet" type="button" @click="repo.reloadPromptVisible = false">Dismiss</button>
+    <button class="button" type="button" @click="repo.reloadPromptVisible = false">Dismiss</button>
   </div>
 </template>
 
