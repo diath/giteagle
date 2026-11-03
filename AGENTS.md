@@ -98,6 +98,10 @@ every one passing.
   - Prefer the tokens in `base.css`, such as `--space-*`, `--font-size-*` and
     `--radius`.
   - 1px hairlines and focus rings stay unscaled.
+- **Buttons** look like buttons: use `.button`, with its border and
+  background. Never style one as plain text or a link unless asked to.
+  Small icon-only controls in rows and headers, such as a collapse chevron
+  or a copy button, use `.icon-button`.
 - **Icons** are inline SVG paths in `ui/src/icons/paths.ts`, drawn with
   `currentColor` through `AppIcon`.
 - **Syntax highlighting** uses the Shiki theme built from the palette in
