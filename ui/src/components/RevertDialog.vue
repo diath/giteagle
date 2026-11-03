@@ -87,7 +87,9 @@ async function confirm(): Promise<void> {
         class="option"
         :class="{ selected: mode === option.mode }"
       >
-        <input v-model="mode" type="radio" name="revert-mode" :value="option.mode" :disabled="working" />
+        <span class="option-control">
+          <input v-model="mode" type="radio" name="revert-mode" :value="option.mode" :disabled="working" />
+        </span>
         <span class="option-text">
           <span class="option-label">{{ option.label }}</span>
           <span class="option-description muted">{{ option.description }}</span>
@@ -130,11 +132,12 @@ async function confirm(): Promise<void> {
   border-color: var(--color-accent);
 }
 
-/* Lines the button up with the first line of the label. */
-.option input {
+/* As tall as a line of the label, so the button centers on its first line. */
+.option-control {
+  display: flex;
   flex: none;
-  margin: calc(4 * var(--px)) 0 0;
-  accent-color: var(--color-accent);
+  align-items: center;
+  height: 1lh;
 }
 
 .option-text {

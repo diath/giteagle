@@ -231,6 +231,33 @@ textarea {
   outline-offset: -1px;
 }
 
+/* Drawn here rather than by the platform, whose radio buttons differ in size
+   and look between systems. When checked, the thick ring leaves a dot of the
+   background in the middle. */
+input[type='radio'] {
+  flex: none;
+  width: calc(16 * var(--px));
+  height: calc(16 * var(--px));
+  margin: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-bg-sunken);
+  appearance: none;
+  cursor: pointer;
+}
+
+input[type='radio']:checked {
+  border: calc(5 * var(--px)) solid var(--color-accent);
+}
+
+input[type='radio']:disabled {
+  cursor: default;
+}
+
+input[type='radio']:checked:disabled {
+  border-color: var(--color-fg-disabled);
+}
+
 /* A text input over several lines, e.g. for a commit message. */
 textarea.text-input {
   height: auto;
