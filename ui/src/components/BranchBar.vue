@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 
 import { api, errorMessage } from '../api'
-import { capabilities, refreshEverything, repo } from '../stores/repo'
+import { applyFetchStatus, capabilities, refreshEverything, repo } from '../stores/repo'
 import { showToast } from '../stores/toasts'
 import { formatRelative } from '../utils/dates'
 import AppIcon from './AppIcon.vue'
@@ -51,6 +51,40 @@ const pullTitle = computed(() => {
     : 'The branch has no upstream to pull from'
 })
 
+const hasRemotes = computed(() => (repo.overview?.remotes.length ?? 0) > 0)
+const fetchFailed = computed(() => repo.fetch.lastError !== null && !repo.fetch.inProgress)
+
+const fetchTitle = computed(() => {
+  if (!hasRemotes.value) {
+    return 'There are no remotes to fetch from'
+  }
+  if (repo.fetch.inProgress) {
+    return 'Fetching from all remotes…'
+  }
+  if (repo.fetch.lastError) {
+    return `The last fetch failed:\n${repo.fetch.lastError}\n\nClick to try again.`
+  }
+  const last =
+    repo.fetch.lastSuccess !== null ? `Last fetched ${formatRelative(repo.fetch.lastSuccess)}.` : 'Not fetched yet.'
+  return `Fetch from all remotes. ${last} Fetches also run in the background every 5 minutes.`
+})
+
+async function fetchNow(): Promise<void> {
+  try {
+    await api.fetchNow()
+    // The outcome arrives as a status event, which may still be on its way.
+    applyFetchStatus(await api.fetchStatus())
+  } catch (error) {
+    showToast('error', errorMessage(error))
+    return
+  }
+  if (repo.fetch.lastError) {
+    showToast('error', `Fetching failed: ${repo.fetch.lastError}`)
+  } else {
+    showToast('success', 'Fetched from the remotes.')
+  }
+}
+
 async function sync(operation: 'pull' | 'push'): Promise<void> {
   repo.busy = operation
   try {
@@ -98,6 +132,17 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
 
         <span class="divider" aria-hidden="true"></span>
 
+        <button
+          class="button"
+          :class="{ 'fetch--failed': fetchFailed }"
+          type="button"
+          :disabled="!hasRemotes || repo.fetch.inProgress"
+          :title="fetchTitle"
+          @click="fetchNow"
+        >
+          <AppIcon :name="fetchFailed ? 'warning' : 'refresh'" />
+          {{ repo.fetch.inProgress ? 'Fetching…' : 'Fetch' }}
+        </button>
         <button class="button" type="button" :disabled="!capabilities.canPull" :title="pullTitle" @click="sync('pull')">
           <AppIcon name="pull" />
           {{ repo.busy === 'pull' ? 'Pulling…' : 'Pull' }}
@@ -189,6 +234,11 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
   height: calc(25 * var(--px));
   margin: 0 var(--space-1);
   background: var(--color-border);
+}
+
+/* A failed background fetch shows here, without interrupting. */
+.fetch--failed {
+  color: var(--color-warning);
 }
 
 .count {

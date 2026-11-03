@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { api } from '../api'
 import { repo } from '../stores/repo'
-import { formatRelative } from '../utils/dates'
-import AppIcon from './AppIcon.vue'
 
 const overview = computed(() => repo.overview)
 
@@ -12,31 +9,6 @@ const commitCountLabel = computed(() => {
   const count = overview.value?.commitCount ?? 0
   return `${count.toLocaleString('en')} ${count === 1 ? 'commit' : 'commits'}`
 })
-
-const fetchLabel = computed(() => {
-  if (repo.fetch.inProgress) {
-    return 'Fetching…'
-  }
-  if (repo.fetch.lastError) {
-    return 'Fetch failed'
-  }
-  if (repo.fetch.lastSuccess !== null) {
-    return `Fetched ${formatRelative(repo.fetch.lastSuccess)}`
-  }
-  return 'Not fetched yet'
-})
-
-const fetchTitle = computed(() =>
-  repo.fetch.lastError
-    ? `${repo.fetch.lastError}\n\nClick to try again.`
-    : 'Fetches run in the background every 5 minutes. Click to fetch now.',
-)
-
-function fetchNow(): void {
-  if (!repo.fetch.inProgress) {
-    void api.fetchNow()
-  }
-}
 </script>
 
 <template>
@@ -70,18 +42,6 @@ function fetchNow(): void {
         ↓{{ overview.head.behind }}
       </span>
     </template>
-
-    <button
-      v-if="overview.remotes.length > 0"
-      class="fetch"
-      :class="{ 'fetch--failed': repo.fetch.lastError, 'fetch--running': repo.fetch.inProgress }"
-      type="button"
-      :title="fetchTitle"
-      @click="fetchNow"
-    >
-      <AppIcon :name="repo.fetch.lastError ? 'warning' : 'refresh'" />
-      {{ fetchLabel }}
-    </button>
   </div>
 </template>
 
@@ -125,37 +85,5 @@ function fetchNow(): void {
 .ahead.zero,
 .behind.zero {
   color: var(--color-fg-faint);
-}
-
-.fetch {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-1);
-  margin-left: auto;
-  padding: calc(3 * var(--px)) var(--space-2);
-  border: none;
-  border-radius: var(--radius);
-  background: transparent;
-  color: var(--color-fg-faint);
-  font-size: var(--font-size-small);
-  cursor: pointer;
-  transition:
-    background-color var(--transition),
-    color var(--transition);
-}
-
-.fetch:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-fg-muted);
-}
-
-.fetch--failed,
-.fetch--failed:hover {
-  color: var(--color-warning);
-}
-
-.fetch--running {
-  color: var(--color-fg-muted);
 }
 </style>
