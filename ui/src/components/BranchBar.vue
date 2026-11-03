@@ -5,6 +5,7 @@ import { api, errorMessage } from '../api'
 import { applyFetchStatus, capabilities, refreshEverything, repo } from '../stores/repo'
 import { showToast } from '../stores/toasts'
 import { formatRelative } from '../utils/dates'
+import { joinWithAnd } from '../utils/lists'
 import AppIcon from './AppIcon.vue'
 import ProjectInfo from './ProjectInfo.vue'
 
@@ -51,7 +52,8 @@ const pullTitle = computed(() => {
     : 'The branch has no upstream to pull from'
 })
 
-const hasRemotes = computed(() => (repo.overview?.remotes.length ?? 0) > 0)
+const remotes = computed(() => repo.overview?.remotes ?? [])
+const hasRemotes = computed(() => remotes.value.length > 0)
 const fetchFailed = computed(() => repo.fetch.lastError !== null && !repo.fetch.inProgress)
 
 const fetchTitle = computed(() => {
@@ -66,7 +68,7 @@ const fetchTitle = computed(() => {
   }
   const last =
     repo.fetch.lastSuccess !== null ? `Last fetched ${formatRelative(repo.fetch.lastSuccess)}.` : 'Not fetched yet.'
-  return `Fetch from all remotes. ${last} Fetches also run in the background every 5 minutes.`
+  return `Fetch from ${joinWithAnd(remotes.value)}. ${last} Fetches also run in the background every 5 minutes.`
 })
 
 async function fetchNow(): Promise<void> {

@@ -3,7 +3,6 @@ import { ref } from 'vue'
 
 import AuthorsTab from '../components/AuthorsTab.vue'
 import BranchBar from '../components/BranchBar.vue'
-import BranchInfo from '../components/BranchInfo.vue'
 import BranchSwitcher from '../components/BranchSwitcher.vue'
 import CommitsTab from '../components/CommitsTab.vue'
 import FilesTab from '../components/FilesTab.vue'
@@ -26,7 +25,6 @@ const TABS: { id: MainTab; label: string }[] = [
 <template>
   <div class="main-view">
     <BranchBar @open-switcher="switcherOpen = true" />
-    <BranchInfo />
 
     <div class="tab-bar">
       <nav class="tabs" role="tablist">
