@@ -227,7 +227,7 @@ defineExpose({ element: root })
         {{ file.path }}
       </span>
       <button
-        class="button button--quiet file-action"
+        class="button file-action"
         type="button"
         title="Show the commits on this branch that changed this file"
         @click="openFileHistory(file.path)"
@@ -235,7 +235,7 @@ defineExpose({ element: root })
         <AppIcon name="history" />
         History
       </button>
-      <button class="button button--quiet file-action" type="button" title="Show who last changed each line" @click="showBlame">
+      <button class="button file-action" type="button" title="Show who last changed each line" @click="showBlame">
         <AppIcon name="blame" />
         Blame
       </button>
@@ -357,12 +357,7 @@ defineExpose({ element: root })
   gap: var(--space-1);
   height: var(--icon-button-size);
   padding: 0 var(--space-2);
-  color: var(--color-fg-muted);
   font-size: var(--font-size-small);
-}
-
-.file-action:hover:not(:disabled) {
-  color: var(--color-fg);
 }
 
 .additions {

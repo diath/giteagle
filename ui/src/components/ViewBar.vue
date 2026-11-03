@@ -27,7 +27,7 @@ defineSlots<{
 <template>
   <div class="view-bar">
     <div class="column">
-      <button class="button button--quiet" type="button" :title="backTitle" @click="goBack">
+      <button class="button" type="button" :title="backTitle" @click="goBack">
         <AppIcon name="back" />
         Back
       </button>
