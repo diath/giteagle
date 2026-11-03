@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { dismissToast, toasts } from '../stores/toasts'
+import type { IconName } from '../icons/paths'
+import { dismissToast, toasts, type ToastKind } from '../stores/toasts'
 import AppIcon from './AppIcon.vue'
+
+const ICONS: Record<ToastKind, IconName> = {
+  info: 'info',
+  success: 'check',
+  error: 'warning',
+}
 </script>
 
 <template>
   <div class="toast-host" aria-live="polite">
     <div v-for="toast in toasts" :key="toast.id" class="toast" :class="`toast--${toast.kind}`">
-      <AppIcon :name="toast.kind === 'error' ? 'warning' : 'check'" class="icon" />
+      <AppIcon :name="ICONS[toast.kind]" class="icon" />
       <p class="message">{{ toast.message }}</p>
       <button class="icon-button" type="button" title="Dismiss" @click="dismissToast(toast.id)">
         <AppIcon name="close" />
