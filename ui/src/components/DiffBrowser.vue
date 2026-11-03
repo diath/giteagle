@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { provide, ref } from 'vue'
+import { computed, provide, ref } from 'vue'
 
 import type { DiffStats, FileDiff } from '../api'
-import DiffFile, { DIFF_SCROLLER } from './DiffFile.vue'
+import { buildFileTree, treeOrder, visibleRows, type FileTreeFolder, type FileTreeRow } from '../utils/fileTree'
+import AppIcon from './AppIcon.vue'
+import DiffFile, { DIFF_SCROLLER, KIND_LABELS } from './DiffFile.vue'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     files: FileDiff[]
     stats: DiffStats
@@ -22,11 +24,19 @@ defineSlots<{
   'file-label'?: (props: { file: FileDiff }) => unknown
 }>()
 
+const tree = computed(() => buildFileTree(props.files.map((file) => file.path)))
+/** Positions in `files`, in the order the list shows them. The diffs follow the same order. */
+const order = computed(() => treeOrder(tree.value))
+/** The paths of the collapsed folders. */
+const collapsed = ref(new Set<string>())
+const rows = computed(() => visibleRows(tree.value, collapsed.value))
+
 const scroller = ref<HTMLElement | null>(null)
 // Component instances, not elements: a child's own template ref is only
 // filled in after this function ref runs, so elements are read on use.
+// Indexed by position in `files`.
 const fileComponents: (InstanceType<typeof DiffFile> | null)[] = []
-const currentFile = ref(0)
+const currentFile = ref(order.value[0] ?? 0)
 
 provide(DIFF_SCROLLER, scroller)
 
@@ -50,22 +60,37 @@ function trackCurrentFile(): void {
     return
   }
   const top = scroller.value.scrollTop + 1
-  let index = 0
-  fileComponents.forEach((component, elementIndex) => {
-    const element = component?.element
+  let current = order.value[0] ?? 0
+  for (const index of order.value) {
+    const element = fileComponents[index]?.element
     if (element && element.offsetTop <= top) {
-      index = elementIndex
+      current = index
     }
-  })
-  currentFile.value = index
+  }
+  currentFile.value = current
 }
 
-function baseName(path: string): string {
-  return path.slice(path.lastIndexOf('/') + 1)
+function toggleFolder(path: string): void {
+  if (collapsed.value.has(path)) {
+    collapsed.value.delete(path)
+  } else {
+    collapsed.value.add(path)
+  }
 }
 
-function directoryName(path: string): string {
-  return path.slice(0, Math.max(path.lastIndexOf('/'), 0))
+/** A collapsed folder stands in for the current file when it hides it. */
+function hidesCurrentFile(folder: FileTreeFolder): boolean {
+  const file = props.files[currentFile.value] as FileDiff | undefined
+  return collapsed.value.has(folder.path) && file !== undefined && file.path.startsWith(`${folder.path}/`)
+}
+
+// A file can turn into a folder of the same name, so the kinds key apart.
+function rowKey(row: FileTreeRow): string {
+  return row.node.kind === 'folder' ? `folder:${row.node.path}` : `file:${props.files[row.node.index].path}`
+}
+
+function fileTitle(file: FileDiff): string {
+  return `${KIND_LABELS[file.kind]}: ${file.oldPath ? `${file.oldPath} → ${file.path}` : file.path}`
 }
 
 defineExpose({ scrollToFile })
@@ -77,25 +102,44 @@ defineExpose({ scrollToFile })
       <div class="file-list-header faint">
         {{ stats.filesChanged }} {{ stats.filesChanged === 1 ? 'file' : 'files' }} changed
       </div>
-      <button
-        v-for="(file, index) in files"
-        :key="file.path"
-        class="file-entry"
-        :class="{ current: index === currentFile, 'highlighted-entry': index === highlighted }"
-        type="button"
-        :title="file.oldPath ? `${file.oldPath} → ${file.path}` : file.path"
-        @click="scrollToFile(index)"
-      >
-        <span class="file-path ellipsis">
-          <span class="file-name">{{ baseName(file.path) }}</span>
-          <span class="file-directory faint">{{ directoryName(file.path) }}</span>
-        </span>
-        <slot name="file-label" :file="file" />
-        <span class="file-delta">
-          (<span class="additions">+{{ file.additions }}</span>
-          <span class="deletions">−{{ file.deletions }}</span>)
-        </span>
-      </button>
+      <template v-for="row in rows" :key="rowKey(row)">
+        <button
+          v-if="row.node.kind === 'folder'"
+          class="tree-row"
+          :class="{ current: hidesCurrentFile(row.node) }"
+          :style="{ '--depth': row.depth }"
+          type="button"
+          :title="row.node.path"
+          :aria-expanded="!collapsed.has(row.node.path)"
+          @click="toggleFolder(row.node.path)"
+        >
+          <AppIcon :name="collapsed.has(row.node.path) ? 'chevronRight' : 'chevronDown'" class="chevron" />
+          <AppIcon name="folder" class="folder-icon" />
+          <span class="folder-name ellipsis">{{ row.node.name }}</span>
+        </button>
+        <button
+          v-else
+          class="tree-row"
+          :class="{ current: row.node.index === currentFile, 'highlighted-entry': row.node.index === highlighted }"
+          :style="{ '--depth': row.depth }"
+          type="button"
+          :title="fileTitle(files[row.node.index])"
+          @click="scrollToFile(row.node.index)"
+        >
+          <span class="chevron"></span>
+          <AppIcon name="file" class="file-icon" :class="`file-icon--${files[row.node.index].kind}`" />
+          <span class="file-text">
+            <span class="file-name ellipsis">{{ row.node.name }}</span>
+            <span v-if="$slots['file-label']" class="file-label ellipsis">
+              <slot name="file-label" :file="files[row.node.index]" />
+            </span>
+          </span>
+          <span class="file-delta">
+            (<span class="additions">+{{ files[row.node.index].additions }}</span>
+            <span class="deletions">−{{ files[row.node.index].deletions }}</span>)
+          </span>
+        </button>
+      </template>
     </aside>
 
     <div ref="scroller" class="diff-area" @scroll.passive="trackCurrentFile">
@@ -103,10 +147,10 @@ defineExpose({ scrollToFile })
 
       <p v-if="files.length === 0" class="empty-state">{{ emptyText }}</p>
       <DiffFile
-        v-for="(file, index) in files"
+        v-for="index in order"
         :ref="(component) => setFileComponent(index, component)"
-        :key="file.path"
-        :file="file"
+        :key="files[index].path"
+        :file="files[index]"
         :highlighted="index === highlighted"
       />
     </div>
@@ -133,12 +177,14 @@ defineExpose({ scrollToFile })
   font-size: var(--font-size-small);
 }
 
-.file-entry {
+/* Each level of the tree steps in by --depth. */
+.tree-row {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
+  align-items: center;
+  gap: var(--space-1);
   width: 100%;
-  padding: calc(4 * var(--px)) var(--space-3);
+  padding: calc(2 * var(--px)) var(--space-3) calc(2 * var(--px))
+    calc(var(--space-2) + var(--depth) * calc(15 * var(--px)));
   border: none;
   border-left: calc(3 * var(--px)) solid transparent;
   background: transparent;
@@ -148,40 +194,92 @@ defineExpose({ scrollToFile })
   transition: background-color var(--transition);
 }
 
-.file-entry:hover {
+.tree-row:hover {
   background: var(--color-bg-hover);
 }
 
-.file-entry.current {
+.tree-row.current {
   border-left-color: var(--color-accent);
   background: var(--color-bg-raised);
 }
 
-.file-entry.highlighted-entry .file-name {
+.tree-row.highlighted-entry .file-name {
   color: var(--color-accent-bright);
 }
 
-.file-entry:focus-visible {
+.tree-row:focus-visible {
   outline-offset: -2px;
 }
 
-.file-path {
+/* File rows keep the space, so their icons line up with their folders'. */
+.chevron {
+  flex: none;
+  width: var(--icon-size);
+  color: var(--color-fg-faint);
+}
+
+.folder-icon {
+  color: var(--color-accent);
+}
+
+.folder-name {
   flex: 1;
+  min-width: 0;
+  color: var(--color-fg-muted);
+}
+
+.file-icon {
+  color: var(--color-fg-faint);
+}
+
+.file-icon--added {
+  color: var(--color-status-added);
+}
+
+.file-icon--deleted {
+  color: var(--color-status-deleted);
+}
+
+.file-icon--modified {
+  color: var(--color-status-modified);
+}
+
+.file-icon--renamed,
+.file-icon--copied {
+  color: var(--color-status-renamed);
+}
+
+.file-icon--typeChange {
+  color: var(--color-status-type-change);
+}
+
+/* Only the labels shrink, so a narrow row cuts them before the name, which
+   is cut only once it needs the whole width. */
+.file-text {
+  display: flex;
+  flex: 1;
+  gap: var(--space-1);
   min-width: 0;
 }
 
 .file-name {
+  flex: none;
+  max-width: 100%;
   color: var(--color-fg);
 }
 
-/* A margin, because Vue drops a space that starts an element. */
-.file-directory {
-  margin-left: 1ch;
+.file-label {
+  min-width: 0;
 }
 
 .file-delta {
   flex: none;
   color: var(--color-fg-faint);
+}
+
+/* A margin, because Vue drops the line break between the counts. */
+.file-delta .deletions {
+  margin-left: 1ch;
 }
 
 .additions {

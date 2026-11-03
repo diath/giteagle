@@ -193,11 +193,13 @@ watch(() => [repo.stashRevision, repo.revision], load)
   font-weight: 400;
 }
 
+/* Inline, so the file list can cut the labels short with an ellipsis. */
 .file-states {
-  display: flex;
-  flex: none;
-  gap: var(--space-1);
   font-size: var(--font-size-tiny);
+}
+
+.file-states > * + * {
+  margin-left: var(--space-1);
 }
 
 .additions {

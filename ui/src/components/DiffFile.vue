@@ -1,14 +1,25 @@
 <script lang="ts">
 import type { InjectionKey, Ref } from 'vue'
 
+import type { ChangeKind } from '../api'
+
 /** The element the diffs scroll in, which the highlight observer watches. */
 export const DIFF_SCROLLER: InjectionKey<Ref<HTMLElement | null>> = Symbol('diff-scroller')
+
+export const KIND_LABELS: Record<ChangeKind, string> = {
+  added: 'Added',
+  deleted: 'Deleted',
+  modified: 'Modified',
+  renamed: 'Renamed',
+  copied: 'Copied',
+  typeChange: 'Type changed',
+}
 </script>
 
 <script setup lang="ts">
 import { computed, inject, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 
-import type { ChangeKind, FileDiff } from '../api'
+import type { FileDiff } from '../api'
 import { scaled } from '../theme/scale'
 import { buildSegments, layoutRows, splitLines } from '../utils/diff'
 import { languageFor, tokenizeFile, type Token } from '../utils/highlight'
@@ -56,15 +67,6 @@ const gutterWidth = computed(() => {
   )
   return `${Math.max(String(largest).length, 3) + 1}ch`
 })
-
-const KIND_LABELS: Record<ChangeKind, string> = {
-  added: 'Added',
-  deleted: 'Deleted',
-  modified: 'Modified',
-  renamed: 'Renamed',
-  copied: 'Copied',
-  typeChange: 'Type changed',
-}
 
 const MODE_NAMES: Record<number, string> = {
   0o100644: 'regular file',
