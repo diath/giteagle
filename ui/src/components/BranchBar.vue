@@ -166,12 +166,14 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
 </template>
 
 <style scoped>
-/* The middle column takes what its contents need, but the outer columns
-   always keep a share, so a long branch name can't push them out. They split
-   the rest equally, which keeps the middle one centered in the window. */
+/* The middle column takes what its contents need, but the project info
+   always keeps a share, so a long branch name can't push it out. When there
+   is room, the outer columns split the rest equally, which keeps the middle
+   one centered in the window. In a narrow window the empty right column
+   gives up its space first, so the branch name keeps some. */
 .branch-bar {
   display: grid;
-  grid-template-columns: minmax(15%, 1fr) minmax(0, max-content) minmax(15%, 1fr);
+  grid-template-columns: minmax(15%, 1fr) minmax(0, max-content) minmax(0, 1fr);
   align-items: center;
   gap: var(--space-4);
   min-height: var(--bar-height);
