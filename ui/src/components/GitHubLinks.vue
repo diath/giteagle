@@ -28,7 +28,7 @@ async function openPage(page: GitHubPage): Promise<void> {
     <button
       v-for="page in PAGES"
       :key="page.id"
-      class="button button--quiet link"
+      class="button"
       type="button"
       :title="`Open the ${page.description} of ${github.owner}/${github.name} on GitHub`"
       @click="openPage(page.id)"
@@ -44,14 +44,6 @@ async function openPage(page: GitHubPage): Promise<void> {
   display: flex;
   flex: none;
   align-items: center;
-  gap: var(--space-1);
-}
-
-.link {
-  color: var(--color-fg-muted);
-}
-
-.link:hover {
-  color: var(--color-fg);
+  gap: var(--space-2);
 }
 </style>
