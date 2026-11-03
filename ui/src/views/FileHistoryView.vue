@@ -4,7 +4,7 @@ import { computed } from 'vue'
 import { api, type HistoryCursor } from '../api'
 import CommitList from '../components/CommitList.vue'
 import ViewBar from '../components/ViewBar.vue'
-import { goBack, openCommit } from '../stores/navigation'
+import { goBack, navigation, openCommit } from '../stores/navigation'
 import { repo } from '../stores/repo'
 import { useEscape } from '../utils/escape'
 
@@ -14,11 +14,16 @@ useEscape(goBack)
 
 const sourceKey = computed(() => `${repo.revision}\n${props.path}`)
 const load = (cursor: HistoryCursor | null) => api.fileHistory(props.path, cursor)
+
+// The view is only seen on top of the stack, so Back leads to the one below.
+const backTitle = computed(() =>
+  navigation.stack[navigation.stack.length - 2]?.kind === 'main' ? 'Back to the files (Esc)' : 'Back (Esc)',
+)
 </script>
 
 <template>
   <div class="file-history">
-    <ViewBar icon="history" back-title="Back to the files (Esc)">
+    <ViewBar icon="history" :back-title="backTitle">
       <template #title>
         File history:
         <span class="path ellipsis" :title="path">{{ path }}</span>

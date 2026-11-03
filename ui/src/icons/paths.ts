@@ -26,6 +26,7 @@ export const ICON_PATHS = {
   warning: 'M8 2l6.5 11.5h-13z M8 6.5v3.5 M8 12v.01',
   refresh: 'M13 3.5v3h-3 M12.7 6.5A5 5 0 1 0 13 9',
   history: 'M2.5 8a5.5 5.5 0 1 0 1.6-3.9 M2.5 2.5v2.5H5 M8 5v3.25l2 1.5',
+  blame: 'M2 4h2 M2 8h2 M2 12h2 M6.25 2v12 M8.5 4h5.5 M8.5 8h3.5 M8.5 12h5',
   expand: 'M8 2.5v3.5 M5.5 4L8 6.5 10.5 4 M8 13.5V10 M5.5 12L8 9.5l2.5 2.5',
   dot: 'M6 8a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
   pencil: 'M11 2.5l2.5 2.5L6 12.5l-3.5 1 1-3.5z M9.5 4l2.5 2.5',

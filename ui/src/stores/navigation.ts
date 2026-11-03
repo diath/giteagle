@@ -73,6 +73,14 @@ export function openStash(id: string): void {
 }
 
 export function openFileHistory(path: string): void {
+  // From a commit opened in this file's history, going back keeps that
+  // history's place instead of stacking a second copy of it.
+  const top = navigation.stack.length - 1
+  const below = navigation.stack[top - 1] as View | undefined
+  if (navigation.stack[top].kind === 'commit' && below?.kind === 'fileHistory' && below.path === path) {
+    goBack()
+    return
+  }
   navigation.stack.push({ kind: 'fileHistory', path })
 }
 

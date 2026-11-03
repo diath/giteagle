@@ -20,6 +20,8 @@ export const KIND_LABELS: Record<ChangeKind, string> = {
 import { computed, inject, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 
 import type { FileDiff } from '../api'
+import { openFileHistory } from '../stores/navigation'
+import { showToast } from '../stores/toasts'
 import { scaled } from '../theme/scale'
 import { buildSegments, layoutRows, splitLines } from '../utils/diff'
 import { languageFor, tokenizeFile, type Token } from '../utils/highlight'
@@ -124,6 +126,10 @@ const summary = computed(() => {
   }
 })
 
+function showBlame(): void {
+  showToast('info', 'Blame is not implemented yet.')
+}
+
 function expandGap(index: number): void {
   expandedGaps.value = new Set([...expandedGaps.value, index])
 }
@@ -220,6 +226,19 @@ defineExpose({ element: root })
         </template>
         {{ file.path }}
       </span>
+      <button
+        class="button button--quiet file-action"
+        type="button"
+        title="Show the commits on this branch that changed this file"
+        @click="openFileHistory(file.path)"
+      >
+        <AppIcon name="history" />
+        History
+      </button>
+      <button class="button button--quiet file-action" type="button" title="Show who last changed each line" @click="showBlame">
+        <AppIcon name="blame" />
+        Blame
+      </button>
     </header>
 
     <div v-if="!collapsed" class="file-body">
@@ -281,7 +300,7 @@ defineExpose({ element: root })
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+  padding: var(--space-1);
   border-bottom: 1px solid var(--color-border);
   border-radius: var(--radius-large) var(--radius-large) 0 0;
   background: var(--color-bg-raised);
@@ -330,6 +349,20 @@ defineExpose({ element: root })
   flex: none;
   gap: var(--space-2);
   font-size: var(--font-size-small);
+}
+
+/* Short enough to fit the header without making it taller. */
+.file-action {
+  flex: none;
+  gap: var(--space-1);
+  height: var(--icon-button-size);
+  padding: 0 var(--space-2);
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-small);
+}
+
+.file-action:hover:not(:disabled) {
+  color: var(--color-fg);
 }
 
 .additions {
