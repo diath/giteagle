@@ -6,18 +6,78 @@ import AppIcon from '../components/AppIcon.vue'
 import AvatarStack from '../components/AvatarStack.vue'
 import DiffBrowser from '../components/DiffBrowser.vue'
 import ViewBar from '../components/ViewBar.vue'
-import { goBack, openCommit } from '../stores/navigation'
+import { goBack, openCommit, replaceCommit, type CommitSequence } from '../stores/navigation'
 import { showToast } from '../stores/toasts'
 import { formatAbsolute, formatRelative } from '../utils/dates'
 import { useEscape } from '../utils/escape'
 
-const props = defineProps<{ id: string; fromFile: string | null }>()
+const props = defineProps<{ id: string; fromFile: string | null; sequence: CommitSequence | null }>()
 
 const details = shallowRef<CommitDetails | null>(null)
 const error = ref<string | null>(null)
 const browser = ref<InstanceType<typeof DiffBrowser> | null>(null)
+const loadingOlder = ref(false)
 
 useEscape(goBack)
+
+/** Where the commit is in the list it was opened from, newest first. */
+const position = computed(() => props.sequence?.commits.findIndex((commit) => commit.id === props.id) ?? -1)
+
+const newerCommit = computed(() => (position.value > 0 ? (props.sequence?.commits[position.value - 1] ?? null) : null))
+
+/** Null at the end of the loaded commits, even when more can be loaded. */
+const olderCommit = computed(() =>
+  position.value === -1 ? null : (props.sequence?.commits[position.value + 1] ?? null),
+)
+
+const canShowOlder = computed(
+  () => olderCommit.value !== null || (position.value !== -1 && props.sequence?.hasMore === true),
+)
+
+const notInList = computed(() =>
+  props.sequence ? "This commit isn't in the list it was opened from" : 'Open a commit from a list to step through it',
+)
+
+const olderTitle = computed(() => {
+  if (position.value === -1) {
+    return notInList.value
+  }
+  if (olderCommit.value) {
+    return `Previous (older) commit: ${olderCommit.value.shortId} ${olderCommit.value.subject}`
+  }
+  return canShowOlder.value ? 'Previous (older) commit' : 'This is the oldest commit in the list'
+})
+
+const newerTitle = computed(() => {
+  if (position.value === -1) {
+    return notInList.value
+  }
+  if (newerCommit.value) {
+    return `Next (newer) commit: ${newerCommit.value.shortId} ${newerCommit.value.subject}`
+  }
+  return 'This is the newest commit in the list'
+})
+
+async function showOlder(): Promise<void> {
+  // At the end of the loaded commits, the list loads its next page first.
+  if (!olderCommit.value && props.sequence) {
+    loadingOlder.value = true
+    try {
+      await props.sequence.loadMore()
+    } finally {
+      loadingOlder.value = false
+    }
+  }
+  if (olderCommit.value) {
+    replaceCommit(props.id, olderCommit.value.id)
+  }
+}
+
+function showNewer(): void {
+  if (newerCommit.value) {
+    replaceCommit(props.id, newerCommit.value.id)
+  }
+}
 
 const committerDiffers = computed(() => {
   const commit = details.value
@@ -69,13 +129,34 @@ onMounted(async () => {
 <template>
   <div class="commit-view">
     <ViewBar icon="commit">
+      <template #before-title>
+        <button
+          class="button"
+          type="button"
+          :disabled="!canShowOlder || loadingOlder"
+          :title="olderTitle"
+          @click="showOlder"
+        >
+          <AppIcon name="chevronLeft" />
+          Previous
+        </button>
+      </template>
       <template #title>
         Commit <span class="hash">{{ details?.shortId ?? id.slice(0, 7) }}</span>
       </template>
+      <template #after-title>
+        <button class="button" type="button" :disabled="!newerCommit" :title="newerTitle" @click="showNewer">
+          Next
+          <AppIcon name="chevronRight" />
+        </button>
+      </template>
       <template #end>
-        <span v-if="fromFile" class="from-file" :title="fromFile">
+        <span v-if="fromFile" class="from-file" :title="`Opened from file history: ${fromFile}`">
           <AppIcon name="history" />
-          Opened from file history: <span class="path">{{ fromFile }}</span>
+          <span class="from-file-text">
+            <span>Opened from file history:</span>
+            <span class="path ellipsis">{{ fromFile }}</span>
+          </span>
         </span>
       </template>
     </ViewBar>
@@ -110,7 +191,7 @@ onMounted(async () => {
                 class="parent hash"
                 type="button"
                 title="Open this parent commit"
-                @click="openCommit(parent.id)"
+                @click="openCommit(parent.id, { sequence })"
               >
                 {{ parent.shortId }}
               </button>
@@ -173,10 +254,20 @@ onMounted(async () => {
   white-space: nowrap;
 }
 
+/* When the bar is narrow, the path moves to a line of its own instead of
+   being cut short. */
+.from-file-text {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 1ch;
+  min-width: 0;
+  line-height: 1.2;
+}
+
 .from-file .path {
-  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
   color: var(--color-fg-strong);
-  text-overflow: ellipsis;
 }
 
 .error {

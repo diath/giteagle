@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 
 import { errorMessage, type CommitSummary, type HistoryCursor, type HistoryPage } from '../api'
+import type { CommitSequence } from '../stores/navigation'
 import { scaled } from '../theme/scale'
 import AppIcon from './AppIcon.vue'
 import CommitEntry from './CommitEntry.vue'
@@ -20,7 +21,7 @@ const props = defineProps<{
   emptyText: string
 }>()
 
-const emit = defineEmits<{ open: [commit: CommitSummary] }>()
+const emit = defineEmits<{ open: [commit: CommitSummary, sequence: CommitSequence] }>()
 
 const commits = shallowRef<CommitSummary[]>([])
 const next = ref<HistoryCursor | null>(null)
@@ -58,16 +59,31 @@ const rows = computed<Row[]>(() => {
   return result
 })
 
+/** Loads the next page as the list is scrolled, while it's shown. */
 async function loadMore(): Promise<void> {
-  if (loading.value || done.value || error.value !== null || !props.active) {
+  if (!props.active) {
     return
+  }
+  const startedGeneration = generation
+  if (await loadPage()) {
+    await continueIfNearBottom(startedGeneration)
+  }
+}
+
+/**
+ * Loads the next page, also while a Commit View stepping through the list
+ * covers it. Resolves to whether another page may follow right away.
+ */
+async function loadPage(): Promise<boolean> {
+  if (loading.value || done.value || error.value !== null) {
+    return false
   }
   const startedGeneration = generation
   loading.value = true
   try {
     const page = await props.load(next.value)
     if (startedGeneration !== generation) {
-      return
+      return false
     }
     commits.value = [...commits.value, ...page.commits]
     listHead ??= page.head
@@ -84,14 +100,27 @@ async function loadMore(): Promise<void> {
     }
   }
   if (startedGeneration !== generation) {
-    return
+    return false
   }
   if (refreshPending) {
     refreshPending = false
     void refreshInPlace()
-    return
+    return false
   }
-  await continueIfNearBottom(startedGeneration)
+  return true
+}
+
+/** Lets a Commit View opened from the list step through it. */
+const sequence: CommitSequence = {
+  get commits() {
+    return commits.value
+  },
+  get hasMore() {
+    return !done.value && error.value === null
+  },
+  async loadMore() {
+    await loadPage()
+  },
 }
 
 async function continueIfNearBottom(startedGeneration: number): Promise<void> {
@@ -211,7 +240,7 @@ onBeforeUnmount(() => observer?.disconnect())
         <AppIcon :name="row.pushed ? 'check' : 'push'" />
         <span>{{ row.pushed ? `Pushed to ${upstream ?? 'the upstream'}` : 'Not pushed yet' }}</span>
       </div>
-      <CommitEntry v-else :commit="row.commit" @open="emit('open', row.commit)" />
+      <CommitEntry v-else :commit="row.commit" @open="emit('open', row.commit, sequence)" />
     </template>
 
     <div v-if="error" class="status status--error">

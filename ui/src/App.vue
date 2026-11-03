@@ -94,7 +94,7 @@ onBeforeUnmount(() => {
       />
       <PendingChangesView v-else-if="view.kind === 'pending'" />
       <StashView v-else-if="view.kind === 'stash'" :id="view.id" />
-      <CommitView v-else :id="view.id" :from-file="view.fromFile" />
+      <CommitView v-else :id="view.id" :from-file="view.fromFile" :sequence="view.sequence" />
     </div>
   </div>
   <p v-else class="loading">Loading the repository…</p>

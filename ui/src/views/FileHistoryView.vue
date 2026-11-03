@@ -33,7 +33,7 @@ const load = (cursor: HistoryCursor | null) => api.fileHistory(props.path, curso
       :active="active"
       :upstream="repo.overview?.head.upstream ?? null"
       empty-text="No commits on this branch changed this file."
-      @open="(commit) => openCommit(commit.id, path)"
+      @open="(commit, sequence) => openCommit(commit.id, { fromFile: path, sequence })"
     />
   </div>
 </template>

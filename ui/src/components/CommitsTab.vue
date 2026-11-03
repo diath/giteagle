@@ -74,7 +74,7 @@ const emptyText = computed(() => {
       :active="active"
       :upstream="repo.overview?.head.upstream ?? null"
       :empty-text="emptyText"
-      @open="(commit) => openCommit(commit.id)"
+      @open="(commit, sequence) => openCommit(commit.id, { sequence })"
     >
       <template #top>
         <PendingEntry v-if="showPending && pendingSummary" :summary="pendingSummary" @open="openPendingChanges" />
