@@ -91,8 +91,9 @@ export function createProjectApi(project: ProjectId) {
     deleteInfo: (name: string) => call<DeleteInfo>('get_delete_info', { name }),
     deleteBranch: (name: string, deleteRemote: boolean) =>
       call<void>('delete_branch', { name, deleteRemote }),
-    pickTargets: (id: string) => call<PickTarget[]>('list_pick_targets', { id }),
-    cherryPick: (id: string, branches: string[]) => call<void>('cherry_pick', { id, branches }),
+    pickTargets: (ids: string[]) => call<PickTarget[]>('list_pick_targets', { ids }),
+    /** Each branch gets a copy of every commit, oldest first. */
+    cherryPick: (ids: string[], branches: string[]) => call<void>('cherry_pick', { ids, branches }),
     revertCommit: (id: string, mode: RevertMode) => call<void>('revert_commit', { id, mode }),
     /** The commits that can be reworded, squashed or dropped together with `id`, newest first. */
     rewritableCommits: (id: string) => call<RewritableCommit[]>('list_rewritable_commits', { id }),

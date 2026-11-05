@@ -118,7 +118,7 @@ const dialog = ref<'reword' | 'squash' | 'drop' | 'cherryPick' | 'revert' | null
     <RewordDialog v-if="dialog === 'reword'" :commit="commit" @close="dialog = null" />
     <SquashDialog v-else-if="dialog === 'squash'" :commit="commit" @close="dialog = null" />
     <DropDialog v-else-if="dialog === 'drop'" :commit="commit" @close="dialog = null" />
-    <CherryPickDialog v-else-if="dialog === 'cherryPick'" :commit="commit" @close="dialog = null" />
+    <CherryPickDialog v-else-if="dialog === 'cherryPick'" :commits="[commit]" @close="dialog = null" />
     <RevertDialog v-else-if="dialog === 'revert'" :commit="commit" @close="dialog = null" />
   </div>
 </template>

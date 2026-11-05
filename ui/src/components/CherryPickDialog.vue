@@ -7,8 +7,11 @@ import { showToast } from '../stores/toasts'
 import { joinWithAnd } from '../utils/lists'
 import ConfirmDialog from './ConfirmDialog.vue'
 
-const props = defineProps<{ commit: CommitSummary }>()
-const emit = defineEmits<{ close: [] }>()
+const props = defineProps<{
+  /** One or more, in any order; each branch gets them oldest first. */
+  commits: CommitSummary[]
+}>()
+const emit = defineEmits<{ close: []; picked: [] }>()
 
 const { api, repo } = useProject()
 
@@ -18,13 +21,22 @@ const chosen = ref<string[]>([])
 const working = ref(false)
 const list = ref<HTMLElement | null>(null)
 
+const single = computed(() => (props.commits.length === 1 ? props.commits[0] : null))
+
+/** Oldest first, roughly the order the copies are made in. */
+const shownCommits = computed(() => [...props.commits].sort((left, right) => left.authorTime - right.authorTime))
+
+const title = computed(() =>
+  single.value ? `Cherry-pick ${single.value.shortId}` : `Cherry-pick ${props.commits.length} commits`,
+)
+
 /** Why the commit can't go onto a branch, or null when it can. */
 function blocker(target: PickTarget): string | null {
   if (target.isCurrent) {
     return 'current branch'
   }
   if (target.hasCommit) {
-    return 'already has this commit'
+    return single.value ? 'already has this commit' : 'already has one of these commits'
   }
   if (target.inOtherWorktree) {
     return 'checked out in another worktree'
@@ -45,8 +57,10 @@ async function confirm(): Promise<void> {
   working.value = true
   repo.busy = 'cherryPick'
   try {
-    await api.cherryPick(props.commit.id, branches)
-    showToast('success', `Cherry-picked ${props.commit.shortId} to ${joinWithAnd(branches)}.`)
+    await api.cherryPick(props.commits.map((commit) => commit.id), branches)
+    const what = single.value ? single.value.shortId : `${props.commits.length} commits`
+    showToast('success', `Cherry-picked ${what} to ${joinWithAnd(branches)}.`)
+    emit('picked')
     emit('close')
   } catch (error) {
     showToast('error', errorMessage(error))
@@ -58,7 +72,7 @@ async function confirm(): Promise<void> {
 
 onMounted(async () => {
   try {
-    targets.value = await api.pickTargets(props.commit.id)
+    targets.value = await api.pickTargets(props.commits.map((commit) => commit.id))
   } catch (error) {
     loadError.value = errorMessage(error)
     return
@@ -71,7 +85,7 @@ onMounted(async () => {
 
 <template>
   <ConfirmDialog
-    :title="`Cherry-pick ${commit.shortId}`"
+    :title="title"
     icon="cherryPick"
     confirm-label="Cherry-pick"
     working-label="Cherry-picking…"
@@ -80,10 +94,19 @@ onMounted(async () => {
     @confirm="confirm"
     @close="emit('close')"
   >
-    <p class="commit ellipsis"><span class="hash">{{ commit.shortId }}</span> {{ commit.subject }}</p>
-    <p class="muted">
+    <p v-if="single" class="commit ellipsis"><span class="hash">{{ single.shortId }}</span> {{ single.subject }}</p>
+    <ul v-else class="commits" aria-label="Commits to cherry-pick">
+      <li v-for="commit in shownCommits" :key="commit.id" class="commit ellipsis">
+        <span class="hash">{{ commit.shortId }}</span> {{ commit.subject }}
+      </li>
+    </ul>
+    <p v-if="single" class="muted">
       Adds a copy of the commit on top of each branch you check. The current branch and the working tree
       stay as they are.
+    </p>
+    <p v-else class="muted">
+      Adds copies of the commits on top of each branch you check, the oldest first. The current branch and
+      the working tree stay as they are.
     </p>
 
     <p v-if="loadError" class="error">{{ loadError }}</p>
@@ -111,6 +134,14 @@ onMounted(async () => {
 <style scoped>
 .commit {
   color: var(--color-fg-strong);
+}
+
+.commits {
+  max-height: calc(160 * var(--px));
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
 }
 
 .error {

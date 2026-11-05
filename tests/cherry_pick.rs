@@ -1,6 +1,7 @@
 mod common;
 
 use std::fs;
+use std::path::Path;
 
 use common::TempRepo;
 use git2::{Commit, Repository, WorktreeAddOptions};
@@ -32,7 +33,7 @@ fn targets_tell_which_branches_already_have_the_commit() {
     let picked = repo.commit_file("b.txt", "b\n", "Add b");
     repo.create_branch("newer", picked);
 
-    let targets = pick_targets(&repo.repository, &picked.to_string()).unwrap();
+    let targets = pick_targets(&repo.repository, &[picked.to_string()]).unwrap();
     let summary: Vec<_> = targets
         .iter()
         .map(|target| {
@@ -66,7 +67,7 @@ fn cherry_picking_copies_the_commit_onto_each_branch() {
 
     cherry_pick(
         &repo.repository,
-        &picked.to_string(),
+        &[picked.to_string()],
         &branches(&["one", "two"]),
     )
     .unwrap();
@@ -110,7 +111,7 @@ fn a_conflict_on_any_branch_cherry_picks_nothing() {
 
     let error = cherry_pick(
         &repo.repository,
-        &picked.to_string(),
+        &[picked.to_string()],
         &branches(&["clean", "diverged"]),
     )
     .unwrap_err();
@@ -138,7 +139,12 @@ fn a_merge_is_cherry_picked_against_its_first_parent() {
     repo.write("side.txt", "side\n");
     let merge = repo.commit_merge("Merge side", side);
 
-    cherry_pick(&repo.repository, &merge.to_string(), &branches(&["target"])).unwrap();
+    cherry_pick(
+        &repo.repository,
+        &[merge.to_string()],
+        &branches(&["target"]),
+    )
+    .unwrap();
 
     let copy = tip(&repo.repository, "target");
     assert_eq!(copy.parent_ids().collect::<Vec<_>>(), [base]);
@@ -158,15 +164,16 @@ fn branches_that_have_the_commit_or_its_changes_are_refused() {
     let picked = repo.commit_file("b.txt", "b\n", "Add b");
     repo.create_branch("contains", picked);
     let id = picked.to_string();
+    let ids = [id.clone()];
 
-    let current = cherry_pick(&repo.repository, &id, &branches(&["main"])).unwrap_err();
+    let current = cherry_pick(&repo.repository, &ids, &branches(&["main"])).unwrap_err();
     assert_eq!(current.kind, ErrorKind::InvalidState);
-    let contains = cherry_pick(&repo.repository, &id, &branches(&["contains"])).unwrap_err();
+    let contains = cherry_pick(&repo.repository, &ids, &branches(&["contains"])).unwrap_err();
     assert_eq!(
         contains.message,
         format!("contains already has {}.", &id[..7])
     );
-    let same = cherry_pick(&repo.repository, &id, &branches(&["same-change"])).unwrap_err();
+    let same = cherry_pick(&repo.repository, &ids, &branches(&["same-change"])).unwrap_err();
     assert_eq!(
         same.message,
         format!("same-change already has the changes from {}.", &id[..7])
@@ -188,16 +195,99 @@ fn branches_checked_out_in_other_worktrees_are_refused() {
         .worktree("linked", &linked_path, Some(&options))
         .unwrap();
     let id = picked.to_string();
+    let ids = [id.clone()];
 
-    let from_main = pick_targets(&repo.repository, &id).unwrap();
+    let from_main = pick_targets(&repo.repository, &ids).unwrap();
     assert!(find(&from_main, "linked").in_other_worktree);
-    let error = cherry_pick(&repo.repository, &id, &branches(&["linked"])).unwrap_err();
+    let error = cherry_pick(&repo.repository, &ids, &branches(&["linked"])).unwrap_err();
     assert_eq!(error.kind, ErrorKind::InvalidState);
     assert_eq!(tip(&repo.repository, "linked").id(), base);
 
     let linked = Repository::open(&linked_path).unwrap();
-    let from_linked = pick_targets(&linked, &id).unwrap();
+    let from_linked = pick_targets(&linked, &ids).unwrap();
     assert!(find(&from_linked, "main").in_other_worktree);
     assert!(find(&from_linked, "linked").is_current);
     assert!(!find(&from_linked, "linked").in_other_worktree);
+}
+
+#[test]
+fn several_commits_go_onto_each_branch_oldest_first() {
+    let repo = TempRepo::new();
+    let base = repo.commit_file("a.txt", "a\n", "Base");
+    repo.create_branch("target", base);
+    let added = repo.commit_file("b.txt", "b\n", "Add b");
+    repo.commit_file("c.txt", "c\n", "Add c");
+    let changed = repo.commit_file("b.txt", "b2\n", "Change b");
+
+    // Given newest first, as a list shows them; "Change b" needs "Add b".
+    cherry_pick(
+        &repo.repository,
+        &[changed.to_string(), added.to_string()],
+        &branches(&["target"]),
+    )
+    .unwrap();
+
+    let top = tip(&repo.repository, "target");
+    assert_eq!(top.summary().unwrap(), Some("Change b"));
+    let below = top.parent(0).unwrap();
+    assert_eq!(below.summary().unwrap(), Some("Add b"));
+    assert_eq!(below.parent_id(0).unwrap(), base);
+    let tree = top.tree().unwrap();
+    assert!(tree.get_path(Path::new("b.txt")).is_ok());
+    assert!(tree.get_path(Path::new("c.txt")).is_err());
+    let reflog = repo.repository.reflog("refs/heads/target").unwrap();
+    assert_eq!(
+        reflog.get(0).unwrap().message().unwrap(),
+        Some("cherry-pick: 2 commits")
+    );
+}
+
+#[test]
+fn a_conflict_in_any_of_several_commits_cherry_picks_nothing() {
+    let repo = TempRepo::new();
+    let base = repo.commit_file("a.txt", "a\n", "Base");
+    repo.create_branch("clean", base);
+    repo.create_branch("diverged", base);
+    repo.checkout("diverged");
+    let diverged = repo.commit_file("a.txt", "theirs\n", "Change a there");
+    repo.checkout("main");
+    let added = repo.commit_file("b.txt", "b\n", "Add b");
+    let changed = repo.commit_file("a.txt", "ours\n", "Change a here");
+
+    let error = cherry_pick(
+        &repo.repository,
+        &[added.to_string(), changed.to_string()],
+        &branches(&["clean", "diverged"]),
+    )
+    .unwrap_err();
+
+    assert_eq!(error.kind, ErrorKind::Conflict);
+    let expected = format!(
+        "The commits conflict with diverged ({}: a.txt)",
+        &changed.to_string()[..7]
+    );
+    assert!(error.message.starts_with(&expected), "{}", error.message);
+    assert_eq!(tip(&repo.repository, "clean").id(), base);
+    assert_eq!(tip(&repo.repository, "diverged").id(), diverged);
+}
+
+#[test]
+fn a_branch_with_any_of_several_commits_is_refused() {
+    let repo = TempRepo::new();
+    let base = repo.commit_file("a.txt", "a\n", "Base");
+    repo.create_branch("free", base);
+    let added = repo.commit_file("b.txt", "b\n", "Add b");
+    repo.create_branch("has-first", added);
+    let changed = repo.commit_file("b.txt", "b2\n", "Change b");
+    let ids = [added.to_string(), changed.to_string()];
+
+    let targets = pick_targets(&repo.repository, &ids).unwrap();
+    assert!(find(&targets, "has-first").has_commit);
+    assert!(!find(&targets, "free").has_commit);
+    let error = cherry_pick(&repo.repository, &ids, &branches(&["free", "has-first"])).unwrap_err();
+    assert_eq!(
+        error.message,
+        format!("has-first already has {}.", &ids[0][..7])
+    );
+    assert_eq!(tip(&repo.repository, "free").id(), base);
 }

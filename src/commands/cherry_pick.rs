@@ -7,10 +7,10 @@ use crate::project::ProjectId;
 pub async fn list_pick_targets(
     state: SharedState<'_>,
     project: ProjectId,
-    id: String,
+    ids: Vec<String>,
 ) -> AppResult<Vec<PickTarget>> {
     blocking(&state, project, move |project| {
-        project.with_repo(|repository| cherry_pick::pick_targets(repository, &id))
+        project.with_repo(|repository| cherry_pick::pick_targets(repository, &ids))
     })
     .await
 }
@@ -19,12 +19,12 @@ pub async fn list_pick_targets(
 pub async fn cherry_pick(
     state: SharedState<'_>,
     project: ProjectId,
-    id: String,
+    ids: Vec<String>,
     branches: Vec<String>,
 ) -> AppResult<()> {
     blocking(&state, project, move |project| {
         project.perform_change(|project| {
-            project.with_repo(|repository| cherry_pick::cherry_pick(repository, &id, &branches))
+            project.with_repo(|repository| cherry_pick::cherry_pick(repository, &ids, &branches))
         })
     })
     .await
