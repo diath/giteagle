@@ -102,12 +102,12 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
 </script>
 
 <template>
-  <header class="branch-bar">
-    <div class="column column--left">
+  <header class="top-bars">
+    <div class="bar">
       <ProjectInfo />
     </div>
 
-    <div class="column column--center">
+    <div class="bar bar--branch">
       <div class="controls">
         <div class="inset current" :title="branchLabel">
           <AppIcon name="branch" />
@@ -162,41 +162,26 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
         {{ capabilities.notice }} - finish it locally to switch, pull, or push.
       </span>
     </div>
-
-    <div class="column column--right"></div>
   </header>
 </template>
 
 <style scoped>
-/* The middle column takes what its contents need, but the project info
-   always keeps a share, so a long branch name can't push it out. When there
-   is room, the outer columns split the rest equally, which keeps the middle
-   one centered in the window. In a narrow window the empty right column
-   gives up its space first, so the branch name keeps some. */
-.branch-bar {
-  display: grid;
-  grid-template-columns: minmax(15%, 1fr) minmax(0, max-content) minmax(0, 1fr);
+/* The project and the branch each get a bar of their own, with their
+   contents centered. */
+.bar {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-4);
+  justify-content: center;
+  gap: var(--space-2);
   min-height: var(--bar-height);
   padding: var(--space-1) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-panel);
 }
 
-.column {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.column--center {
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.column--right {
-  justify-content: flex-end;
+.bar > * {
+  max-width: 100%;
 }
 
 /* The controls never wrap; the branch name gives up its space first. */
