@@ -35,6 +35,15 @@ export interface Session {
   failures: { folder: string; message: string }[]
 }
 
+/** A file as it is in one commit. */
+export interface FileAtCommit {
+  /** In bytes. */
+  size: number
+  isBinary: boolean
+  /** `null` for a binary file or one too large to show. */
+  text: string | null
+}
+
 export interface Person {
   name: string
   email: string

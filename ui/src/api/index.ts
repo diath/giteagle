@@ -10,6 +10,7 @@ import type {
   DeleteInfo,
   DirectoryEntry,
   FetchStatus,
+  FileAtCommit,
   FileSearchResult,
   GitHubPage,
   HistoryCursor,
@@ -76,6 +77,7 @@ export function createProjectApi(project: ProjectId) {
     listDirectory: (path: string) => call<DirectoryEntry[]>('list_directory', { path }),
     lastCommits: (path: string) =>
       call<Record<string, CommitBrief>>('directory_last_commits', { path }),
+    fileAt: (id: string, path: string) => call<FileAtCommit>('get_file_at', { id, path }),
     searchFiles: (path: string, query: string) =>
       call<FileSearchResult>('search_files', { path, query }),
     workingTreeStatus: () => call<StatusEntry[]>('get_working_tree_status'),

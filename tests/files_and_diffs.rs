@@ -1,9 +1,10 @@
 mod common;
 
 use common::TempRepo;
+use giteagle_lib::error::ErrorKind;
 use giteagle_lib::git::commit::commit_details;
 use giteagle_lib::git::diff::{ChangeKind, LineKind, diff_working_tree};
-use giteagle_lib::git::files::{EntryKind, last_commits, list_directory, search_files};
+use giteagle_lib::git::files::{EntryKind, file_at, last_commits, list_directory, search_files};
 use giteagle_lib::git::status::{FileStatus, working_tree_status};
 
 #[test]
@@ -87,6 +88,51 @@ fn file_search_is_recursive_and_case_insensitive() {
     let limited = search_files(&repo.repository, "", "parser", 1).unwrap();
     assert_eq!(limited.entries.len(), 1);
     assert!(limited.truncated);
+}
+
+#[test]
+fn files_read_as_they_are_in_each_commit() {
+    let repo = TempRepo::new();
+    let first = repo.commit_file("src/main.rs", "fn main() {}\n", "Add main");
+    repo.write("src/main.rs", "fn main() {\n    run();\n}\n");
+    repo.write("logo.png", [0x89, b'P', b'N', b'G', 0, 0, 0, 13]);
+    repo.stage("src/main.rs");
+    repo.stage("logo.png");
+    let second = repo.commit("Call run");
+
+    let old = file_at(&repo.repository, &first.to_string(), "src/main.rs").expect("old");
+    assert_eq!(old.text.as_deref(), Some("fn main() {}\n"));
+    assert_eq!(old.size, 13);
+    let new = file_at(&repo.repository, &second.to_string(), "src/main.rs").expect("new");
+    assert_eq!(new.text.as_deref(), Some("fn main() {\n    run();\n}\n"));
+
+    let binary = file_at(&repo.repository, &second.to_string(), "logo.png").expect("binary");
+    assert!(binary.is_binary);
+    assert_eq!(binary.text, None);
+    assert_eq!(binary.size, 8);
+}
+
+#[test]
+fn files_too_large_to_show_are_only_described() {
+    let repo = TempRepo::new();
+    let large = "a line of text\n".repeat(80_000);
+    let commit = repo.commit_file("large.txt", &large, "Add a large file");
+    let file = file_at(&repo.repository, &commit.to_string(), "large.txt").expect("file");
+    assert!(!file.is_binary);
+    assert_eq!(file.size, large.len());
+    assert_eq!(file.text, None);
+}
+
+#[test]
+fn only_files_present_in_the_commit_can_be_read() {
+    let repo = TempRepo::new();
+    let first = repo.commit_file("src/main.rs", "fn main() {}\n", "Add main");
+    let second = repo.commit_file("README.md", "# Readme\n", "Add a readme");
+
+    let missing = file_at(&repo.repository, &first.to_string(), "README.md").expect_err("missing");
+    assert_eq!(missing.kind, ErrorKind::NotFound);
+    let folder = file_at(&repo.repository, &second.to_string(), "src").expect_err("folder");
+    assert_eq!(folder.kind, ErrorKind::InvalidInput);
 }
 
 #[test]

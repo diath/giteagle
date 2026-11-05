@@ -1,6 +1,6 @@
 use super::{SharedState, blocking};
 use crate::error::AppResult;
-use crate::git::files::{self, DirectoryEntry, FileSearchResult};
+use crate::git::files::{self, DirectoryEntry, FileAtCommit, FileSearchResult};
 use crate::git::head_commit;
 use crate::git::status::{StatusEntry, working_tree_status};
 use crate::project::LastCommits;
@@ -38,6 +38,20 @@ pub async fn directory_last_commits(
             project.store_last_commits(head.id(), &path, commits.clone());
             Ok(commits)
         })
+    })
+    .await
+}
+
+/// The file at `path` as it is in commit `id`.
+#[tauri::command]
+pub async fn get_file_at(
+    state: SharedState<'_>,
+    project: ProjectId,
+    id: String,
+    path: String,
+) -> AppResult<FileAtCommit> {
+    blocking(&state, project, move |project| {
+        project.with_repo(|repository| files::file_at(repository, &id, &path))
     })
     .await
 }

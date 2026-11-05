@@ -18,6 +18,7 @@ export type View =
   | { kind: 'commit'; id: string; fromFile: string | null; sequence: CommitSequence | null }
   | { kind: 'pending' }
   | { kind: 'stash'; id: string }
+  | { kind: 'file'; commit: string; shortId: string; path: string }
 
 export type MainTab = 'commits' | 'files' | 'stash' | 'authors'
 
@@ -30,7 +31,7 @@ export interface OpenCommitOptions {
 
 /**
  * Creates a project's stack of views: the main view at the bottom, then file
- * history, commit and stash views. Views below the top stay mounted, so going
+ * history, commit, stash and file views. Views below the top stay mounted, so going
  * back restores their scroll position and state.
  */
 export function createNavigation() {
@@ -73,6 +74,11 @@ export function createNavigation() {
     navigation.stack.push({ kind: 'stash', id })
   }
 
+  /** Shows the file at `path` as it is in commit `commit`. */
+  function openFileAt(commit: string, shortId: string, path: string): void {
+    navigation.stack.push({ kind: 'file', commit, shortId, path })
+  }
+
   function openFileHistory(path: string): void {
     // From a commit opened in this file's history, going back keeps that
     // history's place instead of stacking a second copy of it.
@@ -103,6 +109,7 @@ export function createNavigation() {
     replaceCommit,
     openPendingChanges,
     openStash,
+    openFileAt,
     openFileHistory,
     goBack,
     returnToMain,

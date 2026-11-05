@@ -13,8 +13,10 @@ const props = withDefaults(
     emptyText: string
     /** The file to mark, e.g. the one a file history was opened for. */
     highlighted?: number
+    /** The commit the diffs are of, whose files can be viewed whole. */
+    commit?: { id: string; shortId: string } | null
   }>(),
-  { highlighted: -1 },
+  { highlighted: -1, commit: null },
 )
 
 defineSlots<{
@@ -152,6 +154,7 @@ defineExpose({ scrollToFile })
         :key="files[index].path"
         :file="files[index]"
         :highlighted="index === highlighted"
+        :commit="commit"
       />
     </div>
   </div>

@@ -173,6 +173,7 @@ onMounted(async () => {
       :files="details.files"
       :stats="details.stats"
       :highlighted="fromFileIndex"
+      :commit="details"
       empty-text="This commit changes no files."
     >
       <template #header>

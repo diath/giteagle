@@ -30,9 +30,14 @@ import AppIcon from './AppIcon.vue'
 /** Highlighting starts this many design pixels before a file scrolls into view. */
 const HIGHLIGHT_MARGIN = 1000
 
-const props = defineProps<{ file: FileDiff; highlighted: boolean }>()
+const props = defineProps<{
+  file: FileDiff
+  highlighted: boolean
+  /** The commit the diff is of, if any, whose version of the file can be viewed. */
+  commit: { id: string; shortId: string } | null
+}>()
 
-const { openFileHistory } = useProject()
+const { openFileAt, openFileHistory } = useProject()
 
 const root = ref<HTMLElement | null>(null)
 const scroller = inject(DIFF_SCROLLER, null)
@@ -126,6 +131,17 @@ const summary = computed(() => {
     default:
       return modeChange.value ? null : 'No content changes.'
   }
+})
+
+/** Why the file can't be viewed as it is in the commit, if it can't. */
+const viewUnavailable = computed(() => {
+  if (props.file.kind === 'deleted') {
+    return 'The file is gone in this commit'
+  }
+  if (props.file.isSubmodule) {
+    return 'A submodule has no contents of its own'
+  }
+  return null
 })
 
 function showBlame(): void {
@@ -228,6 +244,17 @@ defineExpose({ element: root })
         </template>
         {{ file.path }}
       </span>
+      <button
+        v-if="commit"
+        class="button file-action"
+        type="button"
+        :disabled="viewUnavailable !== null"
+        :title="viewUnavailable ?? `Show the whole file as it is in commit ${commit.shortId}`"
+        @click="openFileAt(commit.id, commit.shortId, file.path)"
+      >
+        <AppIcon name="eye" />
+        View @ {{ commit.shortId }}
+      </button>
       <button
         class="button file-action"
         type="button"

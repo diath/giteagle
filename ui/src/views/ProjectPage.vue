@@ -6,6 +6,7 @@ import { provideProject, type Project } from '../stores/project'
 import { provideEscapeScope } from '../utils/escape'
 import CommitView from './CommitView.vue'
 import FileHistoryView from './FileHistoryView.vue'
+import FileView from './FileView.vue'
 import MainView from './MainView.vue'
 import PendingChangesView from './PendingChangesView.vue'
 import StashView from './StashView.vue'
@@ -36,6 +37,8 @@ function viewKey(index: number): string {
       return `${index}:pending`
     case 'stash':
       return `${index}:stash:${view.id}`
+    case 'file':
+      return `${index}:file:${view.commit}:${view.path}`
   }
   return String(index)
 }
@@ -66,6 +69,12 @@ onMounted(() => void project.load())
       <FileHistoryView v-else-if="view.kind === 'fileHistory'" :path="view.path" :active="isActive(index)" />
       <PendingChangesView v-else-if="view.kind === 'pending'" />
       <StashView v-else-if="view.kind === 'stash'" :id="view.id" />
+      <FileView
+        v-else-if="view.kind === 'file'"
+        :commit="view.commit"
+        :short-id="view.shortId"
+        :path="view.path"
+      />
       <CommitView v-else :id="view.id" :from-file="view.fromFile" :sequence="view.sequence" />
     </div>
   </div>

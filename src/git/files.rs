@@ -7,8 +7,12 @@ use git2::{
 };
 use serde::Serialize;
 
-use super::{CommitBrief, head_commit, path_to_string};
+use super::{CommitBrief, find_commit, head_commit, path_to_string, short_id};
 use crate::error::{AppError, AppResult};
+
+/// Larger files are described rather than shown, as their lines would take
+/// long to lay out.
+const MAX_VIEW_BYTES: usize = 1024 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -165,6 +169,53 @@ pub fn search_files(
     }
     entries.sort_by(|left, right| left.path.to_lowercase().cmp(&right.path.to_lowercase()));
     Ok(FileSearchResult { entries, truncated })
+}
+
+/// A file as it is in one commit.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileAtCommit {
+    /// In bytes.
+    pub size: usize,
+    pub is_binary: bool,
+    /// `None` for a binary file or one too large to show.
+    pub text: Option<String>,
+}
+
+/// Reads the file at `path` as it is in commit `id`.
+pub fn file_at(repository: &Repository, id: &str, path: &str) -> AppResult<FileAtCommit> {
+    let commit = find_commit(repository, id)?;
+    let entry = match commit.tree()?.get_path(Path::new(path)) {
+        Ok(entry) => entry,
+        Err(error) if error.code() == ErrorCode::NotFound => {
+            return Err(AppError::not_found(format!(
+                "{path} doesn't exist in commit {}.",
+                short_id(commit.id())
+            )));
+        }
+        Err(error) => return Err(error.into()),
+    };
+    match entry.kind() {
+        Some(ObjectType::Blob) => {}
+        Some(ObjectType::Tree) => {
+            return Err(AppError::invalid_input(format!("{path} is a folder.")));
+        }
+        _ => {
+            return Err(AppError::invalid_input(format!(
+                "{path} is a submodule, which has no contents of its own."
+            )));
+        }
+    }
+    let blob = repository.find_blob(entry.id())?;
+    let size = blob.size();
+    let is_binary = blob.is_binary();
+    let text = (!is_binary && size <= MAX_VIEW_BYTES)
+        .then(|| String::from_utf8_lossy(blob.content()).into_owned());
+    Ok(FileAtCommit {
+        size,
+        is_binary,
+        text,
+    })
 }
 
 fn subtree<'r>(
