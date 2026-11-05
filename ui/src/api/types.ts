@@ -1,6 +1,15 @@
 // Mirrors of the structs the Rust commands return (serde camelCase). Kept in
 // one file so drift from the backend is easy to spot.
 
+/** Names an open project for as long as the app runs. */
+export type ProjectId = number
+
+export interface ProjectSummary {
+  id: ProjectId
+  name: string
+  workdir: string
+}
+
 export interface Person {
   name: string
   email: string

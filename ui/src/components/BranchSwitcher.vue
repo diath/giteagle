@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 
-import { api, errorMessage, type BranchList, type BranchRow } from '../api'
-import { returnToMain } from '../stores/navigation'
-import { capabilities, refreshEverything, repo } from '../stores/repo'
+import { errorMessage, type BranchList, type BranchRow } from '../api'
+import { useProject } from '../stores/project'
 import { showToast } from '../stores/toasts'
 import { formatRelative } from '../utils/dates'
 import { useEscape } from '../utils/escape'
@@ -12,6 +11,8 @@ import DeleteBranchDialog from './DeleteBranchDialog.vue'
 import SearchField from './SearchField.vue'
 
 const emit = defineEmits<{ close: [] }>()
+
+const { api, returnToMain, capabilities, refreshEverything, repo } = useProject()
 
 const branches = ref<BranchList | null>(null)
 const error = ref<string | null>(null)

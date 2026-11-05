@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef, watch } from 'vue'
 
-import { api, errorMessage, type AuthorStats } from '../api'
-import { searchCommits } from '../stores/navigation'
-import { repo } from '../stores/repo'
+import { errorMessage, type AuthorStats } from '../api'
+import { useProject } from '../stores/project'
 import { formatRelative } from '../utils/dates'
 import AppIcon from './AppIcon.vue'
 import AvatarStack from './AvatarStack.vue'
@@ -13,6 +12,8 @@ const AVATAR_SIZE = 36
 const SHOWN_EMAILS = 2
 
 const props = defineProps<{ active: boolean }>()
+
+const { api, searchCommits, repo } = useProject()
 
 const authors = shallowRef<AuthorStats[]>([])
 const loading = ref(false)

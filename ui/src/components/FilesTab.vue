@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef, watch } from 'vue'
 
-import { api, errorMessage, type CommitBrief, type DirectoryEntry } from '../api'
+import { errorMessage, type CommitBrief, type DirectoryEntry } from '../api'
 import type { IconName } from '../icons/paths'
-import { navigation, openFileHistory } from '../stores/navigation'
-import { repo } from '../stores/repo'
-import { directoryHasChanges, statusOf } from '../stores/workingTree'
+import { useProject } from '../stores/project'
 import { formatRelative } from '../utils/dates'
 import AppIcon from './AppIcon.vue'
 import SearchField from './SearchField.vue'
 import StatusBadge from './StatusBadge.vue'
 
 const SEARCH_DELAY_MS = 200
+
+const { api, navigation, openFileHistory, repo, directoryHasChanges, statusOf } = useProject()
 
 const entries = shallowRef<DirectoryEntry[]>([])
 const lastCommits = shallowRef<Record<string, CommitBrief>>({})

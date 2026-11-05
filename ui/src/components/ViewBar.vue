@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { IconName } from '../icons/paths'
-import { goBack } from '../stores/navigation'
+import { useProject } from '../stores/project'
 import AppIcon from './AppIcon.vue'
 
 withDefaults(
@@ -22,6 +22,8 @@ defineSlots<{
   /** At the right end of the bar. */
   end?: () => unknown
 }>()
+
+const { goBack } = useProject()
 </script>
 
 <template>

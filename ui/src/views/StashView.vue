@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, shallowRef, watch } from 'vue'
 
-import { api, errorMessage, type StashDetails } from '../api'
+import { errorMessage, type StashDetails } from '../api'
 import DiffBrowser from '../components/DiffBrowser.vue'
 import StashActions from '../components/StashActions.vue'
 import ViewBar from '../components/ViewBar.vue'
-import { goBack, openCommit } from '../stores/navigation'
-import { repo } from '../stores/repo'
+import { useProject } from '../stores/project'
 import { formatAbsolute, formatRelative } from '../utils/dates'
 import { useEscape } from '../utils/escape'
 import { pendingCounts, statesOf, type PendingState } from '../utils/pending'
 import { stashName } from '../utils/stashes'
 
 const props = defineProps<{ id: string }>()
+
+const { api, goBack, openCommit, repo } = useProject()
 
 const details = shallowRef<StashDetails | null>(null)
 const error = ref<string | null>(null)

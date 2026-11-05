@@ -1,18 +1,13 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, watch } from 'vue'
 
-import { api, errorMessage, events } from './api'
-import ReloadPrompt from './components/ReloadPrompt.vue'
+import { appApi, errorMessage, events } from './api'
+import ProjectTabs from './components/ProjectTabs.vue'
 import ToastHost from './components/ToastHost.vue'
-import { goBack, navigation } from './stores/navigation'
-import { applyFetchStatus, refreshOverview, repo } from './stores/repo'
+import { activeTab, projectById, restoreTabs, tabs } from './stores/tabs'
 import { showToast } from './stores/toasts'
-import { applyPendingSummary, applyWorkingTreeStatus, refreshWorkingTree } from './stores/workingTree'
-import CommitView from './views/CommitView.vue'
-import FileHistoryView from './views/FileHistoryView.vue'
-import MainView from './views/MainView.vue'
-import PendingChangesView from './views/PendingChangesView.vue'
-import StashView from './views/StashView.vue'
+import OpenProjectPage from './views/OpenProjectPage.vue'
+import ProjectPage from './views/ProjectPage.vue'
 
 /** The "back" button found on many mice. */
 const MOUSE_BACK_BUTTON = 3
@@ -21,49 +16,47 @@ const unlisteners: (() => void)[] = []
 
 function onMouseUp(event: MouseEvent): void {
   if (event.button === MOUSE_BACK_BUTTON) {
-    goBack()
+    activeTab.value?.project?.goBack()
   }
 }
 
-function viewKey(index: number): string {
-  const view = navigation.stack[index]
-  switch (view.kind) {
-    case 'main':
-      return 'main'
-    case 'fileHistory':
-      return `${index}:history:${view.path}`
-    case 'commit':
-      return `${index}:commit:${view.id}`
-    case 'pending':
-      return `${index}:pending`
-    case 'stash':
-      return `${index}:stash:${view.id}`
-  }
-  return String(index)
-}
+// Only the project on screen is polled for outside changes, and the window
+// title names it.
+watch(
+  () => activeTab.value?.project?.summary.id ?? null,
+  (id) => {
+    appApi.showProject(id).catch((error: unknown) => {
+      showToast('error', `Couldn't switch the project: ${errorMessage(error)}`)
+    })
+  },
+)
 
 onMounted(async () => {
   window.addEventListener('mouseup', onMouseUp)
-  // The repository loads first, so a failure in the live updates below
-  // can't leave the window empty.
-  await refreshOverview()
-  void refreshWorkingTree()
+  // Listening starts before any project loads, so none misses an update;
+  // a failure here still leaves the projects usable.
   try {
     unlisteners.push(
-      await events.onRepoChanged(() => {
-        repo.reloadPromptVisible = true
+      await events.onRepoChanged((id) => {
+        const project = projectById(id)
+        if (project) {
+          project.repo.reloadPromptVisible = true
+        }
       }),
-      await events.onWorkingTreeChanged(applyWorkingTreeStatus),
-      await events.onPendingChanged(applyPendingSummary),
-      await events.onStashesChanged(() => {
-        repo.stashRevision += 1
+      await events.onWorkingTreeChanged((id, entries) => projectById(id)?.applyWorkingTreeStatus(entries)),
+      await events.onPendingChanged((id, summary) => projectById(id)?.applyPendingSummary(summary)),
+      await events.onStashesChanged((id) => {
+        const project = projectById(id)
+        if (project) {
+          project.repo.stashRevision += 1
+        }
       }),
-      await events.onFetchStatus(applyFetchStatus),
+      await events.onFetchStatus((id, status) => projectById(id)?.applyFetchStatus(status)),
     )
-    applyFetchStatus(await api.fetchStatus())
   } catch (error) {
     showToast('error', `Live updates are unavailable: ${errorMessage(error)}`)
   }
+  await restoreTabs()
 })
 
 onBeforeUnmount(() => {
@@ -73,67 +66,45 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div v-if="repo.error && !repo.overview" class="fatal">
-    <p>GitEagle couldn't read the repository.</p>
-    <pre>{{ repo.error }}</pre>
+  <div class="app">
+    <ProjectTabs />
+    <main class="pages">
+      <!-- Every tab stays mounted and only hides, so each keeps its views,
+           scroll positions and loaded data while another is shown. -->
+      <div
+        v-for="tab in tabs.list"
+        :key="tab.key"
+        class="page"
+        :class="{ hidden: tab.key !== tabs.activeKey }"
+      >
+        <ProjectPage v-if="tab.project" :project="tab.project" :active="tab.key === tabs.activeKey" />
+        <OpenProjectPage v-else :tab-key="tab.key" :active="tab.key === tabs.activeKey" />
+      </div>
+    </main>
   </div>
-  <div v-else-if="repo.overview" class="views">
-    <!-- Views below the top stay mounted but hidden so going back restores
-         them exactly as they were. -->
-    <div
-      v-for="(view, index) in navigation.stack"
-      :key="viewKey(index)"
-      class="view"
-      :class="{ covered: index !== navigation.stack.length - 1 }"
-    >
-      <MainView v-if="view.kind === 'main'" :active="index === navigation.stack.length - 1" />
-      <FileHistoryView
-        v-else-if="view.kind === 'fileHistory'"
-        :path="view.path"
-        :active="index === navigation.stack.length - 1"
-      />
-      <PendingChangesView v-else-if="view.kind === 'pending'" />
-      <StashView v-else-if="view.kind === 'stash'" :id="view.id" />
-      <CommitView v-else :id="view.id" :from-file="view.fromFile" :sequence="view.sequence" />
-    </div>
-  </div>
-  <p v-else class="loading">Loading the repository…</p>
-  <ReloadPrompt v-if="repo.reloadPromptVisible" />
   <ToastHost />
 </template>
 
 <style scoped>
-.views {
-  position: relative;
+.app {
+  display: flex;
+  flex-direction: column;
   height: 100%;
 }
 
-.view {
+.pages {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.page {
   position: absolute;
   inset: 0;
-  background: var(--color-bg-app);
 }
 
-.view.covered {
+.page.hidden {
   visibility: hidden;
   pointer-events: none;
-}
-
-.loading {
-  margin: 0;
-  padding: var(--space-8);
-  color: var(--color-fg-faint);
-  text-align: center;
-}
-
-.fatal {
-  padding: var(--space-8);
-  color: var(--color-danger-bright);
-}
-
-.fatal pre {
-  color: var(--color-fg-muted);
-  font: inherit;
-  white-space: pre-wrap;
 }
 </style>

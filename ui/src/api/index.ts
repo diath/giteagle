@@ -18,6 +18,8 @@ import type {
   PendingChanges,
   PendingSummary,
   PickTarget,
+  ProjectId,
+  ProjectSummary,
   RevertMode,
   RewritableCommit,
   SearchTag,
@@ -26,68 +28,99 @@ import type {
   StatusEntry,
 } from './types'
 
-export const api = {
-  overview: () => invoke<Overview>('get_overview'),
-  reload: () => invoke<void>('reload'),
-  fetchStatus: () => invoke<FetchStatus>('get_fetch_status'),
-  fetchNow: () => invoke<void>('fetch_now'),
-  openWorkdir: () => invoke<void>('open_workdir'),
-  openGitHubPage: (page: GitHubPage) => invoke<void>('open_github_page', { page }),
-  history: (cursor: HistoryCursor | null, query: string) =>
-    invoke<HistoryPage>('load_history', { cursor, query }),
+/** Commands about the app rather than one project. */
+export const appApi = {
+  /** The projects open in the backend, e.g. the one named on the command line. */
+  projects: () => invoke<ProjectSummary[]>('list_projects'),
+  /** Resolves to the project already open for the folder, if there is one. */
+  openProject: (path: string) => invoke<ProjectSummary>('open_project', { path }),
+  closeProject: (project: ProjectId) => invoke<void>('close_project', { project }),
+  /** Tells the backend which tab is shown; `null` for one without a project. */
+  showProject: (project: ProjectId | null) => invoke<void>('show_project', { project }),
   searchTags: () => invoke<SearchTag[]>('list_search_tags'),
-  fileHistory: (path: string, cursor: HistoryCursor | null) =>
-    invoke<HistoryPage>('load_file_history', { path, cursor }),
-  authors: () => invoke<AuthorList>('list_authors'),
-  authorLines: (head: string) => invoke<AuthorList>('count_author_lines', { head }),
-  commit: (id: string) => invoke<CommitDetails>('get_commit', { id }),
-  listDirectory: (path: string) => invoke<DirectoryEntry[]>('list_directory', { path }),
-  lastCommits: (path: string) =>
-    invoke<Record<string, CommitBrief>>('directory_last_commits', { path }),
-  searchFiles: (path: string, query: string) =>
-    invoke<FileSearchResult>('search_files', { path, query }),
-  workingTreeStatus: () => invoke<StatusEntry[]>('get_working_tree_status'),
-  pendingSummary: () => invoke<PendingSummary>('get_pending_summary'),
-  pendingChanges: () => invoke<PendingChanges>('get_pending_changes'),
-  branches: () => invoke<BranchList>('list_branches'),
-  switchBranch: (name: string, isRemote: boolean) =>
-    invoke<string>('switch_branch', { name, isRemote }),
-  deleteInfo: (name: string) => invoke<DeleteInfo>('get_delete_info', { name }),
-  deleteBranch: (name: string, deleteRemote: boolean) =>
-    invoke<void>('delete_branch', { name, deleteRemote }),
-  pickTargets: (id: string) => invoke<PickTarget[]>('list_pick_targets', { id }),
-  cherryPick: (id: string, branches: string[]) => invoke<void>('cherry_pick', { id, branches }),
-  revertCommit: (id: string, mode: RevertMode) => invoke<void>('revert_commit', { id, mode }),
-  /** The commits that can be reworded, squashed or dropped together with `id`, newest first. */
-  rewritableCommits: (id: string) => invoke<RewritableCommit[]>('list_rewritable_commits', { id }),
-  rewordCommit: (id: string, message: string) => invoke<void>('reword_commit', { id, message }),
-  squashCommits: (id: string, others: string[], message: string) =>
-    invoke<void>('squash_commits', { id, others, message }),
-  dropCommit: (id: string) => invoke<void>('drop_commit', { id }),
-  stashes: () => invoke<StashSummary[]>('list_stashes'),
-  stash: (id: string) => invoke<StashDetails>('get_stash', { id }),
-  saveStash: (message: string, includeUntracked: boolean) =>
-    invoke<void>('save_stash', { message, includeUntracked }),
-  /** Resolves to the name the stash had, e.g. `stash@{1}`; likewise below. */
-  applyStash: (id: string) => invoke<string>('apply_stash', { id }),
-  popStash: (id: string) => invoke<string>('pop_stash', { id }),
-  dropStash: (id: string) => invoke<string>('drop_stash', { id }),
-  pull: () => invoke<string>('pull'),
-  push: () => invoke<string>('push'),
   avatar: (email: string) => invoke<string | null>('get_avatar', { email }),
 }
 
+/** The commands about project `project`, which each call names. */
+export function createProjectApi(project: ProjectId) {
+  const call = <T>(command: string, args: Record<string, unknown> = {}): Promise<T> =>
+    invoke<T>(command, { ...args, project })
+  return {
+    overview: () => call<Overview>('get_overview'),
+    reload: () => call<void>('reload'),
+    fetchStatus: () => call<FetchStatus>('get_fetch_status'),
+    fetchNow: () => call<void>('fetch_now'),
+    openWorkdir: () => call<void>('open_workdir'),
+    openGitHubPage: (page: GitHubPage) => call<void>('open_github_page', { page }),
+    history: (cursor: HistoryCursor | null, query: string) =>
+      call<HistoryPage>('load_history', { cursor, query }),
+    fileHistory: (path: string, cursor: HistoryCursor | null) =>
+      call<HistoryPage>('load_file_history', { path, cursor }),
+    authors: () => call<AuthorList>('list_authors'),
+    authorLines: (head: string) => call<AuthorList>('count_author_lines', { head }),
+    commit: (id: string) => call<CommitDetails>('get_commit', { id }),
+    listDirectory: (path: string) => call<DirectoryEntry[]>('list_directory', { path }),
+    lastCommits: (path: string) =>
+      call<Record<string, CommitBrief>>('directory_last_commits', { path }),
+    searchFiles: (path: string, query: string) =>
+      call<FileSearchResult>('search_files', { path, query }),
+    workingTreeStatus: () => call<StatusEntry[]>('get_working_tree_status'),
+    pendingSummary: () => call<PendingSummary>('get_pending_summary'),
+    pendingChanges: () => call<PendingChanges>('get_pending_changes'),
+    branches: () => call<BranchList>('list_branches'),
+    switchBranch: (name: string, isRemote: boolean) =>
+      call<string>('switch_branch', { name, isRemote }),
+    deleteInfo: (name: string) => call<DeleteInfo>('get_delete_info', { name }),
+    deleteBranch: (name: string, deleteRemote: boolean) =>
+      call<void>('delete_branch', { name, deleteRemote }),
+    pickTargets: (id: string) => call<PickTarget[]>('list_pick_targets', { id }),
+    cherryPick: (id: string, branches: string[]) => call<void>('cherry_pick', { id, branches }),
+    revertCommit: (id: string, mode: RevertMode) => call<void>('revert_commit', { id, mode }),
+    /** The commits that can be reworded, squashed or dropped together with `id`, newest first. */
+    rewritableCommits: (id: string) => call<RewritableCommit[]>('list_rewritable_commits', { id }),
+    rewordCommit: (id: string, message: string) => call<void>('reword_commit', { id, message }),
+    squashCommits: (id: string, others: string[], message: string) =>
+      call<void>('squash_commits', { id, others, message }),
+    dropCommit: (id: string) => call<void>('drop_commit', { id }),
+    stashes: () => call<StashSummary[]>('list_stashes'),
+    stash: (id: string) => call<StashDetails>('get_stash', { id }),
+    saveStash: (message: string, includeUntracked: boolean) =>
+      call<void>('save_stash', { message, includeUntracked }),
+    /** Resolves to the name the stash had, e.g. `stash@{1}`; likewise below. */
+    applyStash: (id: string) => call<string>('apply_stash', { id }),
+    popStash: (id: string) => call<string>('pop_stash', { id }),
+    dropStash: (id: string) => call<string>('drop_stash', { id }),
+    pull: () => call<string>('pull'),
+    push: () => call<string>('push'),
+  }
+}
+
+export type ProjectApi = ReturnType<typeof createProjectApi>
+
+/** The payload of every event, which names the project it is about. */
+interface ProjectEvent<T> {
+  project: ProjectId
+  payload: T
+}
+
+function listenForProjects<T>(
+  event: string,
+  handler: (project: ProjectId, payload: T) => void,
+): Promise<UnlistenFn> {
+  return listen<ProjectEvent<T>>(event, ({ payload }) => handler(payload.project, payload.payload))
+}
+
 export const events = {
-  onRepoChanged: (handler: () => void): Promise<UnlistenFn> =>
-    listen('repo-changed', () => handler()),
-  onWorkingTreeChanged: (handler: (entries: StatusEntry[]) => void): Promise<UnlistenFn> =>
-    listen<StatusEntry[]>('working-tree-changed', (event) => handler(event.payload)),
-  onPendingChanged: (handler: (summary: PendingSummary) => void): Promise<UnlistenFn> =>
-    listen<PendingSummary>('pending-changed', (event) => handler(event.payload)),
-  onStashesChanged: (handler: () => void): Promise<UnlistenFn> =>
-    listen('stashes-changed', () => handler()),
-  onFetchStatus: (handler: (status: FetchStatus) => void): Promise<UnlistenFn> =>
-    listen<FetchStatus>('fetch-status', (event) => handler(event.payload)),
+  onRepoChanged: (handler: (project: ProjectId) => void): Promise<UnlistenFn> =>
+    listenForProjects<null>('repo-changed', (project) => handler(project)),
+  onWorkingTreeChanged: (handler: (project: ProjectId, entries: StatusEntry[]) => void): Promise<UnlistenFn> =>
+    listenForProjects('working-tree-changed', handler),
+  onPendingChanged: (handler: (project: ProjectId, summary: PendingSummary) => void): Promise<UnlistenFn> =>
+    listenForProjects('pending-changed', handler),
+  onStashesChanged: (handler: (project: ProjectId) => void): Promise<UnlistenFn> =>
+    listenForProjects<null>('stashes-changed', (project) => handler(project)),
+  onFetchStatus: (handler: (project: ProjectId, status: FetchStatus) => void): Promise<UnlistenFn> =>
+    listenForProjects('fetch-status', handler),
 }
 
 function isAppError(error: unknown): error is AppError {

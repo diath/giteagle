@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
-import { api, errorMessage, type CommitSummary, type RevertMode } from '../api'
-import { refreshEverything, repo } from '../stores/repo'
+import { errorMessage, type CommitSummary, type RevertMode } from '../api'
+import { useProject } from '../stores/project'
 import { showToast } from '../stores/toasts'
-import { refreshWorkingTree } from '../stores/workingTree'
 import ConfirmDialog from './ConfirmDialog.vue'
 
 interface RevertOption {
@@ -15,6 +14,8 @@ interface RevertOption {
 
 const props = defineProps<{ commit: CommitSummary }>()
 const emit = defineEmits<{ close: [] }>()
+
+const { api, refreshEverything, repo, refreshWorkingTree } = useProject()
 
 const mode = ref<RevertMode>('newCommit')
 const working = ref(false)

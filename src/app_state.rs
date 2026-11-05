@@ -1,146 +1,174 @@
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::sync::{Mutex, MutexGuard, PoisonError};
+//! The projects open in the window's tabs, and what they share.
 
-use git2::{Oid, Repository};
-use serde::Serialize;
+use std::collections::BTreeMap;
+use std::sync::{Arc, Mutex};
+
+use git2::Repository;
 
 use crate::avatars::AvatarStore;
-use crate::error::AppResult;
-use crate::git::CommitBrief;
-use crate::git::authors::LineCounts;
-use crate::git::snapshot::{Fingerprint, fingerprint};
-
-/// Results of `last_commits` per (HEAD, directory); the walk behind them is
-/// the slowest query in the Files tab.
-const LAST_COMMITS_CACHE_SIZE: usize = 64;
-
-pub type LastCommits = HashMap<String, CommitBrief>;
-
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FetchStatus {
-    pub in_progress: bool,
-    pub last_success: Option<i64>,
-    pub last_error: Option<String>,
-}
+use crate::error::{AppError, AppResult};
+use crate::project::{Project, ProjectId, lock, same_folder, workdir_of};
 
 pub struct AppState {
-    pub workdir: PathBuf,
-    pub git_dir: PathBuf,
-    pub repo_name: String,
-    repository: Mutex<Repository>,
-    /// The repository state the UI last loaded; the watcher reports anything
-    /// that differs from it as an external change.
-    baseline: Mutex<Option<Fingerprint>>,
-    /// Serializes fetch, pull, and push so they don't fight over ref locks.
-    network: Mutex<()>,
-    pub fetch_status: Mutex<FetchStatus>,
-    pub avatars: AvatarStore,
-    last_commits: Mutex<HashMap<(Oid, String), LastCommits>>,
-    /// Lines added and removed per commit. A commit's changes never change,
-    /// so these are kept until the app closes.
-    line_counts: Mutex<HashMap<Oid, LineCounts>>,
+    projects: Mutex<Projects>,
+    /// Shared by every project, since an author's avatar is the same in all.
+    pub avatars: Arc<AvatarStore>,
+}
+
+#[derive(Default)]
+struct Projects {
+    /// Ids grow with each project, so these iterate in the order they opened.
+    open: BTreeMap<ProjectId, Arc<Project>>,
+    last_id: ProjectId,
+}
+
+/// What `AppState::add` did with a repository.
+pub struct Added {
+    pub project: Arc<Project>,
+    /// False when a project was already open for the same folder.
+    pub is_new: bool,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl AppState {
-    pub fn new(repository: Repository) -> Self {
-        let workdir = repository
-            .workdir()
-            .unwrap_or_else(|| repository.path())
-            .to_path_buf();
-        let repo_name = workdir
-            .file_name()
-            .map(|name| name.to_string_lossy().into_owned())
-            .unwrap_or_else(|| workdir.display().to_string());
-        let baseline = fingerprint(&repository).ok();
+    pub fn new() -> Self {
         Self {
-            workdir,
-            git_dir: repository.path().to_path_buf(),
-            repo_name,
-            repository: Mutex::new(repository),
-            baseline: Mutex::new(baseline),
-            network: Mutex::new(()),
-            fetch_status: Mutex::new(FetchStatus::default()),
-            avatars: AvatarStore::new(),
-            last_commits: Mutex::new(HashMap::new()),
-            line_counts: Mutex::new(HashMap::new()),
+            projects: Mutex::new(Projects::default()),
+            avatars: Arc::new(AvatarStore::new()),
         }
     }
 
-    pub fn with_repo<T>(&self, task: impl FnOnce(&Repository) -> AppResult<T>) -> AppResult<T> {
-        task(&lock(&self.repository))
-    }
-
-    /// For the few git2 operations that need exclusive access, such as the
-    /// stash ones.
-    pub fn with_repo_mut<T>(
-        &self,
-        task: impl FnOnce(&mut Repository) -> AppResult<T>,
-    ) -> AppResult<T> {
-        task(&mut lock(&self.repository))
-    }
-
-    /// Runs a slow read, such as a scan of the working tree, on a handle of
-    /// its own, so commands that hold the shared one only briefly, like
-    /// opening a commit, don't queue behind it.
-    pub fn with_own_repo<T>(&self, task: impl FnOnce(&Repository) -> AppResult<T>) -> AppResult<T> {
-        task(&Repository::open(&self.workdir)?)
-    }
-
-    /// Runs an operation of our own that changes refs (switch, pull, delete…)
-    /// and records the result as the new baseline. The baseline stays locked
-    /// throughout so the watcher can't observe the half-finished change.
-    pub fn perform_change<T>(&self, task: impl FnOnce(&AppState) -> AppResult<T>) -> AppResult<T> {
-        let mut baseline = lock(&self.baseline);
-        let result = task(self);
-        if let Ok(current) = fingerprint(&lock(&self.repository)) {
-            *baseline = Some(current);
+    /// Opens `repository` as a new project, unless one is already open for
+    /// the same folder, which is returned instead.
+    pub fn add(&self, repository: Repository) -> Added {
+        let mut projects = lock(&self.projects);
+        let workdir = workdir_of(&repository);
+        if let Some(open) = projects
+            .open
+            .values()
+            .find(|project| same_folder(&project.workdir, &workdir))
+        {
+            return Added {
+                project: Arc::clone(open),
+                is_new: false,
+            };
         }
-        result
+        projects.last_id += 1;
+        let project = Arc::new(Project::new(projects.last_id, repository));
+        projects.open.insert(project.id, Arc::clone(&project));
+        Added {
+            project,
+            is_new: true,
+        }
     }
 
-    /// Reopens the repository so every view reloads from a fresh handle, and
-    /// accepts the current state as the new baseline.
-    pub fn reload(&self) -> AppResult<()> {
-        let mut baseline = lock(&self.baseline);
-        let reopened = Repository::open(&self.workdir)?;
-        *baseline = fingerprint(&reopened).ok();
-        *lock(&self.repository) = reopened;
-        lock(&self.last_commits).clear();
-        Ok(())
-    }
-
-    pub fn lock_baseline(&self) -> MutexGuard<'_, Option<Fingerprint>> {
-        lock(&self.baseline)
-    }
-
-    pub fn lock_network(&self) -> MutexGuard<'_, ()> {
-        lock(&self.network)
-    }
-
-    pub fn lock_line_counts(&self) -> MutexGuard<'_, HashMap<Oid, LineCounts>> {
-        lock(&self.line_counts)
-    }
-
-    pub fn cached_last_commits(&self, head: Oid, directory: &str) -> Option<LastCommits> {
-        lock(&self.last_commits)
-            .get(&(head, directory.to_string()))
+    pub fn project(&self, id: ProjectId) -> AppResult<Arc<Project>> {
+        lock(&self.projects)
+            .open
+            .get(&id)
             .cloned()
+            .ok_or_else(|| AppError::not_found("This project has been closed."))
     }
 
-    pub fn store_last_commits(&self, head: Oid, directory: &str, commits: LastCommits) {
-        let mut cache = lock(&self.last_commits);
-        if cache.len() >= LAST_COMMITS_CACHE_SIZE {
-            cache.clear();
+    pub fn projects(&self) -> Vec<Arc<Project>> {
+        lock(&self.projects).open.values().cloned().collect()
+    }
+
+    /// Takes the project out of the list and stops its background threads.
+    /// Commands already running for it still finish.
+    pub fn close(&self, id: ProjectId) {
+        let closed = lock(&self.projects).open.remove(&id);
+        if let Some(project) = closed {
+            project.close();
         }
-        cache.insert((head, directory.to_string()), commits);
+    }
+
+    /// Marks the project `id` as the one on screen, and every other one as
+    /// hidden. Returns the shown project, if it is open.
+    pub fn show(&self, id: Option<ProjectId>) -> Option<Arc<Project>> {
+        let projects = lock(&self.projects);
+        for project in projects.open.values() {
+            project.set_shown(Some(project.id) == id);
+        }
+        id.and_then(|id| projects.open.get(&id).cloned())
     }
 }
 
-/// A panic in one command must not take every later command down with it,
-/// and none of the guarded values can be left half-updated, so poisoning is
-/// ignored.
-pub fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(PoisonError::into_inner)
+#[cfg(test)]
+mod tests {
+    use std::time::{Duration, Instant};
+
+    use super::*;
+
+    fn temp_repository() -> (tempfile::TempDir, Repository) {
+        let folder = tempfile::tempdir().expect("temp dir");
+        let repository = Repository::init(folder.path()).expect("init");
+        (folder, repository)
+    }
+
+    #[test]
+    fn projects_get_new_ids_in_the_order_they_open() {
+        let state = AppState::new();
+        let (_first_folder, first) = temp_repository();
+        let (_second_folder, second) = temp_repository();
+        let first = state.add(first);
+        let second = state.add(second);
+        assert!(first.is_new && second.is_new);
+        assert!(first.project.id < second.project.id);
+        let ids: Vec<_> = state.projects().iter().map(|project| project.id).collect();
+        assert_eq!(ids, [first.project.id, second.project.id]);
+    }
+
+    #[test]
+    fn a_folder_that_is_already_open_returns_its_project() {
+        let state = AppState::new();
+        let (folder, repository) = temp_repository();
+        let first = state.add(repository);
+        let again = state.add(Repository::open(folder.path()).expect("open"));
+        assert!(!again.is_new);
+        assert_eq!(again.project.id, first.project.id);
+        assert_eq!(state.projects().len(), 1);
+    }
+
+    #[test]
+    fn a_closed_project_is_gone_and_its_ids_are_not_reused() {
+        let state = AppState::new();
+        let (_folder, repository) = temp_repository();
+        let closed = state.add(repository).project;
+        state.close(closed.id);
+        assert!(state.project(closed.id).is_err());
+        assert!(!closed.wait(Duration::from_secs(60)));
+
+        let (_other_folder, other) = temp_repository();
+        assert!(state.add(other).project.id > closed.id);
+    }
+
+    #[test]
+    fn showing_a_project_hides_the_others() {
+        let state = AppState::new();
+        let (_first_folder, first) = temp_repository();
+        let (_second_folder, second) = temp_repository();
+        let first = state.add(first).project;
+        let second = state.add(second).project;
+
+        let shown = state.show(Some(second.id)).expect("shown project");
+        assert_eq!(shown.id, second.id);
+        let started = Instant::now();
+        assert!(second.wait_until_shown(Duration::ZERO));
+        assert!(started.elapsed() < Duration::from_secs(5));
+
+        // The hidden project's watcher would wait until it is shown or closed.
+        let waiter = std::thread::spawn({
+            let first = Arc::clone(&first);
+            move || first.wait_until_shown(Duration::ZERO)
+        });
+        state.close(first.id);
+        assert!(!waiter.join().expect("waiter"));
+        assert!(state.show(None).is_none());
+    }
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref } from 'vue'
 
-import { api, errorMessage, type SearchTag } from '../api'
+import { appApi, errorMessage, type SearchTag } from '../api'
 import { useEscape } from '../utils/escape'
 import AppIcon from './AppIcon.vue'
 
@@ -17,7 +17,7 @@ onMounted(async () => {
   await nextTick()
   closeButton.value?.focus()
   try {
-    tags.value = await api.searchTags()
+    tags.value = await appApi.searchTags()
   } catch (error) {
     loadError.value = errorMessage(error)
   }

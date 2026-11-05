@@ -1,9 +1,15 @@
 # GitEagle
 
-A desktop viewer for one Git repository: branches, history and diffs. It has a
-Tauri 2 shell, a Rust backend using git2, and a Vue 3 + TypeScript frontend in
-`ui/`. It launches as `giteagle [path]` and finds the repository by searching
-upward from the path; bare repositories are rejected at launch.
+A desktop viewer for Git repositories: branches, history and diffs, with each
+repository open in a tab of its own. It has a Tauri 2 shell, a Rust backend
+using git2, and a Vue 3 + TypeScript frontend in `ui/`. It launches as
+`giteagle [path]`:
+
+- With a path, it opens a tab for the repository found by searching upward
+  from the path, and exits with an error if there is none.
+- Without one, it opens a tab that asks for a project.
+
+Bare repositories are rejected.
 
 ## Commands
 
@@ -26,28 +32,39 @@ every one passing.
 - **`src/git/`** holds all repository logic over git2. Its functions take a
   `&Repository` and return serializable structs. It never touches Tauri.
 - **`src/commands/`** holds thin `#[tauri::command]` wrappers. Register new
-  commands in `src/lib.rs`.
+  commands in `src/lib.rs`. Commands about a repository take the id of its
+  `project`, and events name the project in their payload.
+- **`src/app_state.rs`** keeps the open projects by id. **`src/project.rs`**
+  holds one project's repository handle, caches and background schedule.
 - **`src/external_git.rs`** runs network operations (fetch, pull, push, remote
   deletes) through the system `git`, so the user's credentials and SSH config
   apply. It sets `GIT_TERMINAL_PROMPT=0` so nothing prompts. Everything else
   uses git2.
-- **`src/watcher.rs` and `src/fetcher.rs`** do background work and report to
-  the UI through Tauri events:
+- **`src/watcher.rs` and `src/fetcher.rs`** do background work for each
+  project and report to the UI through Tauri events:
   - The watcher polls every 3 seconds for outside changes and the working tree
-    status.
-  - The fetcher fetches at startup and then every 5 minutes.
+    status, but only for the project in the active tab.
+  - The fetcher fetches when a project opens and then every 5 minutes.
 - **`tests/`** holds integration tests that build temporary repositories with
   `TempRepo` from `tests/common`.
 - **`ui/src/api/`** holds typed `invoke` wrappers and DTO types. The DTOs mirror
   the Rust structs (serde `camelCase`) by hand, so change both sides together.
-- **`ui/src/stores/navigation.ts`** holds the view stack. Screens switch inside
-  the single window and never open new OS windows.
+- **`ui/src/stores/`** holds the app state:
+  - `tabs.ts` holds the tabs.
+  - `project.ts` creates the stores of each tab's project: its commands,
+    repository, working tree and view stack. Components get them with
+    `useProject()`.
+  - `navigation.ts` holds a project's view stack. Screens switch inside the
+    single window and never open new OS windows.
 
 ## Product rules
 
 - **Out of scope:** rebasing onto another branch, blame, merge and conflict
   UI, staging and committing, force push, submodules, LFS, bare
-  repositories, multiple repositories in one window, and a light theme.
+  repositories, and a light theme.
+- **Tabs** each hold one project. Opening a project that is already open
+  shows its tab instead. Closing the last tab leaves one that asks for a
+  project.
 - **Switching branches** behaves like `git checkout`: non-conflicting changes
   carry over. If the switch would overwrite local changes or fails, nothing
   changes.

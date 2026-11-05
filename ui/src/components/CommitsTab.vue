@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
-import { api, type HistoryCursor } from '../api'
-import { navigation, openCommit, openPendingChanges } from '../stores/navigation'
-import { repo } from '../stores/repo'
-import { pendingSummary } from '../stores/workingTree'
+import type { HistoryCursor } from '../api'
+import { useProject } from '../stores/project'
 import { hasPendingChanges } from '../utils/pending'
 import AppIcon from './AppIcon.vue'
 import CommitList from './CommitList.vue'
@@ -16,6 +14,8 @@ const SEARCH_DELAY_MS = 250
 const PLACEHOLDER = 'Search commits… (try: author:"name", message:"text", since:7d)'
 
 defineProps<{ active: boolean }>()
+
+const { api, navigation, openCommit, openPendingChanges, repo, pendingSummary } = useProject()
 
 const query = ref('')
 const appliedQuery = ref('')

@@ -1,26 +1,26 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::path::PathBuf;
+use std::path::Path;
 use std::process::ExitCode;
 
 use giteagle_lib::{external_git, git};
 
 fn main() -> ExitCode {
     use_compatible_webview_renderer();
-    let start = std::env::args_os()
-        .nth(1)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("."));
-    let repository = match git::open_repository(&start) {
-        Ok(repository) => repository,
-        Err(error) => return fail(&error.to_string()),
+    // Without a path the window opens with a tab that asks for a project.
+    let initial = match std::env::args_os().nth(1) {
+        Some(path) => match git::open_repository(Path::new(&path)) {
+            Ok(repository) => Some(repository),
+            Err(error) => return fail(&error.to_string()),
+        },
+        None => None,
     };
     if !external_git::is_available() {
         return fail(
             "the git executable was not found on the PATH; GitEagle needs it for fetch, pull, and push",
         );
     }
-    giteagle_lib::run(repository);
+    giteagle_lib::run(initial);
     ExitCode::SUCCESS
 }
 

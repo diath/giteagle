@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, shallowRef, watch } from 'vue'
 
-import { api, errorMessage, type PendingChanges } from '../api'
+import { errorMessage, type PendingChanges } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import DiffBrowser from '../components/DiffBrowser.vue'
 import ViewBar from '../components/ViewBar.vue'
-import { goBack } from '../stores/navigation'
-import { repo } from '../stores/repo'
-import { pendingRevision } from '../stores/workingTree'
+import { useProject } from '../stores/project'
 import { useEscape } from '../utils/escape'
 import { pendingCounts, statesOf, type PendingState } from '../utils/pending'
+
+const { api, goBack, repo, pendingRevision } = useProject()
 
 const changes = shallowRef<PendingChanges | null>(null)
 const error = ref<string | null>(null)

@@ -1,6 +1,6 @@
 import { reactive } from 'vue'
 
-import { api } from '../api'
+import { appApi } from '../api'
 
 /** Data URL per lowercased email; `null` once known to have no avatar. */
 const avatars = reactive(new Map<string, string | null>())
@@ -14,7 +14,7 @@ export function avatarFor(email: string): string | null {
   const key = email.trim().toLowerCase()
   if (!requested.has(key)) {
     requested.add(key)
-    api
+    appApi
       .avatar(key)
       .then((url) => avatars.set(key, url))
       .catch(() => avatars.set(key, null))

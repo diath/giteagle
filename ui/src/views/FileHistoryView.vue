@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { api, type HistoryCursor } from '../api'
+import type { HistoryCursor } from '../api'
 import CommitList from '../components/CommitList.vue'
 import ViewBar from '../components/ViewBar.vue'
-import { goBack, navigation, openCommit } from '../stores/navigation'
-import { repo } from '../stores/repo'
+import { useProject } from '../stores/project'
 import { useEscape } from '../utils/escape'
 
 const props = defineProps<{ path: string; active: boolean }>()
+
+const { api, goBack, navigation, openCommit, repo } = useProject()
 
 useEscape(goBack)
 

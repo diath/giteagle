@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
-import { api, errorMessage, type StashSummary } from '../api'
+import { errorMessage, type StashSummary } from '../api'
 import type { IconName } from '../icons/paths'
-import { capabilities, repo } from '../stores/repo'
+import { useProject } from '../stores/project'
 import { showToast } from '../stores/toasts'
-import { refreshWorkingTree } from '../stores/workingTree'
 import { pendingCounts } from '../utils/pending'
 import { stashName } from '../utils/stashes'
 import AppIcon from './AppIcon.vue'
@@ -13,6 +12,8 @@ import ConfirmDialog from './ConfirmDialog.vue'
 import TypeToConfirm from './TypeToConfirm.vue'
 
 type Action = 'apply' | 'pop' | 'drop'
+
+const { api, capabilities, repo, refreshWorkingTree } = useProject()
 
 const ACTIONS: Record<
   Action,

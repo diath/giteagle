@@ -1,25 +1,25 @@
 //! Background fetches that keep remote branches, ahead/behind counts, and
-//! push status markers current.
+//! push status markers current. Every open project is fetched, shown or not.
 
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
 
-use crate::app_state::{AppState, lock};
 use crate::external_git::{self, Interaction};
+use crate::project::{FetchStatus, Project, lock};
 
 const FETCH_INTERVAL: Duration = Duration::from_secs(5 * 60);
 pub const FETCH_STATUS_EVENT: &str = "fetch-status";
 
-pub fn spawn(app: AppHandle, state: Arc<AppState>) {
+pub fn spawn(app: AppHandle, project: Arc<Project>) {
     let spawned = thread::Builder::new()
-        .name("background-fetch".into())
+        .name(format!("background-fetch-{}", project.id))
         .spawn(move || {
-            loop {
-                fetch(&app, &state);
-                thread::sleep(FETCH_INTERVAL);
+            fetch(&app, &project);
+            while project.wait(FETCH_INTERVAL) {
+                fetch(&app, &project);
             }
         });
     if let Err(error) = spawned {
@@ -29,19 +29,19 @@ pub fn spawn(app: AppHandle, state: Arc<AppState>) {
 
 /// Fetches all remotes, if there are any, and reports the outcome through
 /// the fetch status event.
-pub fn fetch(app: &AppHandle, state: &AppState) {
-    let has_remotes = state
+pub fn fetch(app: &AppHandle, project: &Project) {
+    let has_remotes = project
         .with_repo(|repository| Ok(!repository.remotes()?.is_empty()))
         .unwrap_or(false);
     if !has_remotes {
         return;
     }
 
-    let _network = state.lock_network();
-    update_status(app, state, |status| status.in_progress = true);
+    let _network = project.lock_network();
+    update_status(app, project, |status| status.in_progress = true);
     let arguments = ["fetch", "--all", "--prune", "--quiet"].map(String::from);
-    let result = external_git::run(&state.workdir, &arguments, Interaction::Background);
-    update_status(app, state, |status| {
+    let result = external_git::run(&project.workdir, &arguments, Interaction::Background);
+    update_status(app, project, |status| {
         status.in_progress = false;
         match result {
             Ok(_) => {
@@ -53,17 +53,13 @@ pub fn fetch(app: &AppHandle, state: &AppState) {
     });
 }
 
-fn update_status(
-    app: &AppHandle,
-    state: &AppState,
-    change: impl FnOnce(&mut crate::app_state::FetchStatus),
-) {
+fn update_status(app: &AppHandle, project: &Project, change: impl FnOnce(&mut FetchStatus)) {
     let snapshot = {
-        let mut status = lock(&state.fetch_status);
+        let mut status = lock(&project.fetch_status);
         change(&mut status);
         status.clone()
     };
-    let _ = app.emit(FETCH_STATUS_EVENT, snapshot);
+    project.emit(app, FETCH_STATUS_EVENT, snapshot);
 }
 
 pub fn unix_now() -> i64 {

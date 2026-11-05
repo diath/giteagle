@@ -20,7 +20,7 @@ export const KIND_LABELS: Record<ChangeKind, string> = {
 import { computed, inject, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 
 import type { FileDiff } from '../api'
-import { openFileHistory } from '../stores/navigation'
+import { useProject } from '../stores/project'
 import { showToast } from '../stores/toasts'
 import { scaled } from '../theme/scale'
 import { buildSegments, layoutRows, splitLines } from '../utils/diff'
@@ -31,6 +31,8 @@ import AppIcon from './AppIcon.vue'
 const HIGHLIGHT_MARGIN_PX = scaled(1000)
 
 const props = defineProps<{ file: FileDiff; highlighted: boolean }>()
+
+const { openFileHistory } = useProject()
 
 const root = ref<HTMLElement | null>(null)
 const scroller = inject(DIFF_SCROLLER, null)

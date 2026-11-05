@@ -9,15 +9,17 @@ use crate::git::history::{
     Filter, HistoryCursor, HistoryPage, PAGE_SIZE, load_history as load_page,
 };
 use crate::git::search::{Query, SEARCH_TAGS, SearchTag};
+use crate::project::ProjectId;
 
 #[tauri::command]
 pub async fn load_history(
     state: SharedState<'_>,
+    project: ProjectId,
     cursor: Option<HistoryCursor>,
     query: String,
 ) -> AppResult<HistoryPage> {
     let query = Query::parse(&query).map_err(|error| AppError::invalid_input(error.message))?;
-    blocking(&state, move |state| {
+    blocking(&state, project, move |project| {
         let search = |repository: &Repository| {
             let filter = Filter::Query {
                 query: &query,
@@ -28,9 +30,9 @@ pub async fn load_history(
         // File searches compare the trees of every commit they pass, which
         // takes a second or more when few commits on a long history match.
         if query.needs_changed_paths() {
-            state.with_own_repo(search)
+            project.with_own_repo(search)
         } else {
-            state.with_repo(search)
+            project.with_repo(search)
         }
     })
     .await
@@ -39,11 +41,12 @@ pub async fn load_history(
 #[tauri::command]
 pub async fn load_file_history(
     state: SharedState<'_>,
+    project: ProjectId,
     path: String,
     cursor: Option<HistoryCursor>,
 ) -> AppResult<HistoryPage> {
-    blocking(&state, move |state| {
-        state.with_repo(|repository| {
+    blocking(&state, project, move |project| {
+        project.with_repo(|repository| {
             let path = PathBuf::from(path);
             load_page(repository, cursor.as_ref(), PAGE_SIZE, &Filter::Path(&path))
         })

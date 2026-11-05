@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, shallowRef } from 'vue'
 
-import { api, errorMessage, type CommitSummary, type PickTarget } from '../api'
-import { repo } from '../stores/repo'
+import { errorMessage, type CommitSummary, type PickTarget } from '../api'
+import { useProject } from '../stores/project'
 import { showToast } from '../stores/toasts'
 import { joinWithAnd } from '../utils/lists'
 import ConfirmDialog from './ConfirmDialog.vue'
 
 const props = defineProps<{ commit: CommitSummary }>()
 const emit = defineEmits<{ close: [] }>()
+
+const { api, repo } = useProject()
 
 const targets = shallowRef<PickTarget[] | null>(null)
 const loadError = ref<string | null>(null)

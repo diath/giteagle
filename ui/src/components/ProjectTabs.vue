@@ -1,0 +1,231 @@
+<script setup lang="ts">
+import { nextTick, ref, watch } from 'vue'
+
+import type { Project } from '../stores/project'
+import { activateTab, closeTab, openNewTab, tabs, type Tab } from '../stores/tabs'
+import AppIcon from './AppIcon.vue'
+
+/** The middle button, which closes a tab as in a browser. */
+const MIDDLE_BUTTON = 1
+
+const strip = ref<HTMLElement | null>(null)
+
+function tabName(tab: Tab): string {
+  return tab.project?.summary.name ?? 'New tab'
+}
+
+/** The working directory split before its last component, so it can be cut in the middle. */
+function pathParts(project: Project): { start: string; end: string } {
+  const path = project.summary.workdir.replace(/[\\/]+$/, '')
+  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+  return cut < 0 ? { start: '', end: path } : { start: path.slice(0, cut), end: path.slice(cut) }
+}
+
+/** The only tab, when it asks for a project, has nothing to close into. */
+function canClose(tab: Tab): boolean {
+  return tabs.list.length > 1 || tab.project !== null
+}
+
+function onAuxClick(event: MouseEvent, tab: Tab): void {
+  if (event.button === MIDDLE_BUTTON && canClose(tab)) {
+    closeTab(tab.key)
+  }
+}
+
+// The scrollbar is hidden to keep the bar slim, so the wheel scrolls
+// sideways through tabs that don't fit.
+function onWheel(event: WheelEvent): void {
+  const element = strip.value
+  if (element && event.deltaY !== 0 && element.scrollWidth > element.clientWidth) {
+    element.scrollLeft += event.deltaY
+    event.preventDefault()
+  }
+}
+
+watch(
+  () => tabs.activeKey,
+  async () => {
+    await nextTick()
+    strip.value?.querySelector('.tab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  },
+)
+</script>
+
+<template>
+  <header class="project-tabs">
+    <div ref="strip" class="strip" role="tablist" aria-label="Projects" @wheel="onWheel">
+      <div
+        v-for="tab in tabs.list"
+        :key="tab.key"
+        class="tab"
+        :class="{ active: tab.key === tabs.activeKey }"
+        @mousedown.middle.prevent
+        @auxclick="onAuxClick($event, tab)"
+      >
+        <button
+          class="tab-select"
+          type="button"
+          role="tab"
+          :aria-selected="tab.key === tabs.activeKey"
+          :title="tab.project ? tab.project.summary.workdir : 'Open a project in this tab'"
+          @click="activateTab(tab.key)"
+        >
+          <AppIcon :name="tab.project ? 'folder' : 'plus'" class="tab-icon" />
+          <span class="text">
+            <span class="name ellipsis">{{ tabName(tab) }}</span>
+            <span v-if="tab.project" class="path">
+              <span class="path-start ellipsis">{{ pathParts(tab.project).start }}</span>
+              <span class="path-end ellipsis">{{ pathParts(tab.project).end }}</span>
+            </span>
+            <span v-else class="path">No project open</span>
+          </span>
+        </button>
+        <button
+          v-if="canClose(tab)"
+          class="icon-button tab-close"
+          type="button"
+          :title="`Close ${tabName(tab)}`"
+          @click="closeTab(tab.key)"
+        >
+          <AppIcon name="close" />
+        </button>
+      </div>
+    </div>
+
+    <button class="button button--icon new-tab" type="button" title="Open a project in a new tab" @click="openNewTab">
+      <AppIcon name="plus" />
+    </button>
+  </header>
+</template>
+
+<style scoped>
+/* Editor-style tabs. The shown one takes the color of the bar under it and
+   covers the line between them, so the two read as one surface. */
+.project-tabs {
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-sunken);
+}
+
+/* Reaches over the bar's bottom line, which a scrolling box would otherwise
+   clip the shown tab short of. */
+.strip {
+  display: flex;
+  gap: calc(2 * var(--px));
+  min-width: 0;
+  margin-bottom: -1px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.strip::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  position: relative;
+  display: flex;
+  flex: 0 1 calc(320 * var(--px));
+  align-items: center;
+  min-width: calc(165 * var(--px));
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  transition: background-color var(--transition);
+}
+
+.tab:hover {
+  background: var(--color-bg-app);
+}
+
+.tab.active {
+  border-color: var(--color-border);
+  background: var(--color-bg-panel);
+}
+
+.tab.active::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  left: -1px;
+  height: calc(2 * var(--px));
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--color-accent);
+}
+
+.tab-select {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  border: none;
+  border-radius: var(--radius) 0 0 0;
+  background: transparent;
+  color: var(--color-fg-muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.tab-select:focus-visible {
+  outline-offset: -2px;
+}
+
+.tab-icon {
+  color: var(--color-fg-faint);
+}
+
+.tab.active .tab-icon {
+  color: var(--color-accent);
+}
+
+/* The path gets a line of its own, so it has the tab's full width. */
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.name {
+  font-weight: 600;
+}
+
+.tab.active .name {
+  color: var(--color-fg-strong);
+}
+
+.path {
+  display: flex;
+  min-width: 0;
+  color: var(--color-fg-faint);
+  font-size: calc(12 * var(--px));
+}
+
+/* Only the start shrinks, and the folder name gives way only once the start
+   is gone, so a long path is cut in the middle and both of its ends stay. */
+.path-start {
+  min-width: 0;
+}
+
+.path-end {
+  flex: none;
+  max-width: 100%;
+}
+
+.tab-close {
+  flex: none;
+  margin-right: var(--space-1);
+}
+
+.new-tab {
+  flex: none;
+  align-self: center;
+}
+</style>

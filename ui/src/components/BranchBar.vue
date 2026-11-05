@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { api, errorMessage } from '../api'
-import { applyFetchStatus, capabilities, refreshEverything, repo } from '../stores/repo'
+import { errorMessage } from '../api'
+import { useProject } from '../stores/project'
 import { showToast } from '../stores/toasts'
 import { formatRelative } from '../utils/dates'
 import { joinWithAnd } from '../utils/lists'
 import AppIcon from './AppIcon.vue'
-import ProjectInfo from './ProjectInfo.vue'
 
 defineEmits<{ openSwitcher: [] }>()
+
+const { api, applyFetchStatus, capabilities, refreshEverything, repo } = useProject()
 
 const head = computed(() => repo.overview?.head ?? null)
 
@@ -102,72 +103,65 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
 </script>
 
 <template>
-  <header class="top-bars">
-    <div class="bar">
-      <ProjectInfo />
-    </div>
-
-    <div class="bar bar--branch">
-      <div class="controls">
-        <div class="inset current" :title="branchLabel">
-          <AppIcon name="branch" />
-          <span class="branch-name ellipsis" :class="{ detached: head?.kind === 'detached' }">{{ branchLabel }}</span>
-          <span v-if="head?.tip" class="tip ellipsis">
-            <span class="hash">{{ head.tip.shortId }}</span>
-            <span class="faint"> · </span>
-            <span class="muted">{{ formatRelative(head.tip.authorTime) }}</span>
-          </span>
-          <span v-else-if="head?.kind === 'unborn'" class="faint">no commits yet</span>
-        </div>
-
-        <button
-          class="button"
-          type="button"
-          :disabled="!capabilities.canSwitch"
-          title="Switch to another branch"
-          @click="$emit('openSwitcher')"
-        >
-          <AppIcon name="switch" />
-          Switch
-          <span class="count">{{ repo.overview?.branchCount ?? 0 }}</span>
-        </button>
-
-        <span class="divider" aria-hidden="true"></span>
-
-        <button
-          class="button"
-          :class="{ 'fetch--failed': fetchFailed }"
-          type="button"
-          :disabled="!hasRemotes || repo.fetch.inProgress"
-          :title="fetchTitle"
-          @click="fetchNow"
-        >
-          <AppIcon :name="fetchFailed ? 'warning' : 'refresh'" />
-          {{ repo.fetch.inProgress ? 'Fetching…' : 'Fetch' }}
-        </button>
-        <button class="button" type="button" :disabled="!capabilities.canPull" :title="pullTitle" @click="sync('pull')">
-          <AppIcon name="pull" />
-          {{ repo.busy === 'pull' ? 'Pulling…' : 'Pull' }}
-          <span v-if="head?.behind" class="count count--behind">↓{{ head.behind }}</span>
-        </button>
-        <button class="button" type="button" :disabled="!capabilities.canPush" :title="pushTitle" @click="sync('push')">
-          <AppIcon name="push" />
-          {{ repo.busy === 'push' ? 'Pushing…' : head?.kind === 'branch' && !head.upstream ? 'Publish' : 'Push' }}
-          <span v-if="head?.ahead" class="count count--ahead">↑{{ head.ahead }}</span>
-        </button>
+  <header class="bar">
+    <div class="controls">
+      <div class="inset current" :title="branchLabel">
+        <AppIcon name="branch" />
+        <span class="branch-name ellipsis" :class="{ detached: head?.kind === 'detached' }">{{ branchLabel }}</span>
+        <span v-if="head?.tip" class="tip ellipsis">
+          <span class="hash">{{ head.tip.shortId }}</span>
+          <span class="faint"> · </span>
+          <span class="muted">{{ formatRelative(head.tip.authorTime) }}</span>
+        </span>
+        <span v-else-if="head?.kind === 'unborn'" class="faint">no commits yet</span>
       </div>
 
-      <span v-if="capabilities.notice" class="notice">
-        <AppIcon name="warning" />
-        {{ capabilities.notice }} - finish it locally to switch, pull, or push.
-      </span>
+      <button
+        class="button"
+        type="button"
+        :disabled="!capabilities.canSwitch"
+        title="Switch to another branch"
+        @click="$emit('openSwitcher')"
+      >
+        <AppIcon name="switch" />
+        Switch
+        <span class="count">{{ repo.overview?.branchCount ?? 0 }}</span>
+      </button>
+
+      <span class="divider" aria-hidden="true"></span>
+
+      <button
+        class="button"
+        :class="{ 'fetch--failed': fetchFailed }"
+        type="button"
+        :disabled="!hasRemotes || repo.fetch.inProgress"
+        :title="fetchTitle"
+        @click="fetchNow"
+      >
+        <AppIcon :name="fetchFailed ? 'warning' : 'refresh'" />
+        {{ repo.fetch.inProgress ? 'Fetching…' : 'Fetch' }}
+      </button>
+      <button class="button" type="button" :disabled="!capabilities.canPull" :title="pullTitle" @click="sync('pull')">
+        <AppIcon name="pull" />
+        {{ repo.busy === 'pull' ? 'Pulling…' : 'Pull' }}
+        <span v-if="head?.behind" class="count count--behind">↓{{ head.behind }}</span>
+      </button>
+      <button class="button" type="button" :disabled="!capabilities.canPush" :title="pushTitle" @click="sync('push')">
+        <AppIcon name="push" />
+        {{ repo.busy === 'push' ? 'Pushing…' : head?.kind === 'branch' && !head.upstream ? 'Publish' : 'Push' }}
+        <span v-if="head?.ahead" class="count count--ahead">↑{{ head.ahead }}</span>
+      </button>
     </div>
+
+    <span v-if="capabilities.notice" class="notice">
+      <AppIcon name="warning" />
+      {{ capabilities.notice }} - finish it locally to switch, pull, or push.
+    </span>
   </header>
 </template>
 
 <style scoped>
-/* The project and the branch each get a bar of their own, with their
-   contents centered. */
+/* The branch and its actions sit centered, with any notice below them. */
 .bar {
   display: flex;
   flex-direction: column;

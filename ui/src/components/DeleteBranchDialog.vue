@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
 
-import { api, errorMessage, type DeleteInfo } from '../api'
-import { repo } from '../stores/repo'
+import { errorMessage, type DeleteInfo } from '../api'
+import { useProject } from '../stores/project'
 import { showToast } from '../stores/toasts'
 import { useEscape } from '../utils/escape'
 import AppIcon from './AppIcon.vue'
@@ -10,6 +10,8 @@ import TypeToConfirm from './TypeToConfirm.vue'
 
 const props = defineProps<{ name: string }>()
 const emit = defineEmits<{ close: []; deleted: [] }>()
+
+const { api, repo } = useProject()
 
 const info = ref<DeleteInfo | null>(null)
 const loadError = ref<string | null>(null)

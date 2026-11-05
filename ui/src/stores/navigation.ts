@@ -21,25 +21,6 @@ export type View =
 
 export type MainTab = 'commits' | 'files' | 'stash' | 'authors'
 
-/**
- * Views stack inside the single window: the main view at the bottom, then
- * file history, commit and stash views. Views below the top stay mounted, so going
- * back restores their scroll position and state.
- */
-export const navigation = reactive({
-  stack: [{ kind: 'main' }] as View[],
-  tab: 'commits' as MainTab,
-  directory: '',
-  /** A search started outside the Commits tab, which runs and clears it. */
-  commitSearch: null as string | null,
-})
-
-/** Shows the Commits tab with `query` in its search field, already run. */
-export function searchCommits(query: string): void {
-  navigation.commitSearch = query
-  navigation.tab = 'commits'
-}
-
 export interface OpenCommitOptions {
   /** The file whose history the commit was opened from. */
   fromFile?: string | null
@@ -47,50 +28,83 @@ export interface OpenCommitOptions {
   sequence?: CommitSequence | null
 }
 
-export function openCommit(id: string, { fromFile = null, sequence = null }: OpenCommitOptions = {}): void {
-  // Kept raw, as the list it reads from is reactive on its own.
-  navigation.stack.push({ kind: 'commit', id, fromFile, sequence: sequence && markRaw(sequence) })
-}
-
 /**
- * Shows commit `to` in the Commit View on top while it still shows `from`,
- * e.g. to step through its list, so going back still returns to the list.
+ * Creates a project's stack of views: the main view at the bottom, then file
+ * history, commit and stash views. Views below the top stay mounted, so going
+ * back restores their scroll position and state.
  */
-export function replaceCommit(from: string, to: string): void {
-  const top = navigation.stack.length - 1
-  const view = navigation.stack[top]
-  if (view.kind === 'commit' && view.id === from) {
-    navigation.stack.splice(top, 1, { ...view, id: to })
+export function createNavigation() {
+  const navigation = reactive({
+    stack: [{ kind: 'main' }] as View[],
+    tab: 'commits' as MainTab,
+    directory: '',
+    /** A search started outside the Commits tab, which runs and clears it. */
+    commitSearch: null as string | null,
+  })
+
+  /** Shows the Commits tab with `query` in its search field, already run. */
+  function searchCommits(query: string): void {
+    navigation.commitSearch = query
+    navigation.tab = 'commits'
   }
-}
 
-export function openPendingChanges(): void {
-  navigation.stack.push({ kind: 'pending' })
-}
-
-export function openStash(id: string): void {
-  navigation.stack.push({ kind: 'stash', id })
-}
-
-export function openFileHistory(path: string): void {
-  // From a commit opened in this file's history, going back keeps that
-  // history's place instead of stacking a second copy of it.
-  const top = navigation.stack.length - 1
-  const below = navigation.stack[top - 1] as View | undefined
-  if (navigation.stack[top].kind === 'commit' && below?.kind === 'fileHistory' && below.path === path) {
-    goBack()
-    return
+  function openCommit(id: string, { fromFile = null, sequence = null }: OpenCommitOptions = {}): void {
+    // Kept raw, as the list it reads from is reactive on its own.
+    navigation.stack.push({ kind: 'commit', id, fromFile, sequence: sequence && markRaw(sequence) })
   }
-  navigation.stack.push({ kind: 'fileHistory', path })
-}
 
-export function goBack(): void {
-  if (navigation.stack.length > 1) {
-    navigation.stack.pop()
+  /**
+   * Shows commit `to` in the Commit View on top while it still shows `from`,
+   * e.g. to step through its list, so going back still returns to the list.
+   */
+  function replaceCommit(from: string, to: string): void {
+    const top = navigation.stack.length - 1
+    const view = navigation.stack[top]
+    if (view.kind === 'commit' && view.id === from) {
+      navigation.stack.splice(top, 1, { ...view, id: to })
+    }
   }
-}
 
-/** Drops every view above the main one, e.g. after a branch switch. */
-export function returnToMain(): void {
-  navigation.stack.splice(1)
+  function openPendingChanges(): void {
+    navigation.stack.push({ kind: 'pending' })
+  }
+
+  function openStash(id: string): void {
+    navigation.stack.push({ kind: 'stash', id })
+  }
+
+  function openFileHistory(path: string): void {
+    // From a commit opened in this file's history, going back keeps that
+    // history's place instead of stacking a second copy of it.
+    const top = navigation.stack.length - 1
+    const below = navigation.stack[top - 1] as View | undefined
+    if (navigation.stack[top].kind === 'commit' && below?.kind === 'fileHistory' && below.path === path) {
+      goBack()
+      return
+    }
+    navigation.stack.push({ kind: 'fileHistory', path })
+  }
+
+  function goBack(): void {
+    if (navigation.stack.length > 1) {
+      navigation.stack.pop()
+    }
+  }
+
+  /** Drops every view above the main one, e.g. after a branch switch. */
+  function returnToMain(): void {
+    navigation.stack.splice(1)
+  }
+
+  return {
+    navigation,
+    searchCommits,
+    openCommit,
+    replaceCommit,
+    openPendingChanges,
+    openStash,
+    openFileHistory,
+    goBack,
+    returnToMain,
+  }
 }

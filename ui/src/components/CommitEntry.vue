@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 
 import type { CommitSummary } from '../api'
-import { capabilities } from '../stores/repo'
+import { useProject } from '../stores/project'
 import { joinNames } from '../utils/authors'
 import { formatAbsolute, formatRelative } from '../utils/dates'
 import AppIcon from './AppIcon.vue'
@@ -15,6 +15,8 @@ import SquashDialog from './SquashDialog.vue'
 
 defineProps<{ commit: CommitSummary }>()
 const emit = defineEmits<{ open: [] }>()
+
+const { capabilities } = useProject()
 
 const expanded = ref(false)
 const dialog = ref<'reword' | 'squash' | 'drop' | 'cherryPick' | 'revert' | null>(null)

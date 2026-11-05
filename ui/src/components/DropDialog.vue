@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
-import { api, errorMessage, type CommitSummary } from '../api'
-import { refreshEverything, repo } from '../stores/repo'
+import { errorMessage, type CommitSummary } from '../api'
+import { useProject } from '../stores/project'
 import { showToast } from '../stores/toasts'
 import ConfirmDialog from './ConfirmDialog.vue'
 import TypeToConfirm from './TypeToConfirm.vue'
 
 const props = defineProps<{ commit: CommitSummary }>()
 const emit = defineEmits<{ close: [] }>()
+
+const { api, refreshEverything, repo } = useProject()
 
 /** How many commits come after this one and are recreated without it, once checked. */
 const later = ref<number | null>(null)

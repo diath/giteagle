@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { reloadRepository, repo } from '../stores/repo'
 import AppIcon from './AppIcon.vue'
+import { useProject } from '../stores/project'
+
+const { reloadRepository, repo } = useProject()
 </script>
 
 <template>

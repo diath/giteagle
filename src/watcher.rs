@@ -1,7 +1,8 @@
 //! Polls the repository for changes made outside GitEagle. Ref changes are
 //! announced so the UI can offer a reload; working tree status changes, the
 //! summary of uncommitted changes and changes to the stash are pushed
-//! straight to the UI.
+//! straight to the UI. Only the project in the active tab is polled; a
+//! hidden one catches up as soon as its tab is shown again.
 
 use std::fs;
 use std::path::Path;
@@ -10,13 +11,13 @@ use std::thread;
 use std::time::{Duration, SystemTime};
 
 use git2::{Oid, Repository};
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
 
-use crate::app_state::AppState;
 use crate::git::pending::pending_summary;
 use crate::git::snapshot::fingerprint;
 use crate::git::stashes::stash_ids;
 use crate::git::status::{ChangedPath, changed_paths, tracked_changes};
+use crate::project::Project;
 
 const POLL_INTERVAL: Duration = Duration::from_secs(3);
 pub const REPO_CHANGED_EVENT: &str = "repo-changed";
@@ -63,36 +64,34 @@ impl PendingFingerprint {
     }
 }
 
-pub fn spawn(app: AppHandle, state: Arc<AppState>) {
+pub fn spawn(app: AppHandle, project: Arc<Project>) {
     let spawned = thread::Builder::new()
-        .name("repository-watcher".into())
-        .spawn(move || watch(&app, &state));
+        .name(format!("repository-watcher-{}", project.id))
+        .spawn(move || watch(&app, &project));
     if let Err(error) = spawned {
         eprintln!("giteagle: couldn't start the repository watcher: {error}");
     }
 }
 
-fn watch(app: &AppHandle, state: &AppState) {
+fn watch(app: &AppHandle, project: &Project) {
     // A separate handle keeps polling from contending with commands for the
     // shared repository lock.
-    let Ok(repository) = Repository::open(&state.workdir) else {
+    let Ok(repository) = Repository::open(&project.workdir) else {
         return;
     };
     let mut last_announced = None;
     let mut last_status = None;
     let mut last_pending_fingerprint = None;
     let mut last_stashes = stash_ids(&repository).ok();
-    loop {
-        thread::sleep(POLL_INTERVAL);
-
+    while project.wait_until_shown(POLL_INTERVAL) {
         {
-            let baseline = state.lock_baseline();
+            let baseline = project.lock_baseline();
             if let Ok(current) = fingerprint(&repository) {
                 let changed = baseline.as_ref() != Some(&current);
                 // Announce each new state once, so dismissing the prompt
                 // keeps it dismissed until something else changes.
                 if changed && last_announced.as_ref() != Some(&current) {
-                    let _ = app.emit(REPO_CHANGED_EVENT, ());
+                    project.emit(app, REPO_CHANGED_EVENT, ());
                     last_announced = Some(current);
                 }
             }
@@ -101,7 +100,7 @@ fn watch(app: &AppHandle, state: &AppState) {
         if let Ok(stashes) = stash_ids(&repository)
             && last_stashes.as_ref() != Some(&stashes)
         {
-            let _ = app.emit(STASHES_CHANGED_EVENT, ());
+            project.emit(app, STASHES_CHANGED_EVENT, ());
             last_stashes = Some(stashes);
         }
 
@@ -110,17 +109,17 @@ fn watch(app: &AppHandle, state: &AppState) {
         };
         let status = tracked_changes(&changed);
         if last_status.as_ref() != Some(&status) {
-            let _ = app.emit(WORKING_TREE_CHANGED_EVENT, &status);
+            project.emit(app, WORKING_TREE_CHANGED_EVENT, &status);
             last_status = Some(status);
         }
 
-        let pending_fingerprint = PendingFingerprint::of(&repository, &state.workdir, &changed);
+        let pending_fingerprint = PendingFingerprint::of(&repository, &project.workdir, &changed);
         if last_pending_fingerprint.as_ref() != Some(&pending_fingerprint)
             && let Ok(summary) = pending_summary(&repository, &changed)
         {
             // Sent even when the totals are unchanged: an edit can swap one
             // line for another, and an open view of the changes must reload.
-            let _ = app.emit(PENDING_CHANGED_EVENT, summary);
+            project.emit(app, PENDING_CHANGED_EVENT, summary);
             last_pending_fingerprint = Some(pending_fingerprint);
         }
     }

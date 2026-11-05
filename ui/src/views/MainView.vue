@@ -8,9 +8,12 @@ import CommitsTab from '../components/CommitsTab.vue'
 import FilesTab from '../components/FilesTab.vue'
 import ProjectLinks from '../components/ProjectLinks.vue'
 import StashTab from '../components/StashTab.vue'
-import { navigation, type MainTab } from '../stores/navigation'
+import type { MainTab } from '../stores/navigation'
+import { useProject } from '../stores/project'
 
 defineProps<{ active: boolean }>()
+
+const { navigation } = useProject()
 
 const switcherOpen = ref(false)
 

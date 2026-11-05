@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, shallowRef } from 'vue'
 
-import { api, errorMessage, type CommitDetails } from '../api'
+import { errorMessage, type CommitDetails } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import AvatarStack from '../components/AvatarStack.vue'
 import DiffBrowser from '../components/DiffBrowser.vue'
 import ViewBar from '../components/ViewBar.vue'
-import { goBack, openCommit, replaceCommit, type CommitSequence } from '../stores/navigation'
+import type { CommitSequence } from '../stores/navigation'
+import { useProject } from '../stores/project'
 import { showToast } from '../stores/toasts'
 import { formatAbsolute, formatRelative } from '../utils/dates'
 import { useEscape } from '../utils/escape'
 
 const props = defineProps<{ id: string; fromFile: string | null; sequence: CommitSequence | null }>()
+
+const { api, goBack, openCommit, replaceCommit } = useProject()
 
 const details = shallowRef<CommitDetails | null>(null)
 const error = ref<string | null>(null)

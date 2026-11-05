@@ -1,8 +1,6 @@
 use std::path::Path;
-use std::sync::Arc;
 
 use git2::Repository;
-use tauri::Manager;
 
 mod app_state;
 mod avatars;
@@ -12,22 +10,26 @@ pub mod error;
 pub mod external_git;
 mod fetcher;
 pub mod git;
+mod project;
 mod watcher;
 
 use app_state::AppState;
 
+pub(crate) const APP_NAME: &str = "GitEagle";
 /// Longer paths lose their middle in the window title.
 const TITLE_PATH_CHARS: usize = 48;
 
-/// Opens the main window for an already discovered repository and blocks
-/// until the app exits.
-pub fn run(repository: Repository) {
-    let state = Arc::new(AppState::new(repository));
-    let setup_state = Arc::clone(&state);
-
+/// Opens the main window and blocks until the app exits. The window starts
+/// with a tab for `initial`, the repository named on the command line, or
+/// with one that asks for a project when there is none.
+pub fn run(initial: Option<Repository>) {
     tauri::Builder::default()
-        .manage(state)
+        .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
+            commands::projects::list_projects,
+            commands::projects::open_project,
+            commands::projects::close_project,
+            commands::projects::show_project,
             commands::repository::get_overview,
             commands::repository::reload,
             commands::repository::get_fetch_status,
@@ -68,20 +70,18 @@ pub fn run(repository: Repository) {
             commands::avatars::get_avatar,
         ])
         .setup(move |app| {
-            if let Some(window) = app.get_webview_window("main") {
-                window.set_title(&window_title(&setup_state.repo_name, &setup_state.workdir))?;
+            if let Some(repository) = initial {
+                commands::projects::start_project(app.handle(), repository);
             }
-            watcher::spawn(app.handle().clone(), Arc::clone(&setup_state));
-            fetcher::spawn(app.handle().clone(), Arc::clone(&setup_state));
             Ok(())
         })
         .run(tauri::generate_context!())
         .expect("failed to run GitEagle");
 }
 
-fn window_title(repo_name: &str, workdir: &Path) -> String {
+pub(crate) fn window_title(repo_name: &str, workdir: &Path) -> String {
     let path = shorten_path(&workdir.display().to_string(), TITLE_PATH_CHARS);
-    format!("GitEagle - {repo_name} ({path})")
+    format!("{APP_NAME} - {repo_name} ({path})")
 }
 
 /// Cuts the middle out of a path longer than `max_chars`, keeping its start

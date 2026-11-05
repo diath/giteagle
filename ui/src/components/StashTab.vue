@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef, watch } from 'vue'
 
-import { api, errorMessage, type StashSummary } from '../api'
-import { openStash } from '../stores/navigation'
-import { capabilities, repo } from '../stores/repo'
+import { errorMessage, type StashSummary } from '../api'
+import { useProject } from '../stores/project'
 import { showToast } from '../stores/toasts'
-import { pendingSummary, refreshWorkingTree } from '../stores/workingTree'
 import { hasPendingChanges } from '../utils/pending'
 import AppIcon from './AppIcon.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 import StashEntry from './StashEntry.vue'
 
 const props = defineProps<{ active: boolean }>()
+
+const { api, openStash, capabilities, repo, pendingSummary, refreshWorkingTree } = useProject()
 
 const stashes = shallowRef<StashSummary[]>([])
 const loading = ref(false)

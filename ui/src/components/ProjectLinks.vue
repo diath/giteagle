@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { api, errorMessage, type GitHubPage } from '../api'
+import { errorMessage, type GitHubPage } from '../api'
 import type { IconName } from '../icons/paths'
-import { repo } from '../stores/repo'
+import { useProject } from '../stores/project'
 import { showToast } from '../stores/toasts'
 import AppIcon from './AppIcon.vue'
 
@@ -11,6 +11,8 @@ const GITHUB_PAGES: { id: GitHubPage; label: string; icon: IconName; description
   { id: 'issues', label: 'Issues', icon: 'issue', description: 'issues' },
   { id: 'pullRequests', label: 'Pull Requests', icon: 'pullRequest', description: 'pull requests' },
 ]
+
+const { api, repo, summary } = useProject()
 
 const github = computed(() => repo.overview?.github ?? null)
 
@@ -36,7 +38,7 @@ function openPage(page: GitHubPage): void {
     <button
       class="button"
       type="button"
-      :title="`Open ${repo.overview?.workdir ?? 'the project folder'} in the file manager`"
+      :title="`Open ${summary.workdir} in the file manager`"
       @click="openFolder"
     >
       <AppIcon name="folder" />

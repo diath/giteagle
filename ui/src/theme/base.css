@@ -185,7 +185,7 @@ textarea {
   cursor: default;
 }
 
-/* The sunken frame around the branch name, the project and view titles. */
+/* The sunken frame around the branch name and view titles. */
 .inset {
   display: flex;
   align-items: center;
