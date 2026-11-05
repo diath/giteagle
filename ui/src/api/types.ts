@@ -44,6 +44,16 @@ export interface FileAtCommit {
   text: string | null
 }
 
+/** The versions of a file around the one in a commit. */
+export interface FileVersions {
+  /** The closest older commit with a version of the file. */
+  older: CommitBrief | null
+  /** The closest newer one, only looked for on the current branch. */
+  newer: CommitBrief | null
+  /** Whether the commit is on the current branch. */
+  onBranch: boolean
+}
+
 export interface Person {
   name: string
   email: string

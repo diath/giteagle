@@ -6,7 +6,8 @@ use super::{SharedState, blocking};
 use crate::error::{AppError, AppResult};
 use crate::fetcher::unix_now;
 use crate::git::history::{
-    Filter, HistoryCursor, HistoryPage, PAGE_SIZE, load_history as load_page,
+    FileVersions, Filter, HistoryCursor, HistoryPage, PAGE_SIZE, file_versions,
+    load_history as load_page,
 };
 use crate::git::search::{Query, SEARCH_TAGS, SearchTag};
 use crate::project::ProjectId;
@@ -50,6 +51,20 @@ pub async fn load_file_history(
             let path = PathBuf::from(path);
             load_page(repository, cursor.as_ref(), PAGE_SIZE, &Filter::Path(&path))
         })
+    })
+    .await
+}
+
+/// The commits with versions of `path` around the one in commit `id`.
+#[tauri::command]
+pub async fn get_file_versions(
+    state: SharedState<'_>,
+    project: ProjectId,
+    id: String,
+    path: String,
+) -> AppResult<FileVersions> {
+    blocking(&state, project, move |project| {
+        project.with_repo(|repository| file_versions(repository, &id, &path))
     })
     .await
 }

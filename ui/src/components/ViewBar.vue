@@ -8,8 +8,14 @@ withDefaults(
     /** Shown before the title, in the frame's accent color. */
     icon?: IconName
     backTitle?: string
+    /**
+     * Keeps the end slot as wide as its contents, so the title gives way to
+     * it rather than the other way round, e.g. for buttons that would
+     * otherwise be drawn over the title.
+     */
+    keepEnd?: boolean
   }>(),
-  { icon: undefined, backTitle: 'Back (Esc)' },
+  { icon: undefined, backTitle: 'Back (Esc)', keepEnd: false },
 )
 
 defineSlots<{
@@ -27,7 +33,7 @@ const { goBack } = useProject()
 </script>
 
 <template>
-  <div class="view-bar">
+  <div class="view-bar" :class="{ 'view-bar--keep-end': keepEnd }">
     <div class="column">
       <button class="button" type="button" :title="backTitle" @click="goBack">
         <AppIcon name="back" />
@@ -64,6 +70,10 @@ const { goBack } = useProject()
   padding: var(--space-1) var(--space-4);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-bg-panel);
+}
+
+.view-bar--keep-end {
+  grid-template-columns: minmax(15%, 1fr) minmax(0, max-content) minmax(max-content, 1fr);
 }
 
 .column {

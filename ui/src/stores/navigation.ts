@@ -79,6 +79,19 @@ export function createNavigation() {
     navigation.stack.push({ kind: 'file', commit, shortId, path })
   }
 
+  /**
+   * Shows the version of file `path` in commit `to` in the File View on top
+   * while it still shows commit `from`, so going back skips the versions
+   * stepped through.
+   */
+  function replaceFileVersion(path: string, from: string, to: { id: string; shortId: string }): void {
+    const top = navigation.stack.length - 1
+    const view = navigation.stack[top]
+    if (view.kind === 'file' && view.path === path && view.commit === from) {
+      navigation.stack.splice(top, 1, { ...view, commit: to.id, shortId: to.shortId })
+    }
+  }
+
   function openFileHistory(path: string): void {
     // From a commit opened in this file's history, going back keeps that
     // history's place instead of stacking a second copy of it.
@@ -110,6 +123,7 @@ export function createNavigation() {
     openPendingChanges,
     openStash,
     openFileAt,
+    replaceFileVersion,
     openFileHistory,
     goBack,
     returnToMain,

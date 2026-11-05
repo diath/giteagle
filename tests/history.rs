@@ -3,7 +3,7 @@ mod common;
 use std::path::Path;
 
 use common::{TempRepo, file_url, git};
-use giteagle_lib::git::history::{Filter, load_history};
+use giteagle_lib::git::history::{Filter, file_versions, load_history};
 use giteagle_lib::git::search::Query;
 use giteagle_lib::git::split_message;
 use tempfile::TempDir;
@@ -319,5 +319,61 @@ fn subject_is_the_first_paragraph() {
     assert_eq!(
         split_message("Only subject\n"),
         ("Only subject".to_string(), String::new())
+    );
+}
+
+fn neighbor_subjects(
+    versions: &giteagle_lib::git::history::FileVersions,
+) -> (Option<String>, Option<String>) {
+    (
+        versions.older.as_ref().map(|commit| commit.subject.clone()),
+        versions.newer.as_ref().map(|commit| commit.subject.clone()),
+    )
+}
+
+#[test]
+fn file_versions_step_over_other_files_and_deletions() {
+    let repo = TempRepo::new();
+    let added = repo.commit_file("a.txt", "one\n", "Add a");
+    repo.commit_file("b.txt", "other\n", "Add b");
+    let changed = repo.commit_file("a.txt", "two\n", "Change a");
+    repo.remove("a.txt");
+    repo.commit("Delete a");
+    let restored = repo.commit_file("a.txt", "three\n", "Restore a");
+
+    let at = |commit: git2::Oid| {
+        file_versions(&repo.repository, &commit.to_string(), "a.txt").expect("versions")
+    };
+    let middle = at(changed);
+    assert!(middle.on_branch);
+    assert_eq!(
+        neighbor_subjects(&middle),
+        (Some("Add a".to_string()), Some("Restore a".to_string()))
+    );
+    assert_eq!(
+        neighbor_subjects(&at(added)),
+        (None, Some("Change a".to_string()))
+    );
+    assert_eq!(
+        neighbor_subjects(&at(restored)),
+        (Some("Change a".to_string()), None)
+    );
+}
+
+#[test]
+fn file_versions_off_the_current_branch_only_look_back() {
+    let repo = TempRepo::new();
+    let base = repo.commit_file("a.txt", "one\n", "Add a");
+    repo.create_branch("side", base);
+    repo.commit_file("a.txt", "main\n", "Change a on main");
+    repo.checkout("side");
+    let side = repo.commit_file("a.txt", "side\n", "Change a on side");
+    repo.checkout("main");
+
+    let versions = file_versions(&repo.repository, &side.to_string(), "a.txt").expect("versions");
+    assert!(!versions.on_branch);
+    assert_eq!(
+        neighbor_subjects(&versions),
+        (Some("Add a".to_string()), None)
     );
 }

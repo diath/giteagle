@@ -11,6 +11,7 @@ import type {
   DirectoryEntry,
   FetchStatus,
   FileAtCommit,
+  FileVersions,
   FileSearchResult,
   GitHubPage,
   HistoryCursor,
@@ -78,6 +79,7 @@ export function createProjectApi(project: ProjectId) {
     lastCommits: (path: string) =>
       call<Record<string, CommitBrief>>('directory_last_commits', { path }),
     fileAt: (id: string, path: string) => call<FileAtCommit>('get_file_at', { id, path }),
+    fileVersions: (id: string, path: string) => call<FileVersions>('get_file_versions', { id, path }),
     searchFiles: (path: string, query: string) =>
       call<FileSearchResult>('search_files', { path, query }),
     workingTreeStatus: () => call<StatusEntry[]>('get_working_tree_status'),

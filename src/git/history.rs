@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use super::authors::{Person, commit_authors};
 use super::search::{Candidate, Query};
-use super::{commit_message, head_commit, short_id, split_message};
+use super::{CommitBrief, commit_message, find_commit, head_commit, short_id, split_message};
 use crate::error::AppResult;
 
 pub const PAGE_SIZE: usize = 100;
@@ -147,6 +147,67 @@ fn filter_matches(repository: &Repository, filter: &Filter, commit: &Commit) -> 
         }
         Filter::Path(path) => Ok(changes_path(commit, path)?),
     }
+}
+
+/// The versions of a file around the one in a commit.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileVersions {
+    /// The closest older commit with a version of the file.
+    pub older: Option<CommitBrief>,
+    /// The closest newer commit with a version of the file, which is only
+    /// looked for on the current branch.
+    pub newer: Option<CommitBrief>,
+    /// Whether the commit is on the current branch.
+    pub on_branch: bool,
+}
+
+/// Finds the commits with versions of `path` around the one in commit `id`,
+/// in the order the file's history on the current branch lists them.
+/// Commits that delete the file are passed over, having no version to show.
+/// For a commit off the current branch only older versions are found, among
+/// its own ancestors.
+pub fn file_versions(repository: &Repository, id: &str, path: &str) -> AppResult<FileVersions> {
+    let target = find_commit(repository, id)?.id();
+    let path = Path::new(path);
+    let head = head_commit(repository)?.map(|commit| commit.id());
+    let on_branch = match head {
+        Some(head) => head == target || repository.graph_descendant_of(head, target)?,
+        None => false,
+    };
+
+    let mut walk = repository.revwalk()?;
+    walk.set_sorting(Sort::TIME)?;
+    walk.push(match head {
+        Some(head) if on_branch => head,
+        _ => target,
+    })?;
+    let mut newer = None;
+    let mut passed_target = false;
+    for oid in walk {
+        let oid = oid?;
+        if oid == target {
+            passed_target = true;
+            continue;
+        }
+        let commit = repository.find_commit(oid)?;
+        if !changes_path(&commit, path)? || entry_id(&commit, path)?.is_none() {
+            continue;
+        }
+        if passed_target {
+            return Ok(FileVersions {
+                older: Some(CommitBrief::from_commit(&commit)),
+                newer,
+                on_branch,
+            });
+        }
+        newer = Some(CommitBrief::from_commit(&commit));
+    }
+    Ok(FileVersions {
+        older: None,
+        newer,
+        on_branch,
+    })
 }
 
 /// A commit changes a path when its version differs from every parent's.

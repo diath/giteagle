@@ -43,6 +43,7 @@ pub fn run(initial: Option<Repository>) {
             commands::repository::open_github_page,
             commands::history::load_history,
             commands::history::load_file_history,
+            commands::history::get_file_versions,
             commands::history::list_search_tags,
             commands::authors::list_authors,
             commands::authors::count_author_lines,
