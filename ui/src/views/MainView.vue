@@ -6,7 +6,7 @@ import BranchBar from '../components/BranchBar.vue'
 import BranchSwitcher from '../components/BranchSwitcher.vue'
 import CommitsTab from '../components/CommitsTab.vue'
 import FilesTab from '../components/FilesTab.vue'
-import GitHubLinks from '../components/GitHubLinks.vue'
+import ProjectLinks from '../components/ProjectLinks.vue'
 import StashTab from '../components/StashTab.vue'
 import { navigation, type MainTab } from '../stores/navigation'
 
@@ -41,7 +41,7 @@ const TABS: { id: MainTab; label: string }[] = [
           {{ tab.label }}
         </button>
       </nav>
-      <GitHubLinks />
+      <ProjectLinks />
     </div>
 
     <div class="tab-panes">

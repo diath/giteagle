@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { api, errorMessage } from '../api'
 import { repo } from '../stores/repo'
-import { showToast } from '../stores/toasts'
 import AppIcon from './AppIcon.vue'
 
 /** The working directory split before its last component. */
@@ -12,23 +10,10 @@ const pathParts = computed(() => {
   const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
   return cut < 0 ? { start: '', end: path } : { start: path.slice(0, cut), end: path.slice(cut) }
 })
-
-async function openFolder(): Promise<void> {
-  try {
-    await api.openWorkdir()
-  } catch (error) {
-    showToast('error', errorMessage(error))
-  }
-}
 </script>
 
 <template>
-  <button
-    class="inset project"
-    type="button"
-    :title="`${repo.overview?.workdir ?? ''}\n\nClick to open the folder in the file manager.`"
-    @click="openFolder"
-  >
+  <div class="inset project" :title="repo.overview?.workdir">
     <AppIcon name="folder" />
     <span class="text">
       <span class="name ellipsis">{{ repo.overview?.repoName }}</span>
@@ -37,26 +22,12 @@ async function openFolder(): Promise<void> {
         <span class="path-end ellipsis">{{ pathParts.end }}</span>
       </span>
     </span>
-  </button>
+  </div>
 </template>
 
 <style scoped>
 .project {
   padding: var(--space-1) var(--space-3);
-  text-align: left;
-  cursor: pointer;
-  transition:
-    background-color var(--transition),
-    border-color var(--transition);
-}
-
-.project:hover {
-  border-color: var(--color-border-strong);
-  background: var(--color-bg-hover);
-}
-
-.project:active {
-  background: var(--color-bg-active);
 }
 
 /* The path gets a line of its own, so it has the widget's full width. */
