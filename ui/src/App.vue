@@ -4,7 +4,7 @@ import { onBeforeUnmount, onMounted, watch } from 'vue'
 import { appApi, errorMessage, events } from './api'
 import ProjectTabs from './components/ProjectTabs.vue'
 import ToastHost from './components/ToastHost.vue'
-import { activeTab, projectById, restoreTabs, tabs } from './stores/tabs'
+import { activeTab, closeActiveTab, openNewTab, projectById, restoreTabs, tabs } from './stores/tabs'
 import { showToast } from './stores/toasts'
 import OpenProjectPage from './views/OpenProjectPage.vue'
 import ProjectPage from './views/ProjectPage.vue'
@@ -17,6 +17,28 @@ const unlisteners: (() => void)[] = []
 function onMouseUp(event: MouseEvent): void {
   if (event.button === MOUSE_BACK_BUTTON) {
     activeTab.value?.project?.goBack()
+  }
+}
+
+// Ctrl+T and Ctrl+W open and close tabs as in a browser, even while typing in
+// a field.
+function onKeyDown(event: KeyboardEvent): void {
+  if (!event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) {
+    return
+  }
+  const key = event.key.toLowerCase()
+  if (key !== 't' && key !== 'w') {
+    return
+  }
+  event.preventDefault()
+  // A held key repeats, which would open or close one tab after another.
+  if (event.repeat) {
+    return
+  }
+  if (key === 't') {
+    openNewTab()
+  } else {
+    closeActiveTab()
   }
 }
 
@@ -33,6 +55,7 @@ watch(
 
 onMounted(async () => {
   window.addEventListener('mouseup', onMouseUp)
+  window.addEventListener('keydown', onKeyDown)
   // Listening starts before any project loads, so none misses an update;
   // a failure here still leaves the projects usable.
   try {
@@ -61,6 +84,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('mouseup', onMouseUp)
+  window.removeEventListener('keydown', onKeyDown)
   unlisteners.forEach((unlisten) => unlisten())
 })
 </script>

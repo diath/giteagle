@@ -90,6 +90,18 @@ export async function openProjectInTab(key: number, path: string): Promise<void>
   tabs.list.splice(index, 1, { key, project: markRaw(createProject(summary)) })
 }
 
+/** The only tab, when it asks for a project, has nothing to close into. */
+export function canCloseTab(tab: Tab): boolean {
+  return tabs.list.length > 1 || tab.project !== null
+}
+
+export function closeActiveTab(): void {
+  const tab = activeTab.value
+  if (tab && canCloseTab(tab)) {
+    closeTab(tab.key)
+  }
+}
+
 /**
  * Closes tab `key` and its project. The tab to its right is shown next, or
  * the one to its left for the last tab, and closing the only tab leaves one

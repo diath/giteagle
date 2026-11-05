@@ -64,7 +64,7 @@ every one passing.
   repositories, and a light theme.
 - **Tabs** each hold one project. Opening a project that is already open
   shows its tab instead. Closing the last tab leaves one that asks for a
-  project.
+  project. Ctrl+T opens a new tab and Ctrl+W closes the shown one.
 - **Switching branches** behaves like `git checkout`: non-conflicting changes
   carry over. If the switch would overwrite local changes or fails, nothing
   changes.

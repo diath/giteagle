@@ -2,7 +2,7 @@
 import { nextTick, ref, watch } from 'vue'
 
 import type { Project } from '../stores/project'
-import { activateTab, closeTab, openNewTab, tabs, type Tab } from '../stores/tabs'
+import { activateTab, canCloseTab, closeTab, openNewTab, tabs, type Tab } from '../stores/tabs'
 import AppIcon from './AppIcon.vue'
 
 /** The middle button, which closes a tab as in a browser. */
@@ -21,13 +21,14 @@ function pathParts(project: Project): { start: string; end: string } {
   return cut < 0 ? { start: '', end: path } : { start: path.slice(0, cut), end: path.slice(cut) }
 }
 
-/** The only tab, when it asks for a project, has nothing to close into. */
-function canClose(tab: Tab): boolean {
-  return tabs.list.length > 1 || tab.project !== null
+// Ctrl+W closes only the shown tab, so only its button names the shortcut.
+function closeTitle(tab: Tab): string {
+  const title = `Close ${tabName(tab)}`
+  return tab.key === tabs.activeKey ? `${title} (Ctrl+W)` : title
 }
 
 function onAuxClick(event: MouseEvent, tab: Tab): void {
-  if (event.button === MIDDLE_BUTTON && canClose(tab)) {
+  if (event.button === MIDDLE_BUTTON && canCloseTab(tab)) {
     closeTab(tab.key)
   }
 }
@@ -81,10 +82,10 @@ watch(
           </span>
         </button>
         <button
-          v-if="canClose(tab)"
+          v-if="canCloseTab(tab)"
           class="icon-button tab-close"
           type="button"
-          :title="`Close ${tabName(tab)}`"
+          :title="closeTitle(tab)"
           @click="closeTab(tab.key)"
         >
           <AppIcon name="close" />
@@ -92,7 +93,12 @@ watch(
       </div>
     </div>
 
-    <button class="button button--icon new-tab" type="button" title="Open a project in a new tab" @click="openNewTab">
+    <button
+      class="button button--icon new-tab"
+      type="button"
+      title="Open a project in a new tab (Ctrl+T)"
+      @click="openNewTab"
+    >
       <AppIcon name="plus" />
     </button>
   </header>
