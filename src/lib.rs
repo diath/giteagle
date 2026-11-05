@@ -11,9 +11,12 @@ pub mod external_git;
 mod fetcher;
 pub mod git;
 mod project;
+mod settings;
 mod watcher;
 
 use app_state::AppState;
+use settings::Settings;
+use tauri::Manager;
 
 pub(crate) const APP_NAME: &str = "GitEagle";
 /// Longer paths lose their middle in the window title.
@@ -70,10 +73,20 @@ pub fn run(initial: Option<Repository>) {
             commands::sync::pull,
             commands::sync::push,
             commands::avatars::get_avatar,
+            commands::settings::get_settings,
+            commands::settings::set_settings,
         ])
         .setup(move |app| {
+            // Settings are in place before any command runs, since commands
+            // only start once setup returns.
+            let file = app
+                .path()
+                .app_config_dir()
+                .ok()
+                .map(|folder| folder.join(settings::FILE_NAME));
+            app.manage(Settings::load(file));
             if let Some(repository) = initial {
-                commands::projects::start_project(app.handle(), repository);
+                commands::projects::launch_project(app.handle(), repository);
             }
             Ok(())
         })

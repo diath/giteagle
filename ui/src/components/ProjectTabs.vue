@@ -1,30 +1,31 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
 
-import type { Project } from '../stores/project'
 import { activateTab, canCloseTab, closeTab, openNewTab, tabs, type Tab } from '../stores/tabs'
+import { splitBeforeLast } from '../utils/paths'
 import AppIcon from './AppIcon.vue'
+import RecentMenu from './RecentMenu.vue'
 
 /** The middle button, which closes a tab as in a browser. */
 const MIDDLE_BUTTON = 1
 
 const strip = ref<HTMLElement | null>(null)
+const recentButton = ref<HTMLButtonElement | null>(null)
+const recentOpen = ref(false)
 
 function tabName(tab: Tab): string {
   return tab.project?.summary.name ?? 'New tab'
-}
-
-/** The working directory split before its last component, so it can be cut in the middle. */
-function pathParts(project: Project): { start: string; end: string } {
-  const path = project.summary.workdir.replace(/[\\/]+$/, '')
-  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
-  return cut < 0 ? { start: '', end: path } : { start: path.slice(0, cut), end: path.slice(cut) }
 }
 
 // Ctrl+W closes only the shown tab, so only its button names the shortcut.
 function closeTitle(tab: Tab): string {
   const title = `Close ${tabName(tab)}`
   return tab.key === tabs.activeKey ? `${title} (Ctrl+W)` : title
+}
+
+function closeRecent(): void {
+  recentOpen.value = false
+  recentButton.value?.focus()
 }
 
 function onAuxClick(event: MouseEvent, tab: Tab): void {
@@ -54,6 +55,23 @@ watch(
 
 <template>
   <header class="project-tabs">
+    <div class="recent">
+      <button
+        ref="recentButton"
+        class="button"
+        type="button"
+        aria-haspopup="menu"
+        :aria-expanded="recentOpen"
+        title="Recently opened projects"
+        @click="recentOpen = !recentOpen"
+      >
+        <AppIcon name="history" />
+        Recent
+        <AppIcon name="chevronDown" />
+      </button>
+      <RecentMenu v-if="recentOpen" @close="closeRecent" />
+    </div>
+
     <div ref="strip" class="strip" role="tablist" aria-label="Projects" @wheel="onWheel">
       <div
         v-for="tab in tabs.list"
@@ -75,8 +93,8 @@ watch(
           <span class="text">
             <span class="name ellipsis">{{ tabName(tab) }}</span>
             <span v-if="tab.project" class="path">
-              <span class="path-start ellipsis">{{ pathParts(tab.project).start }}</span>
-              <span class="path-end ellipsis">{{ pathParts(tab.project).end }}</span>
+              <span class="path-start ellipsis">{{ splitBeforeLast(tab.project.summary.workdir).start }}</span>
+              <span class="path-end ellipsis">{{ splitBeforeLast(tab.project.summary.workdir).end }}</span>
             </span>
             <span v-else class="path">No project open</span>
           </span>
@@ -119,6 +137,13 @@ watch(
 
 /* Reaches over the bar's bottom line, which a scrolling box would otherwise
    clip the shown tab short of. */
+/* The menu hangs from the button. */
+.recent {
+  position: relative;
+  flex: none;
+  align-self: center;
+}
+
 .strip {
   display: flex;
   gap: calc(2 * var(--px));

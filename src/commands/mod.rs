@@ -18,6 +18,7 @@ pub mod projects;
 pub mod repository;
 pub mod revert;
 pub mod rewrite;
+pub mod settings;
 pub mod stashes;
 pub mod sync;
 

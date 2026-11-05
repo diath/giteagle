@@ -10,6 +10,14 @@ export interface ProjectSummary {
   workdir: string
 }
 
+/** Mirrors the settings and their defaults in `src/settings.rs`. */
+export interface Settings {
+  /** How many projects the Recent menu remembers. */
+  recentLimit: number
+  /** The folders of recently opened projects, the latest first. */
+  recentProjects: string[]
+}
+
 export interface Person {
   name: string
   email: string

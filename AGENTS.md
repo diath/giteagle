@@ -36,6 +36,10 @@ every one passing.
   `project`, and events name the project in their payload.
 - **`src/app_state.rs`** keeps the open projects by id. **`src/project.rs`**
   holds one project's repository handle, caches and background schedule.
+- **`src/settings.rs`** keeps the settings, saved as JSON in the app's config
+  folder. Every setting has its default there, which also fixes the kind of
+  value it holds. The frontend's settings are listed there too, and
+  `ui/src/stores/settings.ts` repeats the defaults.
 - **`src/external_git.rs`** runs network operations (fetch, pull, push, remote
   deletes) through the system `git`, so the user's credentials and SSH config
   apply. It sets `GIT_TERMINAL_PROMPT=0` so nothing prompts. Everything else
@@ -51,6 +55,7 @@ every one passing.
   the Rust structs (serde `camelCase`) by hand, so change both sides together.
 - **`ui/src/stores/`** holds the app state:
   - `tabs.ts` holds the tabs.
+  - `settings.ts` holds a copy of the settings and saves changes to them.
   - `project.ts` creates the stores of each tab's project: its commands,
     repository, working tree and view stack. Components get them with
     `useProject()`.
@@ -65,6 +70,8 @@ every one passing.
 - **Tabs** each hold one project. Opening a project that is already open
   shows its tab instead. Closing the last tab leaves one that asks for a
   project. Ctrl+T opens a new tab and Ctrl+W closes the shown one.
+- **The Recent menu** lists the projects opened last, latest first. One that
+  fails to open is taken off the list.
 - **Switching branches** behaves like `git checkout`: non-conflicting changes
   carry over. If the switch would overwrite local changes or fails, nothing
   changes.

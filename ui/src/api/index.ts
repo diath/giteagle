@@ -23,6 +23,7 @@ import type {
   RevertMode,
   RewritableCommit,
   SearchTag,
+  Settings,
   StashDetails,
   StashSummary,
   StatusEntry,
@@ -41,6 +42,13 @@ export const appApi = {
   pickFolder: (start: string | null) => invoke<string | null>('pick_folder', { start }),
   searchTags: () => invoke<SearchTag[]>('list_search_tags'),
   avatar: (email: string) => invoke<string | null>('get_avatar', { email }),
+}
+
+/** The settings, which the backend stores. */
+export const settingsApi = {
+  all: () => invoke<Settings>('get_settings'),
+  /** Saves the settings in `changes`; the backend doesn't announce these back. */
+  set: (changes: Partial<Settings>) => invoke<void>('set_settings', { changes }),
 }
 
 /** The commands about project `project`, which each call names. */
@@ -123,6 +131,9 @@ export const events = {
     listenForProjects<null>('stashes-changed', (project) => handler(project)),
   onFetchStatus: (handler: (project: ProjectId, status: FetchStatus) => void): Promise<UnlistenFn> =>
     listenForProjects('fetch-status', handler),
+  /** Settings the backend changed, e.g. the recent projects when one opens. */
+  onSettingsChanged: (handler: (changes: Partial<Settings>) => void): Promise<UnlistenFn> =>
+    listen<Partial<Settings>>('settings-changed', ({ payload }) => handler(payload)),
 }
 
 function isAppError(error: unknown): error is AppError {

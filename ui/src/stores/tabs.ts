@@ -44,7 +44,7 @@ export function openNewTab(): void {
 }
 
 export function projectById(id: ProjectId): Raw<Project> | null {
-  return tabs.list.find((tab) => tab.project?.summary.id === id)?.project ?? null
+  return tabOf(id)?.project ?? null
 }
 
 /**
@@ -73,7 +73,7 @@ export async function restoreTabs(): Promise<void> {
 export async function openProjectInTab(key: number, path: string): Promise<void> {
   const summary = await appApi.openProject(path)
   const index = indexOf(key)
-  const existing = tabs.list.find((tab) => tab.project?.summary.id === summary.id)
+  const existing = tabOf(summary.id)
   if (existing) {
     if (index !== -1) {
       tabs.list.splice(index, 1)
@@ -88,6 +88,33 @@ export async function openProjectInTab(key: number, path: string): Promise<void>
     return
   }
   tabs.list.splice(index, 1, { key, project: markRaw(createProject(summary)) })
+}
+
+/**
+ * Opens the project at `path` in the shown tab if that one asks for a
+ * project, or else in a new tab. A project that is already open is shown in
+ * its own tab instead. Rejects when the folder holds no repository GitEagle
+ * can open.
+ */
+export async function openProject(path: string): Promise<void> {
+  const summary = await appApi.openProject(path)
+  const existing = tabOf(summary.id)
+  if (existing) {
+    activateTab(existing.key)
+    return
+  }
+  const shown = activeTab.value
+  if (shown && shown.project === null) {
+    tabs.list.splice(indexOf(shown.key), 1, { key: shown.key, project: markRaw(createProject(summary)) })
+    return
+  }
+  const tab = newTab(summary)
+  tabs.list.push(tab)
+  activateTab(tab.key)
+}
+
+function tabOf(id: ProjectId): Tab | null {
+  return tabs.list.find((tab) => tab.project?.summary.id === id) ?? null
 }
 
 /** The only tab, when it asks for a project, has nothing to close into. */
