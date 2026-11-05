@@ -1,19 +1,26 @@
-import { inject, provide, type InjectionKey } from 'vue'
+import { inject, provide, watch, type InjectionKey } from 'vue'
 
 import { createProjectApi, type ProjectSummary } from '../api'
 import { createNavigation } from './navigation'
+import { createPickSelection } from './pickSelection'
 import { createRepo } from './repo'
 import { createWorkingTree } from './workingTree'
 
 /**
  * Creates everything a tab knows about the project open in it: the commands
- * that act on it, its repository and working tree, and its stack of views.
+ * that act on it, its repository and working tree, its stack of views, and
+ * the commits chosen to cherry-pick together.
  */
 export function createProject(summary: ProjectSummary) {
   const api = createProjectApi(summary.id)
   const workingTree = createWorkingTree(api)
   const repo = createRepo(api, workingTree.refreshWorkingTree)
   const navigation = createNavigation()
+  const pickSelection = createPickSelection()
+
+  // A selection belongs to the list it was made in, which a change of view
+  // leaves, e.g. through the mouse's back button.
+  watch(() => navigation.navigation.stack.length, pickSelection.endPickSelection)
 
   /** Loads what the tab first shows; live updates keep it current from then on. */
   async function load(): Promise<void> {
@@ -26,7 +33,7 @@ export function createProject(summary: ProjectSummary) {
     }
   }
 
-  return { summary, api, load, ...workingTree, ...repo, ...navigation }
+  return { summary, api, load, ...workingTree, ...repo, ...navigation, ...pickSelection }
 }
 
 export type Project = ReturnType<typeof createProject>

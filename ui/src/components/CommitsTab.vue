@@ -15,7 +15,7 @@ const PLACEHOLDER = 'Search commits… (try: author:"name", message:"text", sinc
 
 defineProps<{ active: boolean }>()
 
-const { api, navigation, openCommit, openPendingChanges, repo, pendingSummary } = useProject()
+const { api, navigation, openCommit, openPendingChanges, pickSelection, repo, pendingSummary } = useProject()
 
 const query = ref('')
 const appliedQuery = ref('')
@@ -60,7 +60,7 @@ const emptyText = computed(() => {
 
 <template>
   <div class="commits-tab">
-    <div class="toolbar">
+    <div class="toolbar" :inert="pickSelection.active">
       <SearchField v-model="query" class="search" :placeholder="PLACEHOLDER" />
       <button class="button button--icon" type="button" title="Search tags" @click="helpOpen = true">
         <AppIcon name="help" />
@@ -77,7 +77,12 @@ const emptyText = computed(() => {
       @open="(commit, sequence) => openCommit(commit.id, { sequence })"
     >
       <template #top>
-        <PendingEntry v-if="showPending && pendingSummary" :summary="pendingSummary" @open="openPendingChanges" />
+        <PendingEntry
+          v-if="showPending && pendingSummary"
+          :inert="pickSelection.active"
+          :summary="pendingSummary"
+          @open="openPendingChanges"
+        />
       </template>
     </CommitList>
     <SearchHelpDialog v-if="helpOpen" @close="helpOpen = false" />

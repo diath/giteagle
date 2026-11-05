@@ -90,8 +90,10 @@ every one passing.
   upstream, pushed or not, and both ask for confirmation first. Merge
   commits are taken against their first parent.
   - Cherry-pick copies the commit onto other local branches without checking
-    them out. Branches that already have it or are checked out in a worktree
-    can't be chosen. If any chosen branch conflicts, no branch changes.
+    them out. Ctrl+Click on it starts selecting several commits instead,
+    which each branch then gets oldest first. Branches that already have one
+    of them or are checked out in a worktree can't be chosen. If any chosen
+    branch conflicts, no branch changes.
   - Revert adds a revert commit, or reverts in the working tree and stages
     the result. If anything is staged, it conflicts, or it would overwrite
     local changes, nothing changes.

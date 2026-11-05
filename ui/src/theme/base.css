@@ -222,6 +222,12 @@ textarea {
   outline-offset: -1px;
 }
 
+/* Controls set aside for a while, e.g. while commits are picked to
+   cherry-pick together, are dimmed so they read as unavailable. */
+[inert] {
+  opacity: 0.45;
+}
+
 /* A classic group box: a framed fieldset whose title sits in the top edge. */
 .group-box {
   display: flex;
