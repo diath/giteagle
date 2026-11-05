@@ -10,8 +10,12 @@ export interface ProjectSummary {
   workdir: string
 }
 
+/** How large the interface is drawn. */
+export type FontSize = 'small' | 'normal' | 'large' | 'extraLarge'
+
 /** Mirrors the settings and their defaults in `src/settings.rs`. */
 export interface Settings {
+  fontSize: FontSize
   /** How many projects the Recent menu remembers. */
   recentLimit: number
   /** The folders of recently opened projects, the latest first. */

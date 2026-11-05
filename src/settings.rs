@@ -46,6 +46,8 @@ pub const ACTIVE_PROJECT: Key<String> = Key::new("activeProject");
 /// them all, so its own settings are listed here too.
 static DEFAULTS: LazyLock<Map<String, Value>> = LazyLock::new(|| {
     [
+        // How large the interface is drawn; only the frontend reads it.
+        ("fontSize", json!("normal")),
         (RECENT_LIMIT.name, json!(10)),
         (RECENT_PROJECTS.name, json!([])),
         (OPEN_PROJECTS.name, json!([])),

@@ -1,16 +1,28 @@
-// The single knob for how large the interface is drawn. Every size in the
-// app is multiplied by it: in CSS through `var(--px)`, in scripts through
-// `scaled()`. At 1 the interface is drawn at its design size.
+// The single knob for how large the interface is drawn, set by the font size
+// setting. Every size in the app is multiplied by it: in CSS through
+// `var(--px)`, in scripts through `scaled()`. At 1 the interface is drawn at
+// its design size.
 
-/** How many times larger than its design size the interface is drawn. */
-export const UI_SCALE = 1
+import type { FontSize } from '../api'
 
-/** A length given in design pixels, in actual pixels. */
-export function scaled(pixels: number): number {
-  return pixels * UI_SCALE
+/** How many times larger than its design size each font size draws the interface. */
+const SCALES: Record<FontSize, number> = {
+  small: 0.75,
+  normal: 1,
+  large: 1.25,
+  extraLarge: 1.5,
 }
 
-/** Publishes the scale as the `--ui-scale` custom property on `root`. */
-export function applyScale(root: HTMLElement): void {
-  root.style.setProperty('--ui-scale', String(UI_SCALE))
+let scale = 1
+
+/** A length given in design pixels, in actual pixels at the current font size. */
+export function scaled(pixels: number): number {
+  return pixels * scale
+}
+
+/** Draws the interface at `fontSize`, through the `--ui-scale` custom property on `root`. */
+export function applyFontSize(root: HTMLElement, fontSize: FontSize): void {
+  // A hand-edited settings file can name a size that doesn't exist.
+  scale = SCALES[fontSize] ?? 1
+  root.style.setProperty('--ui-scale', String(scale))
 }

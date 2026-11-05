@@ -222,6 +222,28 @@ textarea {
   outline-offset: -1px;
 }
 
+/* A classic group box: a framed fieldset whose title sits in the top edge. */
+.group-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-2) var(--space-4) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-bg-panel);
+}
+
+.group-box > legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  color: var(--color-fg-strong);
+  font-weight: 600;
+}
+
 /* Drawn here rather than by the platform, whose radio buttons differ in size
    and look between systems. When checked, the thick ring leaves a dot of the
    background in the middle. */

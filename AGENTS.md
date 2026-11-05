@@ -77,6 +77,8 @@ every one passing.
   reopened at the next start is reported and forgotten.
 - **The Recent menu** lists the projects opened last, latest first. One that
   fails to open is taken off the list.
+- **Settings** apply and are saved as soon as they change, so the Settings
+  dialog has nothing to confirm.
 - **Switching branches** behaves like `git checkout`: non-conflicting changes
   carry over. If the switch would overwrite local changes or fails, nothing
   changes.
@@ -122,8 +124,9 @@ every one passing.
 - **Font:** IBM Plex Mono everywhere. Never use system UI fonts.
 - **Sizes:**
   - Write lengths in design pixels as `calc(N * var(--px))` in CSS, or
-    `scaled(N)` in scripts, so `UI_SCALE` in `ui/src/theme/scale.ts` resizes
-    everything.
+    `scaled(N)` in scripts, so the font size setting resizes everything
+    through `ui/src/theme/scale.ts`. Call `scaled()` when the length is
+    used, since the setting can change while the app runs.
   - Prefer the tokens in `base.css`, such as `--space-*`, `--font-size-*` and
     `--radius`.
   - 1px hairlines and focus rings stay unscaled.

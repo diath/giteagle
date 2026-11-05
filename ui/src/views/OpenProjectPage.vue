@@ -74,8 +74,8 @@ watch(
 
 <template>
   <div class="open-page">
-    <form class="group-box" @submit.prevent="load">
-      <fieldset :disabled="opening">
+    <form class="open-form" @submit.prevent="load">
+      <fieldset class="group-box" :disabled="opening">
         <legend>
           <AppIcon name="folder" />
           Open a project
@@ -127,32 +127,10 @@ watch(
   background: var(--color-bg-app);
 }
 
-/* A classic group box: the title sits in the frame's top edge. */
-.group-box {
+.open-form {
   width: min(calc(700 * var(--px)), 100%);
   /* Rests a little above the middle, where the eye starts. */
   margin-bottom: 10vh;
-}
-
-fieldset {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
-  margin: 0;
-  padding: var(--space-2) var(--space-4) var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-large);
-  background: var(--color-bg-panel);
-}
-
-legend {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 0 var(--space-2);
-  color: var(--color-fg-strong);
-  font-weight: 600;
 }
 
 legend > :first-child {

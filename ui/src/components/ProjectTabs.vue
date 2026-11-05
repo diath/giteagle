@@ -5,6 +5,7 @@ import { activateTab, canCloseTab, closeTab, openNewTab, tabs, type Tab } from '
 import { splitBeforeLast } from '../utils/paths'
 import AppIcon from './AppIcon.vue'
 import RecentMenu from './RecentMenu.vue'
+import SettingsDialog from './SettingsDialog.vue'
 
 /** The middle button, which closes a tab as in a browser. */
 const MIDDLE_BUTTON = 1
@@ -12,6 +13,8 @@ const MIDDLE_BUTTON = 1
 const strip = ref<HTMLElement | null>(null)
 const recentButton = ref<HTMLButtonElement | null>(null)
 const recentOpen = ref(false)
+const settingsButton = ref<HTMLButtonElement | null>(null)
+const settingsOpen = ref(false)
 
 function tabName(tab: Tab): string {
   return tab.project?.summary.name ?? 'New tab'
@@ -26,6 +29,11 @@ function closeTitle(tab: Tab): string {
 function closeRecent(): void {
   recentOpen.value = false
   recentButton.value?.focus()
+}
+
+function closeSettings(): void {
+  settingsOpen.value = false
+  settingsButton.value?.focus()
 }
 
 function onAuxClick(event: MouseEvent, tab: Tab): void {
@@ -119,6 +127,17 @@ watch(
     >
       <AppIcon name="plus" />
     </button>
+
+    <button
+      ref="settingsButton"
+      class="button button--icon settings-button"
+      type="button"
+      title="Settings"
+      @click="settingsOpen = true"
+    >
+      <AppIcon name="settings" />
+    </button>
+    <SettingsDialog v-if="settingsOpen" @close="closeSettings" />
   </header>
 </template>
 
@@ -258,5 +277,11 @@ watch(
 .new-tab {
   flex: none;
   align-self: center;
+}
+
+.settings-button {
+  flex: none;
+  align-self: center;
+  margin-left: auto;
 }
 </style>

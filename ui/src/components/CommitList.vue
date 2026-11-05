@@ -7,8 +7,8 @@ import { scaled } from '../theme/scale'
 import AppIcon from './AppIcon.vue'
 import CommitEntry from './CommitEntry.vue'
 
-/** How close to the bottom the next page starts loading. */
-const PRELOAD_MARGIN_PX = scaled(750)
+/** How close to the bottom, in design pixels, the next page starts loading. */
+const PRELOAD_MARGIN = 750
 
 const props = defineProps<{
   load: (cursor: HistoryCursor | null) => Promise<HistoryPage>
@@ -135,7 +135,7 @@ function sentinelIsNear(): boolean {
     return false
   }
   const container = scroller.value.getBoundingClientRect()
-  return sentinel.value.getBoundingClientRect().top <= container.bottom + PRELOAD_MARGIN_PX
+  return sentinel.value.getBoundingClientRect().top <= container.bottom + scaled(PRELOAD_MARGIN)
 }
 
 function reset(): void {
@@ -221,7 +221,7 @@ onMounted(() => {
         void loadMore()
       }
     },
-    { root: scroller.value, rootMargin: `0px 0px ${PRELOAD_MARGIN_PX}px 0px` },
+    { root: scroller.value, rootMargin: `0px 0px ${scaled(PRELOAD_MARGIN)}px 0px` },
   )
   if (sentinel.value) {
     observer.observe(sentinel.value)

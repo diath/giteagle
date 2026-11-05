@@ -27,8 +27,8 @@ import { buildSegments, layoutRows, splitLines } from '../utils/diff'
 import { languageFor, tokenizeFile, type Token } from '../utils/highlight'
 import AppIcon from './AppIcon.vue'
 
-/** Highlighting starts a little before a file scrolls into view. */
-const HIGHLIGHT_MARGIN_PX = scaled(1000)
+/** Highlighting starts this many design pixels before a file scrolls into view. */
+const HIGHLIGHT_MARGIN = 1000
 
 const props = defineProps<{ file: FileDiff; highlighted: boolean }>()
 
@@ -192,7 +192,7 @@ onMounted(() => {
     },
     // The margin only extends the root's own box, so the root must be the
     // scroll container rather than the viewport that clips it.
-    { root: scroller?.value ?? null, rootMargin: `${HIGHLIGHT_MARGIN_PX}px 0px` },
+    { root: scroller?.value ?? null, rootMargin: `${scaled(HIGHLIGHT_MARGIN)}px 0px` },
   )
   if (root.value) {
     observer.observe(root.value)
