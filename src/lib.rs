@@ -24,12 +24,14 @@ const TITLE_PATH_CHARS: usize = 48;
 /// with one that asks for a project when there is none.
 pub fn run(initial: Option<Repository>) {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
             commands::projects::list_projects,
             commands::projects::open_project,
             commands::projects::close_project,
             commands::projects::show_project,
+            commands::projects::pick_folder,
             commands::repository::get_overview,
             commands::repository::reload,
             commands::repository::get_fetch_status,

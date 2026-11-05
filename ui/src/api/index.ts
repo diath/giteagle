@@ -37,6 +37,8 @@ export const appApi = {
   closeProject: (project: ProjectId) => invoke<void>('close_project', { project }),
   /** Tells the backend which tab is shown; `null` for one without a project. */
   showProject: (project: ProjectId | null) => invoke<void>('show_project', { project }),
+  /** Resolves to `null` when the folder picker is cancelled. */
+  pickFolder: (start: string | null) => invoke<string | null>('pick_folder', { start }),
   searchTags: () => invoke<SearchTag[]>('list_search_tags'),
   avatar: (email: string) => invoke<string | null>('get_avatar', { email }),
 }

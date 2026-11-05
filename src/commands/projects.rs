@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use git2::Repository;
 use tauri::{AppHandle, Manager, WebviewWindow};
+use tauri_plugin_dialog::DialogExt;
 
 use super::{SharedState, join_failure};
 use crate::app_state::AppState;
@@ -75,6 +76,33 @@ pub fn show_project(
     window
         .set_title(&title)
         .map_err(|error| AppError::new(ErrorKind::Internal, error.to_string()))
+}
+
+/// Asks for a folder in the system's folder picker, starting in `start` if
+/// that is one. Resolves to `None` when the picker is cancelled.
+#[tauri::command]
+pub async fn pick_folder(
+    app: AppHandle,
+    window: WebviewWindow,
+    start: Option<String>,
+) -> AppResult<Option<String>> {
+    let start = start
+        .map(|start| expand_home(&app, start.trim()))
+        .filter(|start| start.is_dir());
+    let picked = tauri::async_runtime::spawn_blocking(move || {
+        let mut picker = app
+            .dialog()
+            .file()
+            .set_title("Open a project")
+            .set_parent(&window);
+        if let Some(start) = start {
+            picker = picker.set_directory(start);
+        }
+        picker.blocking_pick_folder()
+    })
+    .await
+    .map_err(join_failure)?;
+    Ok(picked.and_then(|picked| picked.as_path().map(|path| path.display().to_string())))
 }
 
 /// Lets a typed path start with `~` for the home folder, as in a shell.

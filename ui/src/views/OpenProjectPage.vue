@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref, watch } from 'vue'
 
-import { errorMessage } from '../api'
+import { appApi, errorMessage } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import { openProjectInTab } from '../stores/tabs'
 
@@ -15,7 +15,26 @@ const props = defineProps<{
 const path = ref('')
 const error = ref<string | null>(null)
 const opening = ref(false)
+const browsing = ref(false)
 const input = ref<HTMLInputElement | null>(null)
+const loadButton = ref<HTMLButtonElement | null>(null)
+
+async function browse(): Promise<void> {
+  browsing.value = true
+  try {
+    const picked = await appApi.pickFolder(path.value.trim() || null)
+    if (picked !== null) {
+      path.value = picked
+      error.value = null
+      await nextTick()
+      loadButton.value?.focus()
+    }
+  } catch (caught) {
+    error.value = errorMessage(caught)
+  } finally {
+    browsing.value = false
+  }
+}
 
 // On success the tab shows the project instead, and this page goes away.
 async function load(): Promise<void> {
@@ -76,6 +95,10 @@ watch(
             aria-label="Project folder"
             @input="error = null"
           />
+          <button class="button" type="button" :disabled="browsing" @click="browse">
+            <AppIcon name="folder" />
+            Browse…
+          </button>
         </div>
 
         <p v-if="error" class="error" role="alert">
@@ -84,7 +107,7 @@ watch(
         </p>
 
         <div class="actions">
-          <button class="button" type="submit" :disabled="path.trim() === '' || opening">
+          <button ref="loadButton" class="button" type="submit" :disabled="path.trim() === '' || opening">
             {{ opening ? 'Loading…' : 'Load project' }}
           </button>
         </div>
@@ -150,6 +173,10 @@ legend > :first-child {
 .path-row .text-input {
   flex: 1;
   min-width: 0;
+}
+
+.path-row .button {
+  flex: none;
 }
 
 .error {
