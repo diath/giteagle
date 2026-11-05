@@ -11,7 +11,7 @@ import StatusBadge from './StatusBadge.vue'
 
 const SEARCH_DELAY_MS = 200
 
-const { api, navigation, openFileHistory, repo, directoryHasChanges, statusOf } = useProject()
+const { api, navigation, openFileAt, repo, directoryHasChanges, statusOf } = useProject()
 
 const entries = shallowRef<DirectoryEntry[]>([])
 const lastCommits = shallowRef<Record<string, CommitBrief>>({})
@@ -131,11 +131,21 @@ function navigate(path: string): void {
   navigation.directory = path
 }
 
+// A file opens at the commit that last changed it, which its row shows. Until
+// that is known, and for search results, which don't show it, the file opens
+// at HEAD, where it has the same contents.
 function open(entry: DirectoryEntry): void {
   if (entry.kind === 'directory') {
     navigate(entry.path)
-  } else if (entry.kind !== 'submodule') {
-    openFileHistory(entry.path)
+    return
+  }
+  if (entry.kind === 'submodule') {
+    return
+  }
+  const listed = searchResults.value === null ? lastCommits.value[entry.name] : undefined
+  const commit = listed ?? repo.overview?.head.tip
+  if (commit) {
+    openFileAt(commit.id, commit.shortId, entry.path)
   }
 }
 

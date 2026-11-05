@@ -13,7 +13,7 @@ import { languageFor, tokenizeFile, type Token } from '../utils/highlight'
 
 const props = defineProps<{ commit: string; shortId: string; path: string }>()
 
-const { api, goBack, openFileHistory, replaceFileVersion } = useProject()
+const { api, goBack, navigation, openFileHistory, replaceFileVersion } = useProject()
 
 const file = shallowRef<FileAtCommit | null>(null)
 const error = ref<string | null>(null)
@@ -30,6 +30,15 @@ const rows = computed(() => lines.value.map((text, index) => buildSegments(text,
 
 /** One number per line, as a single text, which lays out far faster than a node per line. */
 const lineNumbers = computed(() => lines.value.map((_, index) => index + 1).join('\n'))
+
+// The view is only seen on top of the stack, so Back leads to the one below.
+const backTitle = computed(() => {
+  const below = navigation.stack[navigation.stack.length - 2]?.kind
+  if (below === 'main') {
+    return 'Back to the files (Esc)'
+  }
+  return below === 'commit' ? 'Back to the commit (Esc)' : 'Back (Esc)'
+})
 
 const olderTitle = computed(() => {
   if (versionsError.value) {
@@ -102,7 +111,7 @@ onMounted(async () => {
 
 <template>
   <div class="file-view">
-    <ViewBar icon="file" back-title="Back to the commit (Esc)" keep-end>
+    <ViewBar icon="file" :back-title="backTitle" keep-end>
       <template #before-title>
         <button
           class="button step"

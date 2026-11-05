@@ -377,3 +377,17 @@ fn file_versions_off_the_current_branch_only_look_back() {
         (Some("Add a".to_string()), None)
     );
 }
+
+#[test]
+fn file_versions_from_a_commit_that_kept_the_file_step_to_a_different_version() {
+    let repo = TempRepo::new();
+    repo.commit_file("a.txt", "one\n", "Add a");
+    repo.commit_file("a.txt", "two\n", "Change a");
+    let head = repo.commit_file("b.txt", "other\n", "Add b");
+
+    let versions = file_versions(&repo.repository, &head.to_string(), "a.txt").expect("versions");
+    assert_eq!(
+        neighbor_subjects(&versions),
+        (Some("Add a".to_string()), None)
+    );
+}

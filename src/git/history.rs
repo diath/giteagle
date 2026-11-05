@@ -163,13 +163,17 @@ pub struct FileVersions {
 }
 
 /// Finds the commits with versions of `path` around the one in commit `id`,
-/// in the order the file's history on the current branch lists them.
-/// Commits that delete the file are passed over, having no version to show.
-/// For a commit off the current branch only older versions are found, among
-/// its own ancestors.
+/// in the order the file's history on the current branch lists them. Only
+/// versions that differ from the one in `id` count, so a commit that didn't
+/// change the file, such as HEAD, steps to an actual change. Commits that
+/// delete the file are passed over, having no version to show. For a commit
+/// off the current branch only older versions are found, among its own
+/// ancestors.
 pub fn file_versions(repository: &Repository, id: &str, path: &str) -> AppResult<FileVersions> {
-    let target = find_commit(repository, id)?.id();
+    let target = find_commit(repository, id)?;
     let path = Path::new(path);
+    let shown_version = entry_id(&target, path)?;
+    let target = target.id();
     let head = head_commit(repository)?.map(|commit| commit.id());
     let on_branch = match head {
         Some(head) => head == target || repository.graph_descendant_of(head, target)?,
@@ -191,7 +195,11 @@ pub fn file_versions(repository: &Repository, id: &str, path: &str) -> AppResult
             continue;
         }
         let commit = repository.find_commit(oid)?;
-        if !changes_path(&commit, path)? || entry_id(&commit, path)?.is_none() {
+        if !changes_path(&commit, path)? {
+            continue;
+        }
+        let version = entry_id(&commit, path)?;
+        if version.is_none() || version == shown_version {
             continue;
         }
         if passed_target {
