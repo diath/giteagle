@@ -9,7 +9,7 @@ import { useEscape } from '../utils/escape'
 
 const props = defineProps<{ path: string; active: boolean }>()
 
-const { api, goBack, navigation, openCommit, pickSelection, repo } = useProject()
+const { api, goBack, navigation, openCommit, commitSelection, repo } = useProject()
 
 useEscape(goBack)
 
@@ -24,7 +24,7 @@ const backTitle = computed(() =>
 
 <template>
   <div class="file-history">
-    <ViewBar icon="history" :back-title="backTitle" :inert="pickSelection.active">
+    <ViewBar icon="history" :back-title="backTitle" :inert="commitSelection.active">
       <template #title>
         File history:
         <span class="path ellipsis" :title="path">{{ path }}</span>

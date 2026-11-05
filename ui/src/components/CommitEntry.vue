@@ -16,30 +16,53 @@ import SquashDialog from './SquashDialog.vue'
 const props = defineProps<{ commit: CommitSummary }>()
 const emit = defineEmits<{ open: [] }>()
 
-const { capabilities, isPicked, pickSelection, startPickSelection, togglePicked } = useProject()
+const {
+  canSelect,
+  capabilities,
+  commitSelection,
+  isChecked,
+  startCherryPickSelection,
+  startSquashSelection,
+  toggleChecked,
+} = useProject()
 
 const CHERRY_PICK_TITLE = 'Cherry-pick to other branches\nCtrl+Click to cherry-pick multiple commits'
+const SQUASH_TITLE = 'Squash other commits into this one\nCtrl+Click to check the commits to squash in the list'
 
 const expanded = ref(false)
 const dialog = ref<'reword' | 'squash' | 'drop' | 'cherryPick' | 'revert' | null>(null)
 
-/** Whether the row is a checkbox, while commits are picked to cherry-pick together. */
-const picking = computed(() => pickSelection.active && props.commit.isPushed !== null)
-const picked = computed(() => picking.value && isPicked(props.commit.id))
+/** Whether the row is a checkbox, while commits are checked to act on together. */
+const selectable = computed(() => commitSelection.active && canSelect(props.commit))
+const checked = computed(() => selectable.value && isChecked(props.commit.id))
+/** The commit a squash selection folds the others into, which stays checked. */
+const isSquashTarget = computed(() => commitSelection.active && commitSelection.target?.id === props.commit.id)
 
 function activate(): void {
-  if (picking.value) {
-    togglePicked(props.commit)
-  } else if (!pickSelection.active) {
+  if (selectable.value) {
+    toggleChecked(props.commit)
+  } else if (!commitSelection.active) {
     emit('open')
   }
 }
 
+function withCtrl(event: MouseEvent): boolean {
+  return event.ctrlKey || event.metaKey
+}
+
 function cherryPick(event: MouseEvent): void {
-  if (event.ctrlKey || event.metaKey) {
-    startPickSelection(props.commit)
+  if (withCtrl(event)) {
+    startCherryPickSelection(props.commit)
   } else {
     dialog.value = 'cherryPick'
+  }
+}
+
+function squash(event: MouseEvent): void {
+  if (withCtrl(event)) {
+    void startSquashSelection(props.commit)
+  } else {
+    dialog.value = 'squash'
   }
 }
 </script>
@@ -47,20 +70,23 @@ function cherryPick(event: MouseEvent): void {
 <template>
   <div
     class="commit-entry"
-    :class="{ picking, picked }"
-    :role="picking ? 'checkbox' : 'button'"
-    :aria-checked="picking ? picked : undefined"
+    :class="{ checked }"
+    :role="selectable ? 'checkbox' : 'button'"
+    :aria-checked="selectable ? checked : undefined"
+    :aria-disabled="isSquashTarget || undefined"
+    :inert="commitSelection.active && !selectable"
     tabindex="0"
     @click="activate"
     @keydown.enter.self="activate"
-    @keydown.space.self.prevent="picking && activate()"
+    @keydown.space.self.prevent="selectable && activate()"
   >
     <!-- Only shows the state; the whole row is the checkbox. -->
     <input
-      v-if="picking"
-      class="pick-box"
+      v-if="selectable"
+      class="select-box"
       type="checkbox"
-      :checked="picked"
+      :checked="checked"
+      :disabled="isSquashTarget"
       tabindex="-1"
       aria-hidden="true"
     />
@@ -73,6 +99,7 @@ function cherryPick(event: MouseEvent): void {
         <span class="faint">@</span>
         <span class="date muted">{{ formatAbsolute(commit.authorTime) }}</span>
         <span class="faint">({{ formatRelative(commit.authorTime) }})</span>
+        <span v-if="isSquashTarget" class="target-tag">squashing into</span>
       </div>
       <div class="subject-line">
         <span class="subject ellipsis">{{ commit.subject }}</span>
@@ -98,7 +125,7 @@ function cherryPick(event: MouseEvent): void {
         <button
           class="button button--icon"
           type="button"
-          :disabled="!capabilities.canRewrite || pickSelection.active"
+          :disabled="!capabilities.canRewrite || commitSelection.active"
           title="Reword this commit"
           @click.stop="dialog = 'reword'"
           @keydown.enter.stop
@@ -108,9 +135,9 @@ function cherryPick(event: MouseEvent): void {
         <button
           class="button button--icon"
           type="button"
-          :disabled="!capabilities.canRewrite || pickSelection.active"
-          title="Squash other commits into this one"
-          @click.stop="dialog = 'squash'"
+          :disabled="!capabilities.canRewrite || commitSelection.active"
+          :title="SQUASH_TITLE"
+          @click.stop="squash"
           @keydown.enter.stop
         >
           <AppIcon name="squash" />
@@ -118,7 +145,7 @@ function cherryPick(event: MouseEvent): void {
         <button
           class="button button--icon"
           type="button"
-          :disabled="!capabilities.canRewrite || pickSelection.active"
+          :disabled="!capabilities.canRewrite || commitSelection.active"
           title="Drop this commit"
           @click.stop="dialog = 'drop'"
           @keydown.enter.stop
@@ -130,7 +157,7 @@ function cherryPick(event: MouseEvent): void {
       <button
         class="button button--icon"
         type="button"
-        :disabled="!capabilities.canCherryPick || pickSelection.active"
+        :disabled="!capabilities.canCherryPick || commitSelection.active"
         :title="CHERRY_PICK_TITLE"
         @click.stop="cherryPick"
         @keydown.enter.stop
@@ -140,7 +167,7 @@ function cherryPick(event: MouseEvent): void {
       <button
         class="button button--icon"
         type="button"
-        :disabled="!capabilities.canRevert || pickSelection.active"
+        :disabled="!capabilities.canRevert || commitSelection.active"
         title="Revert this commit"
         @click.stop="dialog = 'revert'"
         @keydown.enter.stop
@@ -176,16 +203,16 @@ function cherryPick(event: MouseEvent): void {
   outline-offset: -2px;
 }
 
-.commit-entry.picked {
+.commit-entry.checked {
   background: var(--color-accent-muted);
 }
 
-.commit-entry.picked:hover {
+.commit-entry.checked:hover {
   background: var(--color-accent-muted);
 }
 
 /* Clicks go to the row, which toggles it. */
-.pick-box {
+.select-box {
   flex: none;
   align-self: center;
   width: calc(18 * var(--px));
@@ -222,6 +249,17 @@ function cherryPick(event: MouseEvent): void {
 
 .meta .faint:last-child {
   flex: none;
+}
+
+.target-tag {
+  flex: none;
+  margin-left: var(--space-1);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius);
+  background: var(--color-bg-active);
+  color: var(--color-accent-bright);
+  font-size: var(--font-size-tiny);
+  font-weight: 600;
 }
 
 .subject-line {

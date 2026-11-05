@@ -104,7 +104,8 @@ every one passing.
   would be overwritten, nothing changes.
   - Reword changes only the message and never touches the working tree.
   - Squash folds the chosen commits into the one it was started from, which
-    keeps its place and its author.
+    keeps its place and its author. Ctrl+Click on it starts checking them
+    in the commit list instead.
 - **Pull** is fast-forward only.
 - **Push** pushes the current branch to its upstream. Without an upstream it
   runs `git push -u origin <branch>`, and with no `origin` it is disabled.

@@ -222,8 +222,8 @@ textarea {
   outline-offset: -1px;
 }
 
-/* Controls set aside for a while, e.g. while commits are picked to
-   cherry-pick together, are dimmed so they read as unavailable. */
+/* Controls set aside for a while, e.g. while commits are checked to act on
+   together, are dimmed so they read as unavailable. */
 [inert] {
   opacity: 0.45;
 }

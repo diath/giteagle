@@ -6,8 +6,15 @@ import { useProject } from '../stores/project'
 import { showToast } from '../stores/toasts'
 import ConfirmDialog from './ConfirmDialog.vue'
 
-const props = defineProps<{ commit: CommitSummary }>()
-const emit = defineEmits<{ close: [] }>()
+const props = withDefaults(
+  defineProps<{
+    commit: CommitSummary
+    /** The ids of the commits to check from the start, e.g. those checked in the commit list. */
+    preselected?: string[]
+  }>(),
+  { preselected: () => [] },
+)
+const emit = defineEmits<{ close: []; squashed: [] }>()
 
 const { api, refreshEverything, repo } = useProject()
 
@@ -56,6 +63,7 @@ async function confirm(): Promise<void> {
     repo.busy = null
   }
   showToast('success', `Squashed ${others.length + 1} commits into one.`)
+  emit('squashed')
   emit('close')
   await refreshEverything()
 }
@@ -67,6 +75,10 @@ onMounted(async () => {
     loadError.value = errorMessage(error)
     return
   }
+  const loaded = commits.value
+  chosen.value = props.preselected.filter(
+    (id) => id !== props.commit.id && loaded.some((candidate) => candidate.id === id),
+  )
   // The dialog had nothing to focus before the commits arrived.
   await nextTick()
   list.value?.querySelector<HTMLInputElement>('input:not(:disabled)')?.focus()

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 
-import PickSelectionPrompt from '../components/PickSelectionPrompt.vue'
+import CommitSelectionPrompt from '../components/CommitSelectionPrompt.vue'
 import ReloadPrompt from '../components/ReloadPrompt.vue'
 import { provideProject, type Project } from '../stores/project'
 import { provideEscapeScope } from '../utils/escape'
@@ -21,7 +21,7 @@ const props = defineProps<{
 
 // Read once, as a page keeps its project for life.
 const project = props.project
-const { navigation, pickSelection, repo } = project
+const { commitSelection, navigation, repo } = project
 provideProject(project)
 provideEscapeScope(() => props.active)
 
@@ -81,7 +81,7 @@ onMounted(() => void project.load())
   </div>
   <p v-else class="loading">Loading the repository…</p>
   <!-- Both sit at the bottom, so the reload prompt waits for the selection. -->
-  <PickSelectionPrompt v-if="pickSelection.active" />
+  <CommitSelectionPrompt v-if="commitSelection.active" />
   <ReloadPrompt v-else-if="repo.reloadPromptVisible" />
 </template>
 

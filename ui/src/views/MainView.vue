@@ -13,7 +13,7 @@ import { useProject } from '../stores/project'
 
 defineProps<{ active: boolean }>()
 
-const { navigation, pickSelection } = useProject()
+const { navigation, commitSelection } = useProject()
 
 const switcherOpen = ref(false)
 
@@ -27,11 +27,11 @@ const TABS: { id: MainTab; label: string }[] = [
 
 <template>
   <div class="main-view">
-    <!-- While commits are picked to cherry-pick together, only the list and
-         its prompt take input. -->
-    <BranchBar :inert="pickSelection.active" @open-switcher="switcherOpen = true" />
+    <!-- While commits are checked to act on together, only the list and its
+         prompt take input. -->
+    <BranchBar :inert="commitSelection.active" @open-switcher="switcherOpen = true" />
 
-    <div class="tab-bar" :inert="pickSelection.active">
+    <div class="tab-bar" :inert="commitSelection.active">
       <nav class="tabs" role="tablist">
         <button
           v-for="tab in TABS"
