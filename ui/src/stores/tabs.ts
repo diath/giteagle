@@ -1,7 +1,9 @@
-import { computed, markRaw, reactive, type Raw } from 'vue'
+import { computed, markRaw, reactive, watch, type Raw } from 'vue'
 
-import { appApi, errorMessage, type ProjectId, type ProjectSummary } from '../api'
+import { appApi, errorMessage, type ProjectId, type ProjectSummary, type Session, type Settings } from '../api'
+import { folderName } from '../utils/paths'
 import { createProject, type Project } from './project'
+import { changeSettings } from './settings'
 import { showToast } from './toasts'
 
 export interface Tab {
@@ -48,21 +50,40 @@ export function projectById(id: ProjectId): Raw<Project> | null {
 }
 
 /**
- * Starts with a tab for each project the backend already has open, such as
- * the one named on the command line, or with one that asks for a project.
+ * Starts with the tabs that were open when the app last closed, and those of
+ * projects open already, such as the one named on the command line. Without
+ * any there is one tab that asks for a project.
  */
 export async function restoreTabs(): Promise<void> {
-  let projects: ProjectSummary[] = []
+  let session: Session | null = null
   try {
-    projects = await appApi.projects()
+    session = await appApi.restoreSession()
   } catch (error) {
-    showToast('error', `Couldn't list the open projects: ${errorMessage(error)}`)
+    showToast('error', `Couldn't reopen the projects: ${errorMessage(error)}`)
   }
-  tabs.list.push(...projects.map(newTab))
+  for (const failure of session?.failures ?? []) {
+    showToast('error', `Couldn't reopen ${folderName(failure.folder)}: ${failure.message}`)
+  }
+  tabs.list.push(...(session?.projects ?? []).map(newTab))
   if (tabs.list.length === 0) {
     tabs.list.push(newTab(null))
   }
-  activateTab(tabs.list[0].key)
+  const active = session && session.active !== null ? tabOf(session.active) : null
+  activateTab((active ?? tabs.list[0]).key)
+
+  // From here on the tabs are remembered as they change, which also forgets
+  // the projects that couldn't be reopened. Without a session the ones from
+  // last time are kept for the next start.
+  if (session) {
+    watch(rememberedTabs, changeSettings, { immediate: true })
+  }
+}
+
+function rememberedTabs(): Pick<Settings, 'openProjects' | 'activeProject'> {
+  return {
+    openProjects: tabs.list.flatMap((tab) => (tab.project ? [tab.project.summary.workdir] : [])),
+    activeProject: activeTab.value?.project?.summary.workdir ?? '',
+  }
 }
 
 /**

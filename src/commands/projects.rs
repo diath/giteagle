@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use git2::Repository;
+use serde::Serialize;
 use tauri::{AppHandle, Manager, WebviewWindow};
 use tauri_plugin_dialog::DialogExt;
 
@@ -10,18 +11,86 @@ use crate::app_state::AppState;
 use crate::error::{AppError, AppResult, ErrorKind};
 use crate::git::{OpenError, open_repository};
 use crate::project::{ProjectId, ProjectSummary, same_folder};
-use crate::settings::{RECENT_LIMIT, RECENT_PROJECTS, Settings};
+use crate::settings::{ACTIVE_PROJECT, OPEN_PROJECTS, RECENT_LIMIT, RECENT_PROJECTS, Settings};
 use crate::{APP_NAME, fetcher, watcher, window_title};
 
-/// The projects already open, e.g. the one named on the command line, in the
-/// order their tabs go.
+/// The tabs to show when the window opens.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Session {
+    /// In tab order.
+    pub projects: Vec<ProjectSummary>,
+    /// The project whose tab is shown first.
+    pub active: Option<ProjectId>,
+    /// The projects that were open last time but couldn't be reopened.
+    pub failures: Vec<ReopenFailure>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReopenFailure {
+    pub folder: String,
+    pub message: String,
+}
+
+/// Reopens the projects that were open when the app last closed, in their
+/// order, followed by any others that are open already: the one named on
+/// the command line, or every project when the page reloads. The project
+/// named on the command line is shown first, or else the one shown last.
 #[tauri::command]
-pub fn list_projects(state: SharedState<'_>) -> Vec<ProjectSummary> {
-    state
-        .projects()
-        .iter()
-        .map(|project| project.summary())
-        .collect()
+pub async fn restore_session(app: AppHandle) -> AppResult<Session> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let state = app.state::<AppState>();
+        let settings = app.state::<Settings>();
+        let already_open: Vec<ProjectSummary> = state
+            .projects()
+            .iter()
+            .map(|project| project.summary())
+            .collect();
+        let mut reopened = Vec::new();
+        let mut failures = Vec::new();
+        for folder in settings.get(&OPEN_PROJECTS) {
+            match open_folder(&app, Path::new(&folder)) {
+                Ok(summary) => reopened.push(summary),
+                Err(error) => failures.push(ReopenFailure {
+                    folder,
+                    message: error.message,
+                }),
+            }
+        }
+        let projects = tab_order(reopened, already_open);
+        let shown_last = settings.get(&ACTIVE_PROJECT);
+        let active = state.take_launched().or_else(|| {
+            projects
+                .iter()
+                .find(|project| {
+                    !shown_last.is_empty() && same_folder(&project.workdir, Path::new(&shown_last))
+                })
+                .map(|project| project.id)
+        });
+        Ok(Session {
+            projects,
+            active,
+            failures,
+        })
+    })
+    .await
+    .map_err(join_failure)?
+}
+
+/// The reopened projects in their order, then the other open ones, each
+/// once.
+fn tab_order(
+    reopened: Vec<ProjectSummary>,
+    already_open: Vec<ProjectSummary>,
+) -> Vec<ProjectSummary> {
+    let mut projects: Vec<ProjectSummary> = Vec::new();
+    for project in reopened.into_iter().chain(already_open) {
+        if !projects.iter().any(|listed| listed.id == project.id) {
+            projects.push(project);
+        }
+    }
+    projects
 }
 
 /// Opens the repository at or above `path` as a project, and puts it first
@@ -45,6 +114,7 @@ pub async fn open_project(app: AppHandle, path: String) -> AppResult<ProjectSumm
 /// Starts the project named on the command line.
 pub fn launch_project(app: &AppHandle, repository: Repository) {
     let summary = start_project(app, repository);
+    app.state::<AppState>().set_launched(summary.id);
     remember_recent(app, &summary.workdir);
 }
 
@@ -179,6 +249,24 @@ fn as_sentence(message: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn summary(id: ProjectId) -> ProjectSummary {
+        ProjectSummary {
+            id,
+            name: format!("project-{id}"),
+            workdir: PathBuf::from(format!("/work/project-{id}")),
+        }
+    }
+
+    #[test]
+    fn reopened_tabs_keep_their_order_and_the_others_follow() {
+        let order = tab_order(
+            vec![summary(3), summary(2), summary(3)],
+            vec![summary(1), summary(2), summary(3)],
+        );
+        let ids: Vec<_> = order.iter().map(|project| project.id).collect();
+        assert_eq!(ids, [3, 2, 1]);
+    }
 
     #[test]
     fn an_opened_project_goes_first_among_the_recent_ones() {

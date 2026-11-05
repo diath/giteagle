@@ -3,11 +3,14 @@
 A desktop viewer for Git repositories: branches, history and diffs, with each
 repository open in a tab of its own. It has a Tauri 2 shell, a Rust backend
 using git2, and a Vue 3 + TypeScript frontend in `ui/`. It launches as
-`giteagle [path]`:
+`giteagle [path]` and reopens the projects that were open when it last
+closed:
 
-- With a path, it opens a tab for the repository found by searching upward
-  from the path, and exits with an error if there is none.
-- Without one, it opens a tab that asks for a project.
+- With a path, it also opens a tab for the repository found by searching
+  upward from the path, and shows it. It exits with an error if there is
+  none.
+- Without one, it shows the tab that was shown last, or a tab that asks for
+  a project when there is nothing to reopen.
 
 Bare repositories are rejected.
 
@@ -70,6 +73,8 @@ every one passing.
 - **Tabs** each hold one project. Opening a project that is already open
   shows its tab instead. Closing the last tab leaves one that asks for a
   project. Ctrl+T opens a new tab and Ctrl+W closes the shown one.
+- **Open tabs are remembered** as they change. A project that can't be
+  reopened at the next start is reported and forgotten.
 - **The Recent menu** lists the projects opened last, latest first. One that
   fails to open is taken off the list.
 - **Switching branches** behaves like `git checkout`: non-conflicting changes

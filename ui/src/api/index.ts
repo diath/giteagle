@@ -23,6 +23,7 @@ import type {
   RevertMode,
   RewritableCommit,
   SearchTag,
+  Session,
   Settings,
   StashDetails,
   StashSummary,
@@ -31,8 +32,11 @@ import type {
 
 /** Commands about the app rather than one project. */
 export const appApi = {
-  /** The projects open in the backend, e.g. the one named on the command line. */
-  projects: () => invoke<ProjectSummary[]>('list_projects'),
+  /**
+   * Reopens the projects open when the app last closed, and lists them with
+   * the ones open already, e.g. the one named on the command line.
+   */
+  restoreSession: () => invoke<Session>('restore_session'),
   /** Resolves to the project already open for the folder, if there is one. */
   openProject: (path: string) => invoke<ProjectSummary>('open_project', { path }),
   closeProject: (project: ProjectId) => invoke<void>('close_project', { project }),

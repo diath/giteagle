@@ -16,6 +16,19 @@ export interface Settings {
   recentLimit: number
   /** The folders of recently opened projects, the latest first. */
   recentProjects: string[]
+  /** The folders of the projects open in tabs, in tab order, to reopen at the next start. */
+  openProjects: string[]
+  /** The folder of the project in the shown tab, or empty for a tab without one. */
+  activeProject: string
+}
+
+/** The tabs to show when the window opens. */
+export interface Session {
+  projects: ProjectSummary[]
+  /** The project whose tab is shown first. */
+  active: ProjectId | null
+  /** The projects that were open last time but couldn't be reopened. */
+  failures: { folder: string; message: string }[]
 }
 
 export interface Person {

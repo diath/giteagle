@@ -11,6 +11,9 @@ use crate::project::{Project, ProjectId, lock, same_folder, workdir_of};
 
 pub struct AppState {
     projects: Mutex<Projects>,
+    /// The project named on the command line, until the window's first tabs
+    /// are set up.
+    launched: Mutex<Option<ProjectId>>,
     /// Shared by every project, since an author's avatar is the same in all.
     pub avatars: Arc<AvatarStore>,
 }
@@ -39,6 +42,7 @@ impl AppState {
     pub fn new() -> Self {
         Self {
             projects: Mutex::new(Projects::default()),
+            launched: Mutex::new(None),
             avatars: Arc::new(AvatarStore::new()),
         }
     }
@@ -65,6 +69,16 @@ impl AppState {
             project,
             is_new: true,
         }
+    }
+
+    pub fn set_launched(&self, id: ProjectId) {
+        *lock(&self.launched) = Some(id);
+    }
+
+    /// The project named on the command line, the first time only; a page
+    /// reload later finds none.
+    pub fn take_launched(&self) -> Option<ProjectId> {
+        lock(&self.launched).take()
     }
 
     pub fn project(&self, id: ProjectId) -> AppResult<Arc<Project>> {

@@ -30,7 +30,7 @@ pub fn run(initial: Option<Repository>) {
         .plugin(tauri_plugin_dialog::init())
         .manage(AppState::new())
         .invoke_handler(tauri::generate_handler![
-            commands::projects::list_projects,
+            commands::projects::restore_session,
             commands::projects::open_project,
             commands::projects::close_project,
             commands::projects::show_project,

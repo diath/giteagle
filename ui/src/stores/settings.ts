@@ -10,6 +10,8 @@ import { showToast } from './toasts'
 export const settings = reactive<Settings>({
   recentLimit: 10,
   recentProjects: [],
+  openProjects: [],
+  activeProject: '',
 })
 
 /** Reads the stored settings, and follows the ones the backend changes from then on. */

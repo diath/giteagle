@@ -36,6 +36,11 @@ impl<T> Key<T> {
 pub const RECENT_LIMIT: Key<usize> = Key::new("recentLimit");
 /// The folders of recently opened projects, the latest first.
 pub const RECENT_PROJECTS: Key<Vec<String>> = Key::new("recentProjects");
+/// The folders of the projects open in tabs, in tab order, to reopen at the
+/// next start.
+pub const OPEN_PROJECTS: Key<Vec<String>> = Key::new("openProjects");
+/// The folder of the project in the shown tab, or empty for a tab without one.
+pub const ACTIVE_PROJECT: Key<String> = Key::new("activeProject");
 
 /// Every setting there is, with its default. The frontend reads and changes
 /// them all, so its own settings are listed here too.
@@ -43,6 +48,8 @@ static DEFAULTS: LazyLock<Map<String, Value>> = LazyLock::new(|| {
     [
         (RECENT_LIMIT.name, json!(10)),
         (RECENT_PROJECTS.name, json!([])),
+        (OPEN_PROJECTS.name, json!([])),
+        (ACTIVE_PROJECT.name, json!("")),
     ]
     .into_iter()
     .map(|(name, value)| (name.to_string(), value))
@@ -206,6 +213,8 @@ mod tests {
         let settings = Settings::load(None);
         assert_eq!(settings.get(&RECENT_LIMIT), 10);
         assert!(settings.get(&RECENT_PROJECTS).is_empty());
+        assert!(settings.get(&OPEN_PROJECTS).is_empty());
+        assert_eq!(settings.get(&ACTIVE_PROJECT), "");
     }
 
     #[test]
