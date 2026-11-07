@@ -1,0 +1,184 @@
+//! Committing uncommitted files onto the current branch, as with
+//! `git commit -- <paths>`.
+//!
+//! The commit holds HEAD's files with only the chosen changes, whatever is
+//! staged. Afterwards the index holds the committed version of each chosen
+//! file, and staged changes to other files stay staged. The working tree is
+//! never touched.
+
+use std::fs;
+use std::io;
+use std::iter;
+use std::path::Path;
+
+use git2::{Commit, Index, Repository, Tree};
+use serde::Deserialize;
+
+use super::overview::ensure_clean_state;
+use super::{CommitBrief, clean_message, head_commit, split_message, user_signature};
+use crate::error::{AppError, AppResult};
+
+/// One file to commit, as it is in the working tree.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FilePick {
+    /// Where the file is in the working tree, or was before it was deleted.
+    pub path: String,
+    /// Where a renamed file was, which the commit removes.
+    #[serde(default)]
+    pub old_path: Option<String>,
+}
+
+/// Commits the chosen changes onto the current branch with the current user
+/// as author and committer.
+pub fn commit_changes(
+    repository: &Repository,
+    message: &str,
+    picks: &[FilePick],
+) -> AppResult<CommitBrief> {
+    ensure_clean_state(repository)?;
+    if picks.is_empty() {
+        return Err(AppError::invalid_input("Choose the changes to commit."));
+    }
+    let message = clean_message(message)?;
+    let branch = target_branch(repository)?;
+    let parent = head_commit(repository)?;
+    let head_tree = parent.as_ref().map(Commit::tree).transpose()?;
+    let signature = user_signature(repository, "Committing")?;
+
+    let mut index = repository.index()?;
+    // Picks up anything staged outside GitEagle since this handle read it.
+    index.read(true)?;
+    if index.has_conflicts() {
+        return Err(AppError::invalid_state(
+            "Some files have conflicts. Resolve them with Git before committing.",
+        ));
+    }
+    let written = stage_picks(repository, &mut index, head_tree.as_ref(), picks).and_then(|tree| {
+        let parents: Vec<&Commit> = parent.iter().collect();
+        let id = repository.commit(None, &signature, &signature, &message, &tree, &parents)?;
+        // The index goes before the branch, so if another program holds its
+        // lock, nothing has changed yet. Should the branch move meanwhile,
+        // what was committed is left staged rather than lost.
+        index.write()?;
+        Ok(id)
+    });
+    let commit_id = match written {
+        Ok(id) => id,
+        Err(error) => {
+            // The repository handle keeps its index for later commands, so
+            // it mustn't hold half of a commit that didn't happen.
+            index.read(true)?;
+            return Err(error);
+        }
+    };
+
+    let subject = split_message(&message).0;
+    match &parent {
+        Some(parent) => {
+            repository.reference_matching(
+                &branch,
+                commit_id,
+                true,
+                parent.id(),
+                &format!("commit: {subject}"),
+            )?;
+        }
+        None => {
+            repository.reference(
+                &branch,
+                commit_id,
+                false,
+                &format!("commit (initial): {subject}"),
+            )?;
+        }
+    }
+    Ok(CommitBrief::from_commit(
+        &repository.find_commit(commit_id)?,
+    ))
+}
+
+/// The branch HEAD names, which doesn't exist yet before the first commit.
+fn target_branch(repository: &Repository) -> AppResult<String> {
+    let detached =
+        || AppError::invalid_state("HEAD is detached. Check out a branch to commit onto it.");
+    if repository.head_detached()? {
+        return Err(detached());
+    }
+    repository
+        .find_reference("HEAD")?
+        .symbolic_target()?
+        .map(String::from)
+        .ok_or_else(detached)
+}
+
+/// Puts the chosen changes in `index` and returns the tree to commit: HEAD's
+/// with only those changes.
+fn stage_picks<'r>(
+    repository: &'r Repository,
+    index: &mut Index,
+    head_tree: Option<&Tree>,
+    picks: &[FilePick],
+) -> AppResult<Tree<'r>> {
+    let mut committed = Index::new()?;
+    if let Some(tree) = head_tree {
+        committed.read_tree(tree)?;
+    }
+    for pick in picks {
+        let paths: Vec<&str> = pick
+            .old_path
+            .iter()
+            .chain(iter::once(&pick.path))
+            .map(String::as_str)
+            .collect();
+        for path in &paths {
+            stage_working_tree_file(repository, index, path)?;
+            let path = Path::new(path);
+            match index.get_path(path, 0) {
+                Some(entry) => committed.add(&entry)?,
+                None => committed.remove_path(path)?,
+            }
+        }
+    }
+
+    let tree_id = committed.write_tree_to(repository)?;
+    let unchanged = match head_tree {
+        Some(tree) => tree.id() == tree_id,
+        None => committed.is_empty(),
+    };
+    if unchanged {
+        return Err(AppError::invalid_state(
+            "The chosen changes are committed already, so there is nothing to commit.",
+        ));
+    }
+    Ok(repository.find_tree(tree_id)?)
+}
+
+/// Stages a file as it is in the working tree, as `git add` does, or its
+/// deletion when it's gone.
+fn stage_working_tree_file(
+    repository: &Repository,
+    index: &mut Index,
+    path: &str,
+) -> AppResult<()> {
+    let workdir = repository
+        .workdir()
+        .ok_or_else(|| AppError::invalid_state("The repository has no working tree."))?;
+    let relative = Path::new(path);
+    match fs::symlink_metadata(workdir.join(relative)) {
+        // A folder in its place holds files of its own, which are separate
+        // changes.
+        Ok(metadata) if metadata.is_dir() => index.remove_path(relative)?,
+        Ok(_) => index.add_path(relative)?,
+        Err(error)
+            if matches!(
+                error.kind(),
+                io::ErrorKind::NotFound | io::ErrorKind::NotADirectory
+            ) =>
+        {
+            index.remove_path(relative)?
+        }
+        Err(error) => return Err(error.into()),
+    }
+    Ok(())
+}

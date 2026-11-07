@@ -69,7 +69,7 @@ every one passing.
 ## Product rules
 
 - **Out of scope:** rebasing onto another branch, merge and conflict UI,
-  staging and committing, force push, submodules, LFS and bare repositories.
+  staging, force push, submodules, LFS and bare repositories.
 - **Tabs** each hold one project. Opening a project that is already open
   shows its tab instead. Closing the last tab leaves one that asks for a
   project. Ctrl+T opens a new tab and Ctrl+W closes the shown one.
@@ -106,6 +106,12 @@ every one passing.
   - Squash folds the chosen commits into the one it was started from, which
     keeps its place and its author. Ctrl+Click on it starts checking them
     in the commit list instead.
+- **Committing** is offered on the uncommitted changes row, onto the current
+  branch but never a detached HEAD. The commit holds HEAD's files with only
+  the chosen changes, whatever is staged. Afterwards the index holds the
+  committed versions, staged changes to other files stay staged, and the
+  working tree never changes.
+  - Commit takes the checked files whole, as they are in the working tree.
 - **Pull** is fast-forward only.
 - **Push** pushes the current branch to its upstream. Without an upstream it
   runs `git push -u origin <branch>`, and with no `origin` it is disabled.

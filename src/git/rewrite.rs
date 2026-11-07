@@ -15,8 +15,8 @@ use serde::Serialize;
 use super::history::unpushed_commits;
 use super::overview::{ensure_clean_state, upstream_of};
 use super::{
-    checkout_safely, commit_message, conflicted_paths, find_commit, list_paths, overwrite_error,
-    short_id, split_message, user_signature,
+    checkout_safely, clean_message, commit_message, conflicted_paths, find_commit, list_paths,
+    overwrite_error, short_id, split_message, user_signature,
 };
 use crate::error::{AppError, AppResult, ErrorKind};
 
@@ -322,16 +322,6 @@ pub fn drop_commit(repository: &Repository, id: &str) -> AppResult<()> {
         &format!("Dropping {short}"),
         &format!("drop: {subject}"),
     )
-}
-
-/// Tidies a typed message like `git commit -m` does: trailing whitespace and
-/// repeated blank lines go, and it ends with a newline.
-fn clean_message(message: &str) -> AppResult<String> {
-    let message = git2::message_prettify(message, None)?;
-    if message.is_empty() {
-        return Err(AppError::invalid_input("Enter a commit message."));
-    }
-    Ok(message)
 }
 
 /// Makes the commits of `steps` one after another on top of `base`, with the

@@ -346,6 +346,13 @@ export interface PendingChanges {
   files: FileDiff[]
 }
 
+/** An uncommitted file to commit, as it is in the working tree. */
+export interface FilePick {
+  path: string
+  /** Where a renamed file was, which the commit removes. */
+  oldPath: string | null
+}
+
 export interface ParentRef {
   id: string
   shortId: string

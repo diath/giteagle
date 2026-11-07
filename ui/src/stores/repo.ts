@@ -10,6 +10,7 @@ export type BusyOperation =
   | 'delete'
   | 'reload'
   | 'stash'
+  | 'commit'
   | 'cherryPick'
   | 'revert'
   | 'reword'
@@ -100,6 +101,7 @@ export function createRepo(api: ProjectApi, refreshWorkingTree: () => Promise<vo
         canDelete: false,
         canStash: false,
         canDropStash: false,
+        canCommit: false,
         canCherryPick: false,
         canRevert: false,
         canRewrite: false,
@@ -119,6 +121,8 @@ export function createRepo(api: ProjectApi, refreshWorkingTree: () => Promise<vo
       // leaves the working tree alone.
       canStash: idle && clean && overview.head.kind !== 'unborn',
       canDropStash: idle,
+      // A commit on a detached HEAD is easily lost by switching away from it.
+      canCommit: idle && clean && overview.head.kind !== 'detached',
       // Both act on the pushed commits of the checked-out branch.
       canCherryPick: idle && clean && onBranch,
       canRevert: idle && clean && onBranch,

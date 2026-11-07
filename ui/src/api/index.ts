@@ -12,6 +12,7 @@ import type {
   FetchStatus,
   FileAtCommit,
   FileBlame,
+  FilePick,
   FileVersions,
   FileSearchResult,
   GitHubPage,
@@ -87,6 +88,9 @@ export function createProjectApi(project: ProjectId) {
     workingTreeStatus: () => call<StatusEntry[]>('get_working_tree_status'),
     pendingSummary: () => call<PendingSummary>('get_pending_summary'),
     pendingChanges: () => call<PendingChanges>('get_pending_changes'),
+    /** Commits the files onto the current branch as they are in the working tree. */
+    commitChanges: (message: string, files: FilePick[]) =>
+      call<CommitBrief>('commit_changes', { message, files }),
     branches: () => call<BranchList>('list_branches'),
     switchBranch: (name: string, isRemote: boolean) =>
       call<string>('switch_branch', { name, isRemote }),

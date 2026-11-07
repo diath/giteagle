@@ -11,6 +11,7 @@ pub mod avatars;
 pub mod branches;
 pub mod cherry_pick;
 pub mod commit;
+pub mod committing;
 pub mod files;
 pub mod history;
 pub mod pending;

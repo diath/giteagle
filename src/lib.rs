@@ -59,6 +59,7 @@ pub fn run(initial: Option<Repository>) {
             commands::files::get_working_tree_status,
             commands::pending::get_pending_summary,
             commands::pending::get_pending_changes,
+            commands::committing::commit_changes,
             commands::branches::list_branches,
             commands::branches::switch_branch,
             commands::branches::get_delete_info,

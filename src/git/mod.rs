@@ -20,6 +20,7 @@ pub mod blame;
 pub mod branches;
 pub mod cherry_pick;
 pub mod commit;
+pub mod committing;
 pub mod diff;
 pub mod files;
 pub mod github;
@@ -156,6 +157,16 @@ pub fn head_commit(repository: &Repository) -> Result<Option<Commit<'_>>, git2::
         }
         Err(error) => Err(error),
     }
+}
+
+/// Tidies a typed message like `git commit -m` does: trailing whitespace and
+/// repeated blank lines go, and it ends with a newline.
+pub fn clean_message(message: &str) -> AppResult<String> {
+    let message = git2::message_prettify(message, None)?;
+    if message.is_empty() {
+        return Err(AppError::invalid_input("Enter a commit message."));
+    }
+    Ok(message)
 }
 
 /// Converts a path from a Git tree or diff into the `/`-separated form used

@@ -1,14 +1,21 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import type { PendingSummary } from '../api'
+import { useProject } from '../stores/project'
 import { pendingCounts } from '../utils/pending'
 import AppIcon from './AppIcon.vue'
+import CommitDialog from './CommitDialog.vue'
 
 const props = defineProps<{ summary: PendingSummary }>()
 const emit = defineEmits<{ open: [] }>()
 
+const { capabilities } = useProject()
+
+const COMMIT_TITLE = 'Commit\nChoose the files to commit'
+
 const counts = computed(() => pendingCounts(props.summary))
+const dialog = ref<'files' | null>(null)
 </script>
 
 <template>
@@ -34,6 +41,20 @@ const counts = computed(() => pendingCounts(props.summary))
         <span class="deletions">−{{ summary.deletions }}</span>
       </div>
     </div>
+    <div class="actions">
+      <button
+        class="button button--icon"
+        type="button"
+        :disabled="!capabilities.canCommit"
+        :title="COMMIT_TITLE"
+        @click.stop="dialog = 'files'"
+        @keydown.enter.stop
+      >
+        <AppIcon name="commit" />
+      </button>
+    </div>
+
+    <CommitDialog v-if="dialog === 'files'" @close="dialog = null" />
   </div>
 </template>
 
@@ -69,6 +90,7 @@ const counts = computed(() => pendingCounts(props.summary))
 }
 
 .content {
+  flex: 1;
   min-width: 0;
 }
 
@@ -93,5 +115,13 @@ const counts = computed(() => pendingCounts(props.summary))
 
 .deletions {
   color: var(--color-diff-removed-sign);
+}
+
+/* Lined up with the actions of the commits below. */
+.actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
 }
 </style>
