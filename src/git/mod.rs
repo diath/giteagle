@@ -16,6 +16,7 @@ use serde::Serialize;
 use crate::error::{AppError, AppResult, ErrorKind};
 
 pub mod authors;
+pub mod blame;
 pub mod branches;
 pub mod cherry_pick;
 pub mod commit;

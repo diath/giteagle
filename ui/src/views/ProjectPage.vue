@@ -5,6 +5,7 @@ import CommitSelectionPrompt from '../components/CommitSelectionPrompt.vue'
 import ReloadPrompt from '../components/ReloadPrompt.vue'
 import { provideProject, type Project } from '../stores/project'
 import { provideEscapeScope } from '../utils/escape'
+import BlameView from './BlameView.vue'
 import CommitView from './CommitView.vue'
 import FileHistoryView from './FileHistoryView.vue'
 import FileView from './FileView.vue'
@@ -40,6 +41,8 @@ function viewKey(index: number): string {
       return `${index}:stash:${view.id}`
     case 'file':
       return `${index}:file:${view.commit}:${view.path}`
+    case 'blame':
+      return `${index}:blame:${view.commit}:${view.path}`
   }
   return String(index)
 }
@@ -75,6 +78,13 @@ onMounted(() => void project.load())
         :commit="view.commit"
         :short-id="view.shortId"
         :path="view.path"
+      />
+      <BlameView
+        v-else-if="view.kind === 'blame'"
+        :commit="view.commit"
+        :short-id="view.shortId"
+        :path="view.path"
+        :line="view.line"
       />
       <CommitView v-else :id="view.id" :from-file="view.fromFile" :sequence="view.sequence" />
     </div>

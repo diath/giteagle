@@ -55,6 +55,7 @@ pub fn run(initial: Option<Repository>) {
             commands::files::directory_last_commits,
             commands::files::search_files,
             commands::files::get_file_at,
+            commands::files::get_file_blame,
             commands::files::get_working_tree_status,
             commands::pending::get_pending_summary,
             commands::pending::get_pending_changes,

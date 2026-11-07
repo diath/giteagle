@@ -1,8 +1,9 @@
 use super::{SharedState, blocking};
 use crate::error::AppResult;
+use crate::git::blame::{self, FileBlame};
 use crate::git::files::{self, DirectoryEntry, FileAtCommit, FileSearchResult};
-use crate::git::head_commit;
 use crate::git::status::{StatusEntry, working_tree_status};
+use crate::git::{head_commit, open_without_workdir};
 use crate::project::LastCommits;
 use crate::project::ProjectId;
 
@@ -52,6 +53,24 @@ pub async fn get_file_at(
 ) -> AppResult<FileAtCommit> {
     blocking(&state, project, move |project| {
         project.with_repo(|repository| files::file_at(repository, &id, &path))
+    })
+    .await
+}
+
+/// Who last changed each line of the file at `path` as it is in commit `id`.
+#[tauri::command]
+pub async fn get_file_blame(
+    state: SharedState<'_>,
+    project: ProjectId,
+    id: String,
+    path: String,
+) -> AppResult<FileBlame> {
+    blocking(&state, project, move |project| {
+        // Blaming diffs every commit that changed the file, which takes a
+        // while on a long history, so it gets a handle of its own instead of
+        // holding the shared one.
+        let repository = open_without_workdir(&project.git_dir)?;
+        blame::blame_file(&repository, &id, &path)
     })
     .await
 }

@@ -19,6 +19,8 @@ export type View =
   | { kind: 'pending' }
   | { kind: 'stash'; id: string }
   | { kind: 'file'; commit: string; shortId: string; path: string }
+  /** `line` is marked and scrolled to, if set. */
+  | { kind: 'blame'; commit: string; shortId: string; path: string; line: number | null }
 
 export type MainTab = 'commits' | 'files' | 'stash' | 'authors'
 
@@ -31,8 +33,8 @@ export interface OpenCommitOptions {
 
 /**
  * Creates a project's stack of views: the main view at the bottom, then file
- * history, commit, stash and file views. Views below the top stay mounted, so going
- * back restores their scroll position and state.
+ * history, commit, stash, file and blame views. Views below the top stay
+ * mounted, so going back restores their scroll position and state.
  */
 export function createNavigation() {
   const navigation = reactive({
@@ -79,17 +81,25 @@ export function createNavigation() {
     navigation.stack.push({ kind: 'file', commit, shortId, path })
   }
 
+  /** Shows who last changed each line of the file at `path` in commit `commit`. */
+  function openBlame(commit: string, shortId: string, path: string, line: number | null = null): void {
+    navigation.stack.push({ kind: 'blame', commit, shortId, path, line })
+  }
+
   /**
-   * Shows the version of file `path` in commit `to` in the File View on top
-   * while it still shows commit `from`, so going back skips the versions
-   * stepped through.
+   * Shows the version of file `path` in commit `to` in the File or Blame View
+   * on top while it still shows commit `from`, so going back skips the
+   * versions stepped through.
    */
   function replaceFileVersion(path: string, from: string, to: { id: string; shortId: string }): void {
     const top = navigation.stack.length - 1
     const view = navigation.stack[top]
-    if (view.kind === 'file' && view.path === path && view.commit === from) {
-      navigation.stack.splice(top, 1, { ...view, commit: to.id, shortId: to.shortId })
+    if ((view.kind !== 'file' && view.kind !== 'blame') || view.path !== path || view.commit !== from) {
+      return
     }
+    const moved = { ...view, commit: to.id, shortId: to.shortId }
+    // A line marked in one version means nothing in another.
+    navigation.stack.splice(top, 1, moved.kind === 'blame' ? { ...moved, line: null } : moved)
   }
 
   function openFileHistory(path: string): void {
@@ -123,6 +133,7 @@ export function createNavigation() {
     openPendingChanges,
     openStash,
     openFileAt,
+    openBlame,
     replaceFileVersion,
     openFileHistory,
     goBack,

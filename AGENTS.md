@@ -67,9 +67,8 @@ every one passing.
 
 ## Product rules
 
-- **Out of scope:** rebasing onto another branch, blame, merge and conflict
-  UI, staging and committing, force push, submodules, LFS and bare
-  repositories.
+- **Out of scope:** rebasing onto another branch, merge and conflict UI,
+  staging and committing, force push, submodules, LFS and bare repositories.
 - **Tabs** each hold one project. Opening a project that is already open
   shows its tab instead. Closing the last tab leaves one that asks for a
   project. Ctrl+T opens a new tab and Ctrl+W closes the shown one.
@@ -113,6 +112,9 @@ every one passing.
   indicator, not a dialog.
 - **Outside changes** to HEAD or branches show a non-blocking reload prompt.
   Working tree and stash changes update silently.
+- **Blame** shows the commit that last changed each line of a file as it is
+  in one commit, following renames. Each run of lines can step back to the
+  blame from before its change.
 - **Dates** are shown in the local timezone, and lists show the author date.
 
 ## UI rules

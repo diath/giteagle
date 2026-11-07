@@ -4,23 +4,18 @@ import { computed } from 'vue'
 import AppIcon from '../components/AppIcon.vue'
 import FileVersionBar from '../components/FileVersionBar.vue'
 import { useProject } from '../stores/project'
-import { showToast } from '../stores/toasts'
 import { useEscape } from '../utils/escape'
 import { useFileAt } from '../utils/fileText'
 
 const props = defineProps<{ commit: string; shortId: string; path: string }>()
 
-const { api, goBack, openFileHistory } = useProject()
+const { api, goBack, openBlame, openFileHistory } = useProject()
 const { lines, rows, notice } = useFileAt(api, props.commit, props.path)
 
 useEscape(goBack)
 
 /** One number per line, as a single text, which lays out far faster than a node per line. */
 const lineNumbers = computed(() => lines.value.map((_, index) => index + 1).join('\n'))
-
-function showBlame(): void {
-  showToast('info', 'Blame is not implemented yet.')
-}
 </script>
 
 <template>
@@ -36,7 +31,12 @@ function showBlame(): void {
           <AppIcon name="history" />
           History
         </button>
-        <button class="button" type="button" title="Show who last changed each line" @click="showBlame">
+        <button
+          class="button"
+          type="button"
+          title="Show who last changed each line"
+          @click="openBlame(commit, shortId, path)"
+        >
           <AppIcon name="blame" />
           Blame
         </button>

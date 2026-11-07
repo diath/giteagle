@@ -63,6 +63,43 @@ export interface Person {
   email: string
 }
 
+/** A commit that last changed some lines of a blamed file. */
+export interface BlameCommit {
+  id: string
+  shortId: string
+  subject: string
+  author: Person
+  authorTime: number
+}
+
+/** The version of a file that a commit changed some lines of, to blame them as they were before. */
+export interface EarlierVersion {
+  /** The commit's first parent. */
+  id: string
+  shortId: string
+  /** The file's path there, which differs when the commit renamed it. */
+  path: string
+  /** The line there that the first changed line replaced, or the one it was inserted after. */
+  line: number
+}
+
+/** Lines in a row that the same commit last changed. */
+export interface BlameHunk {
+  /** Counting from 1. */
+  startLine: number
+  lineCount: number
+  /** A key of `FileBlame.commits`. */
+  commitId: string
+  /** `null` when the file didn't exist before that commit. */
+  earlier: EarlierVersion | null
+}
+
+export interface FileBlame {
+  /** In line order, covering every line. */
+  hunks: BlameHunk[]
+  commits: Record<string, BlameCommit>
+}
+
 export interface CommitBrief {
   id: string
   shortId: string
