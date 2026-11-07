@@ -1,24 +1,27 @@
-//! Committing uncommitted files onto the current branch, as with
-//! `git commit -- <paths>`.
+//! Committing uncommitted changes onto the current branch: whole files, as
+//! with `git commit -- <paths>`, or hunks picked from them, as with
+//! `git add --patch` followed by a commit.
 //!
 //! The commit holds HEAD's files with only the chosen changes, whatever is
 //! staged. Afterwards the index holds the committed version of each chosen
 //! file, and staged changes to other files stay staged. The working tree is
 //! never touched.
 
+use std::collections::HashSet;
 use std::fs;
 use std::io;
 use std::iter;
 use std::path::Path;
 
-use git2::{Commit, Index, Repository, Tree};
+use git2::{Commit, Index, IndexEntry, IndexTime, Patch, Repository, Tree};
 use serde::Deserialize;
 
+use super::diff::working_tree_hunks;
 use super::overview::ensure_clean_state;
 use super::{CommitBrief, clean_message, head_commit, split_message, user_signature};
-use crate::error::{AppError, AppResult};
+use crate::error::{AppError, AppResult, ErrorKind};
 
-/// One file to commit, as it is in the working tree.
+/// One file to commit, whole or in part.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FilePick {
@@ -27,6 +30,18 @@ pub struct FilePick {
     /// Where a renamed file was, which the commit removes.
     #[serde(default)]
     pub old_path: Option<String>,
+    /// The hunks picked from the file, or `None` to commit all of it.
+    #[serde(default)]
+    pub hunks: Option<HunkPick>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HunkPick {
+    /// The `fingerprint` of the file's diff the hunks were picked from.
+    pub fingerprint: String,
+    /// Positions of the hunks in that diff, counting from 0.
+    pub indices: Vec<usize>,
 }
 
 /// Commits the chosen changes onto the current branch with the current user
@@ -131,8 +146,17 @@ fn stage_picks<'r>(
             .chain(iter::once(&pick.path))
             .map(String::as_str)
             .collect();
+        match &pick.hunks {
+            None => {
+                for path in &paths {
+                    stage_working_tree_file(repository, index, path)?;
+                }
+            }
+            Some(hunks) => index.add(&picked_hunks_entry(
+                repository, head_tree, &pick.path, hunks,
+            )?)?,
+        }
         for path in &paths {
-            stage_working_tree_file(repository, index, path)?;
             let path = Path::new(path);
             match index.get_path(path, 0) {
                 Some(entry) => committed.add(&entry)?,
@@ -181,4 +205,101 @@ fn stage_working_tree_file(
         Err(error) => return Err(error.into()),
     }
     Ok(())
+}
+
+/// The index entry for HEAD's version of `path` with the picked hunks of
+/// its uncommitted changes applied.
+fn picked_hunks_entry(
+    repository: &Repository,
+    head_tree: Option<&Tree>,
+    path: &str,
+    pick: &HunkPick,
+) -> AppResult<IndexEntry> {
+    let changed = || {
+        AppError::new(
+            ErrorKind::Conflict,
+            format!("{path} changed after its hunks were picked. Pick them again."),
+        )
+    };
+    let head_tree = head_tree.ok_or_else(changed)?;
+    let Some((patch, fingerprint)) = working_tree_hunks(repository, head_tree, path)? else {
+        return Err(changed());
+    };
+    if fingerprint != pick.fingerprint {
+        return Err(changed());
+    }
+    let picked: HashSet<usize> = pick.indices.iter().copied().collect();
+    if picked.is_empty() || picked.iter().any(|&index| index >= patch.num_hunks()) {
+        return Err(AppError::invalid_input(format!(
+            "The picked hunks aren't all in the changes to {path}."
+        )));
+    }
+
+    let head_entry = head_tree.get_path(Path::new(path))?;
+    let head_blob = repository.find_blob(head_entry.id())?;
+    let contents = apply_hunks(head_blob.content(), &patch, &picked)?;
+    // With no file times or size, Git compares the file's contents with
+    // this entry instead of trusting the times, so the hunks that were left
+    // out still show as changed.
+    let unknown = IndexTime::new(0, 0);
+    Ok(IndexEntry {
+        ctime: unknown,
+        mtime: unknown,
+        dev: 0,
+        ino: 0,
+        mode: head_entry.filemode() as u32,
+        uid: 0,
+        gid: 0,
+        file_size: 0,
+        id: repository.blob(&contents)?,
+        flags: 0,
+        flags_extended: 0,
+        path: path.as_bytes().to_vec(),
+    })
+}
+
+/// `old` with the hunks of `patch` at the `picked` positions applied. The
+/// patch must be a diff of `old`, so each hunk covers a run of its lines and
+/// the others stay as they are.
+fn apply_hunks(old: &[u8], patch: &Patch, picked: &HashSet<usize>) -> AppResult<Vec<u8>> {
+    let mismatch = || {
+        AppError::new(
+            ErrorKind::Internal,
+            "The changes don't fit the committed file.",
+        )
+    };
+    let old_lines: Vec<&[u8]> = old.split_inclusive(|&byte| byte == b'\n').collect();
+    let mut contents = Vec::with_capacity(old.len());
+    let mut copied = 0;
+    for hunk_index in 0..patch.num_hunks() {
+        let (hunk, line_count) = patch.hunk(hunk_index)?;
+        let length = hunk.old_lines() as usize;
+        // A hunk that removes no lines names the line it follows; others
+        // name their first line.
+        let start = if length == 0 {
+            hunk.old_start() as usize
+        } else {
+            (hunk.old_start() as usize)
+                .checked_sub(1)
+                .ok_or_else(mismatch)?
+        };
+        let end = start + length;
+        if start < copied || end > old_lines.len() {
+            return Err(mismatch());
+        }
+        contents.extend(old_lines[copied..start].concat());
+        if picked.contains(&hunk_index) {
+            for line_index in 0..line_count {
+                let line = patch.line_in_hunk(hunk_index, line_index)?;
+                if matches!(line.origin(), ' ' | '+') {
+                    contents.extend_from_slice(line.content());
+                }
+            }
+        } else {
+            contents.extend(old_lines[start..end].concat());
+        }
+        copied = end;
+    }
+    contents.extend(old_lines[copied..].concat());
+    Ok(contents)
 }

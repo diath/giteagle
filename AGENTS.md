@@ -112,6 +112,12 @@ every one passing.
   committed versions, staged changes to other files stay staged, and the
   working tree never changes.
   - Commit takes the checked files whole, as they are in the working tree.
+  - Commit (Pick Hunks) goes through the changes like `git add --patch`:
+    Pick, Skip and Skip Rest, or the Y, N and Q keys, answer as `y`, `n` and
+    `q` do, and a message for what was picked comes last. Cancel drops
+    everything picked. Only text files changed in place are split into
+    hunks; other changes are asked about whole. If a file changed after its
+    hunks were picked, nothing changes.
 - **Pull** is fast-forward only.
 - **Push** pushes the current branch to its upstream. Without an upstream it
   runs `git push -u origin <branch>`, and with no `origin` it is disabled.

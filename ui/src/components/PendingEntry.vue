@@ -6,6 +6,7 @@ import { useProject } from '../stores/project'
 import { pendingCounts } from '../utils/pending'
 import AppIcon from './AppIcon.vue'
 import CommitDialog from './CommitDialog.vue'
+import PickHunksDialog from './PickHunksDialog.vue'
 
 const props = defineProps<{ summary: PendingSummary }>()
 const emit = defineEmits<{ open: [] }>()
@@ -13,9 +14,10 @@ const emit = defineEmits<{ open: [] }>()
 const { capabilities } = useProject()
 
 const COMMIT_TITLE = 'Commit\nChoose the files to commit'
+const PICK_HUNKS_TITLE = 'Commit (Pick Hunks)\nGo through the changes hunk by hunk, as with git add --patch'
 
 const counts = computed(() => pendingCounts(props.summary))
-const dialog = ref<'files' | null>(null)
+const dialog = ref<'files' | 'hunks' | null>(null)
 </script>
 
 <template>
@@ -52,9 +54,20 @@ const dialog = ref<'files' | null>(null)
       >
         <AppIcon name="commit" />
       </button>
+      <button
+        class="button button--icon"
+        type="button"
+        :disabled="!capabilities.canCommit"
+        :title="PICK_HUNKS_TITLE"
+        @click.stop="dialog = 'hunks'"
+        @keydown.enter.stop
+      >
+        <AppIcon name="pickHunks" />
+      </button>
     </div>
 
     <CommitDialog v-if="dialog === 'files'" @close="dialog = null" />
+    <PickHunksDialog v-else-if="dialog === 'hunks'" @close="dialog = null" />
   </div>
 </template>
 

@@ -29,17 +29,24 @@ import AppIcon from './AppIcon.vue'
 /** Highlighting starts this many design pixels before a file scrolls into view. */
 const HIGHLIGHT_MARGIN = 1000
 
-const props = defineProps<{
-  file: FileDiff
-  highlighted: boolean
-  /** The commit the diff is of, if any, whose version of the file can be viewed. */
-  commit: { id: string; shortId: string } | null
-  /**
-   * The commit that changes other than a commit's are compared with, e.g.
-   * HEAD for uncommitted ones, whose version of the file is blamed.
-   */
-  base: { id: string; shortId: string } | null
-}>()
+const props = withDefaults(
+  defineProps<{
+    file: FileDiff
+    highlighted: boolean
+    /** The commit the diff is of, if any, whose version of the file can be viewed. */
+    commit: { id: string; shortId: string } | null
+    /**
+     * The commit that changes other than a commit's are compared with, e.g.
+     * HEAD for uncommitted ones, whose version of the file is blamed.
+     */
+    base: { id: string; shortId: string } | null
+    /** Shows only this hunk, e.g. while hunks are picked one at a time. */
+    hunkIndex?: number | null
+    /** Whether the header has the buttons that hide the file and open other views. */
+    fileActions?: boolean
+  }>(),
+  { hunkIndex: null, fileActions: true },
+)
 
 const { openBlame, openFileAt, openFileHistory } = useProject()
 
@@ -55,8 +62,16 @@ let seen = false
 
 const newLines = computed(() => splitLines(props.file.newContent))
 
+const shownHunks = computed(() =>
+  props.hunkIndex === null ? props.file.hunks : props.file.hunks.slice(props.hunkIndex, props.hunkIndex + 1),
+)
+
+// The lines around a lone hunk can hold other hunks' changes, so they
+// aren't offered as unchanged ones.
+const gapLines = computed(() => (props.hunkIndex === null ? newLines.value : null))
+
 const rows = computed(() =>
-  layoutRows(props.file.hunks, newLines.value, expandedGaps.value).map((row) => {
+  layoutRows(shownHunks.value, gapLines.value, expandedGaps.value).map((row) => {
     if (row.type !== 'line') {
       return row
     }
@@ -259,6 +274,7 @@ defineExpose({ element: root })
   <section ref="root" class="diff-file" :class="{ highlighted }">
     <header class="file-header">
       <button
+        v-if="fileActions"
         class="icon-button"
         type="button"
         :title="collapsed ? 'Show this file' : 'Hide this file'"
@@ -280,7 +296,7 @@ defineExpose({ element: root })
         {{ file.path }}
       </span>
       <button
-        v-if="commit"
+        v-if="fileActions && commit"
         class="button file-action"
         type="button"
         :disabled="viewUnavailable !== null"
@@ -290,25 +306,27 @@ defineExpose({ element: root })
         <AppIcon name="eye" />
         View @ {{ commit.shortId }}
       </button>
-      <button
-        class="button file-action"
-        type="button"
-        title="Show the commits on this branch that changed this file"
-        @click="openFileHistory(file.path)"
-      >
-        <AppIcon name="history" />
-        History
-      </button>
-      <button class="button file-action" type="button" :disabled="blameUnavailable !== null" :title="blameTitle" @click="showBlame">
-        <AppIcon name="blame" />
-        Blame
-      </button>
+      <template v-if="fileActions">
+        <button
+          class="button file-action"
+          type="button"
+          title="Show the commits on this branch that changed this file"
+          @click="openFileHistory(file.path)"
+        >
+          <AppIcon name="history" />
+          History
+        </button>
+        <button class="button file-action" type="button" :disabled="blameUnavailable !== null" :title="blameTitle" @click="showBlame">
+          <AppIcon name="blame" />
+          Blame
+        </button>
+      </template>
     </header>
 
     <div v-if="!collapsed" class="file-body">
       <p v-if="modeChange" class="note">{{ modeChange }}</p>
       <p v-if="summary" class="note">{{ summary }}</p>
-      <div v-if="file.hunks.length > 0 && !file.tooLarge" class="code-scroll">
+      <div v-if="shownHunks.length > 0 && !file.tooLarge" class="code-scroll">
         <table class="code" :style="{ '--gutter-width': gutterWidth }">
           <tbody>
             <template v-for="row in rows" :key="row.key">

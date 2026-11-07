@@ -313,6 +313,11 @@ export interface FileDiff {
   hunks: Hunk[]
   oldContent: string | null
   newContent: string | null
+  /**
+   * Set for an uncommitted text file changed in place, whose hunks can be
+   * committed one at a time. It changes with any change to the hunks.
+   */
+  fingerprint: string | null
 }
 
 export interface DiffStats {
@@ -346,11 +351,21 @@ export interface PendingChanges {
   files: FileDiff[]
 }
 
-/** An uncommitted file to commit, as it is in the working tree. */
+/** Hunks picked from an uncommitted file, to commit them without the rest. */
+export interface HunkPick {
+  /** The `fingerprint` of the file's diff they were picked from. */
+  fingerprint: string
+  /** Positions in that diff's hunks. */
+  indices: number[]
+}
+
+/** An uncommitted file to commit, whole or in part. */
 export interface FilePick {
   path: string
   /** Where a renamed file was, which the commit removes. */
   oldPath: string | null
+  /** `null` commits the whole file. */
+  hunks: HunkPick | null
 }
 
 export interface ParentRef {

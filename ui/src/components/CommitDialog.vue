@@ -45,7 +45,7 @@ async function confirm(): Promise<void> {
   }
   const picks: FilePick[] = files.value
     .filter((file) => chosen.value.includes(file.path))
-    .map((file) => ({ path: file.path, oldPath: file.oldPath }))
+    .map((file) => ({ path: file.path, oldPath: file.oldPath, hunks: null }))
   working.value = true
   repo.busy = 'commit'
   let shortId: string

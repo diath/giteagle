@@ -19,8 +19,10 @@ const props = withDefaults(
     disabled?: boolean
     /** Room for a commit message's 72 columns. */
     wide?: boolean
+    /** Room for a diff, as much as the window has. */
+    large?: boolean
   }>(),
-  { warning: null, danger: false, disabled: false, wide: false },
+  { warning: null, danger: false, disabled: false, wide: false, large: false },
 )
 
 const emit = defineEmits<{ confirm: []; close: [] }>()
@@ -29,6 +31,8 @@ defineSlots<{
   default?: () => unknown
   /** Comes after the warning, e.g. a field to type a confirmation into. */
   confirmation?: () => unknown
+  /** Buttons in place of Cancel and the confirm button. */
+  actions?: () => unknown
 }>()
 
 const form = ref<HTMLFormElement | null>(null)
@@ -60,7 +64,7 @@ onMounted(async () => {
       <form
         ref="form"
         class="dialog"
-        :class="{ 'dialog--wide': wide }"
+        :class="{ 'dialog--wide': wide, 'dialog--large': large }"
         role="dialog"
         aria-modal="true"
         :aria-label="title"
@@ -81,10 +85,12 @@ onMounted(async () => {
         <slot name="confirmation" />
 
         <div class="actions">
-          <button class="button" type="button" :disabled="working" @click="emit('close')">Cancel</button>
-          <button class="button" :class="{ 'button--danger': danger }" type="submit" :disabled="disabled || working">
-            {{ working ? workingLabel : confirmLabel }}
-          </button>
+          <slot name="actions">
+            <button class="button" type="button" :disabled="working" @click="emit('close')">Cancel</button>
+            <button class="button" :class="{ 'button--danger': danger }" type="submit" :disabled="disabled || working">
+              {{ working ? workingLabel : confirmLabel }}
+            </button>
+          </slot>
         </div>
       </form>
     </div>
@@ -116,6 +122,10 @@ onMounted(async () => {
 
 .dialog--wide {
   width: min(calc(800 * var(--px)), calc(100% - 2 * var(--space-6)));
+}
+
+.dialog--large {
+  width: min(calc(1200 * var(--px)), calc(100% - 2 * var(--space-6)));
 }
 
 .title {

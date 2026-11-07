@@ -2,13 +2,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use git2::{
-    Delta, Diff, DiffFile, DiffFindOptions, DiffOptions, FileMode, Index, Oid, Patch, Repository,
-    Tree,
+    Delta, Diff, DiffFile, DiffFindOptions, DiffOptions, FileMode, Index, ObjectType, Odb, Oid,
+    Patch, Repository, Tree,
 };
 use serde::Serialize;
 
 use super::path_to_string;
-use crate::error::{AppError, AppResult};
+use crate::error::{AppError, AppResult, ErrorKind};
 
 /// Files above this size are summarized instead of diffed.
 const MAX_DIFF_BYTES: usize = 4 * 1024 * 1024;
@@ -76,6 +76,10 @@ pub struct FileDiff {
     pub hunks: Vec<Hunk>,
     pub old_content: Option<String>,
     pub new_content: Option<String>,
+    /// Set for an uncommitted text file changed in place, whose hunks can
+    /// be committed one at a time. It changes with any change to the hunks,
+    /// so a commit can tell when the file changed after they were picked.
+    pub fingerprint: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -184,6 +188,44 @@ pub fn working_tree_diff<'r>(
     repository: &'r Repository,
     head: Option<&Tree<'_>>,
 ) -> AppResult<Diff<'r>> {
+    working_tree_diff_of(repository, head, None)
+}
+
+/// The patch of the uncommitted changes to `path` and its fingerprint, made
+/// as `diff_working_tree` makes them, or `None` when its hunks can't be
+/// committed one at a time.
+pub fn working_tree_hunks<'r>(
+    repository: &'r Repository,
+    head: &Tree,
+    path: &str,
+) -> AppResult<Option<(Patch<'r>, String)>> {
+    let workdir = repository
+        .workdir()
+        .ok_or_else(|| AppError::invalid_state("The repository has no working tree."))?;
+    let diff = working_tree_diff_of(repository, Some(head), Some(path))?;
+    let odb = repository.odb()?;
+    for (index, delta) in diff.deltas().enumerate() {
+        if delta.new_file().path_bytes().map(path_to_string).as_deref() != Some(path) {
+            continue;
+        }
+        let (file, patch) = file_diff(
+            repository,
+            &odb,
+            &diff,
+            index,
+            NewSide::WorkingTree(workdir),
+        )?;
+        return Ok(patch.zip(file.fingerprint));
+    }
+    Ok(None)
+}
+
+/// The diff of HEAD against the working tree, or of only `path` in it.
+fn working_tree_diff_of<'r>(
+    repository: &'r Repository,
+    head: Option<&Tree<'_>>,
+    path: Option<&str>,
+) -> AppResult<Diff<'r>> {
     let mut options = diff_options();
     options
         .include_untracked(true)
@@ -193,6 +235,9 @@ pub fn working_tree_diff<'r>(
         // Bigger files count as binary, so totals leave out what is never
         // diffed and huge untracked files aren't read just to count lines.
         .max_size(MAX_DIFF_BYTES as i64);
+    if let Some(path) = path {
+        options.pathspec(path).disable_pathspec_match(true);
+    }
     let mut diff = repository.diff_tree_to_workdir_with_index(head, Some(&mut options))?;
     diff.find_similar(Some(DiffFindOptions::new().renames(true)))?;
     Ok(diff)
@@ -208,6 +253,19 @@ fn diff_options() -> DiffOptions {
 
 fn file_diffs(repository: &Repository, diff: &Diff, new_side: NewSide) -> AppResult<Vec<FileDiff>> {
     let odb = repository.odb()?;
+    (0..diff.deltas().len())
+        .map(|index| Ok(file_diff(repository, &odb, diff, index, new_side)?.0))
+        .collect()
+}
+
+/// Reads delta `index` of `diff`, along with its patch when it was diffed.
+fn file_diff<'r>(
+    repository: &Repository,
+    odb: &Odb,
+    diff: &Diff<'r>,
+    index: usize,
+    new_side: NewSide,
+) -> AppResult<(FileDiff, Option<Patch<'r>>)> {
     let blob_size = |id: Oid| -> usize {
         if id.is_zero() {
             return 0;
@@ -222,67 +280,98 @@ fn file_diffs(repository: &Repository, diff: &Diff, new_side: NewSide) -> AppRes
         }
     };
 
-    let mut files = Vec::new();
-    for (index, delta) in diff.deltas().enumerate() {
-        let old_file = delta.old_file();
-        let new_file = delta.new_file();
-        let old_path = old_file.path_bytes().map(path_to_string);
-        let new_path = new_file.path_bytes().map(path_to_string);
-        let path = new_path
-            .clone()
-            .or_else(|| old_path.clone())
-            .unwrap_or_default();
-        let added = matches!(delta.status(), Delta::Added | Delta::Untracked);
-        let old_mode = (!added).then(|| u32::from(old_file.mode()));
-        let new_mode = (delta.status() != Delta::Deleted).then(|| u32::from(new_file.mode()));
-        let is_submodule = [old_mode, new_mode].contains(&Some(u32::from(FileMode::Commit)));
+    let delta = diff
+        .get_delta(index)
+        .ok_or_else(|| AppError::new(ErrorKind::Internal, "The diff has no such file."))?;
+    let old_file = delta.old_file();
+    let new_file = delta.new_file();
+    let old_path = old_file.path_bytes().map(path_to_string);
+    let new_path = new_file.path_bytes().map(path_to_string);
+    let path = new_path
+        .clone()
+        .or_else(|| old_path.clone())
+        .unwrap_or_default();
+    let added = matches!(delta.status(), Delta::Added | Delta::Untracked);
+    let old_mode = (!added).then(|| u32::from(old_file.mode()));
+    let new_mode = (delta.status() != Delta::Deleted).then(|| u32::from(new_file.mode()));
+    let is_submodule = [old_mode, new_mode].contains(&Some(u32::from(FileMode::Commit)));
 
-        let mut file = FileDiff {
-            old_path: old_path.filter(|old_path| *old_path != path),
-            path,
-            kind: change_kind(delta.status()),
-            old_mode,
-            new_mode,
-            is_binary: false,
-            is_submodule,
-            too_large: false,
-            additions: 0,
-            deletions: 0,
-            hunks: Vec::new(),
-            old_content: None,
-            new_content: None,
-        };
+    let mut file = FileDiff {
+        old_path: old_path.filter(|old_path| *old_path != path),
+        path,
+        kind: change_kind(delta.status()),
+        old_mode,
+        new_mode,
+        is_binary: false,
+        is_submodule,
+        too_large: false,
+        additions: 0,
+        deletions: 0,
+        hunks: Vec::new(),
+        old_content: None,
+        new_content: None,
+        fingerprint: None,
+    };
 
-        let largest = blob_size(old_file.id()).max(new_size(&new_file));
-        if !is_submodule && largest > MAX_DIFF_BYTES {
+    let largest = blob_size(old_file.id()).max(new_size(&new_file));
+    if !is_submodule && largest > MAX_DIFF_BYTES {
+        file.too_large = true;
+        return Ok((file, None));
+    }
+
+    let Some(patch) = Patch::from_diff(diff, index)? else {
+        return Ok((file, None));
+    };
+    file.is_binary = patch.delta().flags().is_binary();
+    let (_, additions, deletions) = patch.line_stats()?;
+    file.additions = additions;
+    file.deletions = deletions;
+    if !file.is_binary && !is_submodule {
+        if additions + deletions > MAX_DIFF_LINES {
             file.too_large = true;
-            files.push(file);
-            continue;
-        }
-
-        if let Some(patch) = Patch::from_diff(diff, index)? {
-            file.is_binary = patch.delta().flags().is_binary();
-            let (_, additions, deletions) = patch.line_stats()?;
-            file.additions = additions;
-            file.deletions = deletions;
-            if !file.is_binary && !is_submodule {
-                if additions + deletions > MAX_DIFF_LINES {
-                    file.too_large = true;
-                } else {
-                    file.hunks = read_hunks(&patch)?;
-                    if largest <= MAX_CONTENT_BYTES {
-                        file.old_content = blob_text(repository, old_file.id())?;
-                        file.new_content = match new_side {
-                            NewSide::Blobs => blob_text(repository, new_file.id())?,
-                            NewSide::WorkingTree(root) => file_text(root, &new_file),
-                        };
-                    }
-                }
+        } else {
+            file.hunks = read_hunks(&patch)?;
+            if largest <= MAX_CONTENT_BYTES {
+                file.old_content = blob_text(repository, old_file.id())?;
+                file.new_content = match new_side {
+                    NewSide::Blobs => blob_text(repository, new_file.id())?,
+                    NewSide::WorkingTree(root) => file_text(root, &new_file),
+                };
             }
         }
-        files.push(file);
     }
-    Ok(files)
+    if matches!(new_side, NewSide::WorkingTree(_)) && hunks_can_be_picked(&file) {
+        file.fingerprint = Some(hunk_fingerprint(&patch)?);
+    }
+    Ok((file, Some(patch)))
+}
+
+/// Whether a file's hunks can be committed one at a time. Other changes,
+/// such as new files, renames and mode changes, are committed whole.
+fn hunks_can_be_picked(file: &FileDiff) -> bool {
+    file.kind == ChangeKind::Modified
+        && file.old_mode == file.new_mode
+        && !file.is_binary
+        && !file.is_submodule
+        && !file.too_large
+        && !file.hunks.is_empty()
+}
+
+/// A hash of every hunk header and line in `patch`, with each line's length
+/// in front so that no two patches run together the same way.
+fn hunk_fingerprint(patch: &Patch) -> AppResult<String> {
+    let mut bytes = Vec::new();
+    for hunk_index in 0..patch.num_hunks() {
+        let (hunk, line_count) = patch.hunk(hunk_index)?;
+        bytes.extend_from_slice(hunk.header());
+        for line_index in 0..line_count {
+            let line = patch.line_in_hunk(hunk_index, line_index)?;
+            bytes.push(line.origin() as u8);
+            bytes.extend_from_slice(&line.content().len().to_le_bytes());
+            bytes.extend_from_slice(line.content());
+        }
+    }
+    Ok(Oid::hash_object(ObjectType::Blob, &bytes)?.to_string())
 }
 
 fn read_hunks(patch: &Patch) -> AppResult<Vec<Hunk>> {
