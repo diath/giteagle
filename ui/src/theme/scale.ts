@@ -6,7 +6,7 @@
 import type { FontSize } from '../api'
 
 /** How many times larger than its design size each font size draws the interface. */
-const SCALES: Record<FontSize, number> = {
+export const FONT_SIZE_SCALES: Record<FontSize, number> = {
   small: 0.75,
   normal: 1,
   large: 1.25,
@@ -23,6 +23,6 @@ export function scaled(pixels: number): number {
 /** Draws the interface at `fontSize`, through the `--ui-scale` custom property on `root`. */
 export function applyFontSize(root: HTMLElement, fontSize: FontSize): void {
   // A hand-edited settings file can name a size that doesn't exist.
-  scale = SCALES[fontSize] ?? 1
+  scale = FONT_SIZE_SCALES[fontSize] ?? 1
   root.style.setProperty('--ui-scale', String(scale))
 }

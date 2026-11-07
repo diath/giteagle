@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref } from 'vue'
 
 import type { FontSize, ThemeName } from '../api'
 import { changeSettings, settings } from '../stores/settings'
+import { FONT_SIZE_SCALES } from '../theme/scale'
 import { useEscape } from '../utils/escape'
 import AppIcon from './AppIcon.vue'
 import NumberField from './NumberField.vue'
@@ -17,11 +18,16 @@ const THEMES: { value: ThemeName; label: string }[] = [
   { value: 'lightWhite', label: 'Light (White)' },
 ]
 
-const FONT_SIZES: { value: FontSize; label: string }[] = [
-  { value: 'small', label: 'Small' },
-  { value: 'normal', label: 'Normal' },
-  { value: 'large', label: 'Large' },
-  { value: 'extraLarge', label: 'Extra large' },
+/** Names a font size along with how large it draws the interface, e.g. "Large (125%)". */
+function fontSizeOption(value: FontSize, name: string): { value: FontSize; label: string } {
+  return { value, label: `${name} (${Math.round(FONT_SIZE_SCALES[value] * 100)}%)` }
+}
+
+const FONT_SIZES = [
+  fontSizeOption('small', 'Small'),
+  fontSizeOption('normal', 'Normal'),
+  fontSizeOption('large', 'Large'),
+  fontSizeOption('extraLarge', 'Extra large'),
 ]
 
 /** The most projects the Recent menu remembers; more would be hard to scan. */
@@ -67,16 +73,11 @@ onMounted(async () => {
           <legend>Interface</legend>
           <div class="setting">
             <span class="setting-label">Theme</span>
-            <SelectField ref="themeField" v-model="theme" class="theme-field" :options="THEMES" label="Theme" />
+            <SelectField ref="themeField" v-model="theme" class="select" :options="THEMES" label="Theme" />
           </div>
           <div class="setting">
-            <span id="font-size-label" class="setting-label">Font size</span>
-            <div class="choices" role="radiogroup" aria-labelledby="font-size-label">
-              <label v-for="option in FONT_SIZES" :key="option.value" class="choice">
-                <input v-model="fontSize" type="radio" name="font-size" :value="option.value" />
-                <span>{{ option.label }}</span>
-              </label>
-            </div>
+            <span class="setting-label">Font size</span>
+            <SelectField v-model="fontSize" class="select" :options="FONT_SIZES" label="Font size" />
           </div>
         </fieldset>
 
@@ -141,23 +142,10 @@ onMounted(async () => {
   gap: var(--space-2) var(--space-4);
 }
 
-.choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-4);
-}
-
-/* Wide enough for the longest theme name, so the field keeps its size as
-   the theme changes. */
-.theme-field {
-  width: calc(210 * var(--px));
-}
-
-.choice {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  cursor: pointer;
+/* Wide enough for the longest option, "Extra large (150%)", so each field
+   keeps its size as its choice changes, and both line up. */
+.select {
+  width: calc(250 * var(--px));
 }
 
 .actions {
