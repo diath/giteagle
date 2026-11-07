@@ -113,8 +113,9 @@ every one passing.
 - **Outside changes** to HEAD or branches show a non-blocking reload prompt.
   Working tree and stash changes update silently.
 - **Blame** shows the commit that last changed each line of a file as it is
-  in one commit, following renames. Each run of lines can step back to the
-  blame from before its change.
+  in one commit, following renames. A commit's diff blames that commit's
+  version, and uncommitted changes and stashes the one they are compared
+  with. Each run of lines can step back to the blame from before its change.
 - **Dates** are shown in the local timezone, and lists show the author date.
 
 ## UI rules

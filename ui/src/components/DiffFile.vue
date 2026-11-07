@@ -21,7 +21,6 @@ import { computed, inject, onBeforeUnmount, onMounted, ref, shallowRef, watch } 
 
 import type { FileDiff } from '../api'
 import { useProject } from '../stores/project'
-import { showToast } from '../stores/toasts'
 import { scaled } from '../theme/scale'
 import { buildSegments, layoutRows, splitLines } from '../utils/diff'
 import { languageFor, tokenizeFile, type Token } from '../utils/highlight'
@@ -35,9 +34,14 @@ const props = defineProps<{
   highlighted: boolean
   /** The commit the diff is of, if any, whose version of the file can be viewed. */
   commit: { id: string; shortId: string } | null
+  /**
+   * The commit that changes other than a commit's are compared with, e.g.
+   * HEAD for uncommitted ones, whose version of the file is blamed.
+   */
+  base: { id: string; shortId: string } | null
 }>()
 
-const { openFileAt, openFileHistory } = useProject()
+const { openBlame, openFileAt, openFileHistory } = useProject()
 
 const root = ref<HTMLElement | null>(null)
 const scroller = inject(DIFF_SCROLLER, null)
@@ -144,8 +148,39 @@ const viewUnavailable = computed(() => {
   return null
 })
 
+/** Why the file can't be blamed, if it can't. */
+const blameUnavailable = computed(() => {
+  const file = props.file
+  if (file.isSubmodule) {
+    return 'A submodule has no lines to blame'
+  }
+  if (file.isBinary) {
+    return 'A binary file has no lines to blame'
+  }
+  if (props.commit) {
+    return file.kind === 'deleted' ? 'The file is gone in this commit' : null
+  }
+  if (props.base) {
+    return file.kind === 'added' ? `The file isn't in ${props.base.shortId}` : null
+  }
+  return 'Nothing is committed yet'
+})
+
+const blameTitle = computed(() => {
+  if (blameUnavailable.value) {
+    return blameUnavailable.value
+  }
+  return props.commit ? 'Show who last changed each line' : `Show who last changed each line, as of ${props.base?.shortId}`
+})
+
+/** Blames the commit's version of the file, or else the one the changes are compared with. */
 function showBlame(): void {
-  showToast('info', 'Blame is not implemented yet.')
+  const { commit, base, file } = props
+  if (commit) {
+    openBlame(commit.id, commit.shortId, file.path)
+  } else if (base) {
+    openBlame(base.id, base.shortId, file.oldPath ?? file.path)
+  }
 }
 
 function expandGap(index: number): void {
@@ -264,7 +299,7 @@ defineExpose({ element: root })
         <AppIcon name="history" />
         History
       </button>
-      <button class="button file-action" type="button" title="Show who last changed each line" @click="showBlame">
+      <button class="button file-action" type="button" :disabled="blameUnavailable !== null" :title="blameTitle" @click="showBlame">
         <AppIcon name="blame" />
         Blame
       </button>

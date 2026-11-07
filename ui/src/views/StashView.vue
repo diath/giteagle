@@ -74,7 +74,13 @@ watch(() => [repo.stashRevision, repo.revision], load)
     <p v-if="error" class="error">{{ error }}</p>
     <p v-else-if="!details" class="loading faint">Loading stash…</p>
 
-    <DiffBrowser v-else :files="details.files" :stats="details.stats" empty-text="This stash changes no files.">
+    <DiffBrowser
+      v-else
+      :files="details.files"
+      :stats="details.stats"
+      :base="details.base"
+      empty-text="This stash changes no files."
+    >
       <template #header>
         <header class="stash-header">
           <dl class="detail-list">

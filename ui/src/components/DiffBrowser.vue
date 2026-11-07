@@ -15,8 +15,10 @@ const props = withDefaults(
     highlighted?: number
     /** The commit the diffs are of, whose files can be viewed whole. */
     commit?: { id: string; shortId: string } | null
+    /** The commit that changes other than a commit's are compared with, whose files are blamed. */
+    base?: { id: string; shortId: string } | null
   }>(),
-  { highlighted: -1, commit: null },
+  { highlighted: -1, commit: null, base: null },
 )
 
 defineSlots<{
@@ -155,6 +157,7 @@ defineExpose({ scrollToFile })
         :file="files[index]"
         :highlighted="index === highlighted"
         :commit="commit"
+        :base="base"
       />
     </div>
   </div>

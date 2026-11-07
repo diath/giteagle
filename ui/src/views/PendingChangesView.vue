@@ -63,7 +63,13 @@ watch(() => [pendingRevision.value, repo.revision], load)
     <p v-if="error" class="error">{{ error }}</p>
     <p v-else-if="!changes" class="loading faint">Loading uncommitted changes…</p>
 
-    <DiffBrowser v-else :files="changes.files" :stats="changes.stats" empty-text="There are no uncommitted changes.">
+    <DiffBrowser
+      v-else
+      :files="changes.files"
+      :stats="changes.stats"
+      :base="head"
+      empty-text="There are no uncommitted changes."
+    >
       <template #header>
         <header class="pending-header">
           <dl class="detail-list">
