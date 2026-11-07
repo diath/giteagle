@@ -1,10 +1,11 @@
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Map, Value};
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State, WebviewWindow};
 
 use crate::error::AppResult;
-use crate::settings::{Key, Settings};
+use crate::settings::{Key, Settings, THEME};
+use crate::theme;
 
 /// Tells the frontend about settings the backend changed, with their new
 /// values.
@@ -19,8 +20,19 @@ pub fn get_settings(settings: State<'_, Settings>) -> Map<String, Value> {
 /// The frontend updates its own copy as it changes settings, so these
 /// changes aren't sent back to it.
 #[tauri::command]
-pub fn set_settings(settings: State<'_, Settings>, changes: Map<String, Value>) -> AppResult<()> {
-    settings.set(changes)
+pub fn set_settings(
+    window: WebviewWindow,
+    settings: State<'_, Settings>,
+    changes: Map<String, Value>,
+) -> AppResult<()> {
+    let theme_changed = changes.contains_key(THEME.name);
+    // A failed save still changes the settings, so the theme follows them
+    // either way.
+    let saved = settings.set(changes);
+    if theme_changed {
+        theme::apply(&window, &settings.get(&THEME));
+    }
+    saved
 }
 
 /// Changes `key` as `Settings::update` does, and tells the frontend.

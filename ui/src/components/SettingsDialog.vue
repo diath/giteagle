@@ -1,13 +1,21 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
 
-import type { FontSize } from '../api'
+import type { FontSize, ThemeName } from '../api'
 import { changeSettings, settings } from '../stores/settings'
 import { useEscape } from '../utils/escape'
 import AppIcon from './AppIcon.vue'
 import NumberField from './NumberField.vue'
+import SelectField from './SelectField.vue'
 
 const emit = defineEmits<{ close: [] }>()
+
+const THEMES: { value: ThemeName; label: string }[] = [
+  { value: 'darkBlack', label: 'Dark (Black)' },
+  { value: 'darkBrown', label: 'Dark (Brown)' },
+  { value: 'lightBeige', label: 'Light (Beige)' },
+  { value: 'lightWhite', label: 'Light (White)' },
+]
 
 const FONT_SIZES: { value: FontSize; label: string }[] = [
   { value: 'small', label: 'Small' },
@@ -19,9 +27,14 @@ const FONT_SIZES: { value: FontSize; label: string }[] = [
 /** The most projects the Recent menu remembers; more would be hard to scan. */
 const MAX_RECENT_LIMIT = 50
 
-const dialog = ref<HTMLElement | null>(null)
+const themeField = ref<{ focus: () => void } | null>(null)
 
 // Every change applies and is saved at once, so there is nothing to confirm.
+const theme = computed({
+  get: () => settings.theme,
+  set: (theme: ThemeName) => changeSettings({ theme }),
+})
+
 const fontSize = computed({
   get: () => settings.fontSize,
   set: (fontSize: FontSize) => changeSettings({ fontSize }),
@@ -34,17 +47,17 @@ const recentLimit = computed({
 
 useEscape(() => emit('close'))
 
-// The chosen font size takes focus, so the arrow keys change it at once.
+// The first setting takes focus, so the keyboard reaches it at once.
 onMounted(async () => {
   await nextTick()
-  dialog.value?.querySelector<HTMLElement>('input:checked')?.focus()
+  themeField.value?.focus()
 })
 </script>
 
 <template>
   <Teleport to="body">
     <div class="dialog-layer" @mousedown.self="emit('close')">
-      <section ref="dialog" class="dialog" role="dialog" aria-modal="true" aria-label="Settings">
+      <section class="dialog" role="dialog" aria-modal="true" aria-label="Settings">
         <h2 class="title">
           <AppIcon name="settings" large />
           Settings
@@ -52,6 +65,10 @@ onMounted(async () => {
 
         <fieldset class="group-box">
           <legend>Interface</legend>
+          <div class="setting">
+            <span class="setting-label">Theme</span>
+            <SelectField ref="themeField" v-model="theme" class="theme-field" :options="THEMES" label="Theme" />
+          </div>
           <div class="setting">
             <span id="font-size-label" class="setting-label">Font size</span>
             <div class="choices" role="radiogroup" aria-labelledby="font-size-label">
@@ -128,6 +145,12 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-4);
+}
+
+/* Wide enough for the longest theme name, so the field keeps its size as
+   the theme changes. */
+.theme-field {
+  width: calc(210 * var(--px));
 }
 
 .choice {

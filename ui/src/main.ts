@@ -10,18 +10,22 @@ import { errorMessage } from './api'
 import App from './App.vue'
 import { loadSettings, settings } from './stores/settings'
 import { showToast } from './stores/toasts'
-import { applyPalette } from './theme/palette'
+import { applyTheme } from './theme/palette'
 import { applyFontSize } from './theme/scale'
 
 // The settings load before anything is drawn, so the window never shows the
 // defaults first.
 async function start(): Promise<void> {
-  applyPalette(document.documentElement)
   try {
     await loadSettings()
   } catch (error) {
     showToast('error', `Couldn't load the settings: ${errorMessage(error)}`)
   }
+  watch(
+    () => settings.theme,
+    (theme) => applyTheme(document.documentElement, theme),
+    { immediate: true },
+  )
   watch(
     () => settings.fontSize,
     (fontSize) => applyFontSize(document.documentElement, fontSize),

@@ -13,8 +13,12 @@ export interface ProjectSummary {
 /** How large the interface is drawn. */
 export type FontSize = 'small' | 'normal' | 'large' | 'extraLarge'
 
+/** The colors the interface is drawn in. */
+export type ThemeName = 'darkBlack' | 'darkBrown' | 'lightBeige' | 'lightWhite'
+
 /** Mirrors the settings and their defaults in `src/settings.rs`. */
 export interface Settings {
+  theme: ThemeName
   fontSize: FontSize
   /** How many projects the Recent menu remembers. */
   recentLimit: number

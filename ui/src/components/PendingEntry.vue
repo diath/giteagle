@@ -47,11 +47,11 @@ const counts = computed(() => pendingCounts(props.summary))
   background: var(--color-pending-muted);
   line-height: var(--line-height-dense);
   cursor: pointer;
-  transition: filter var(--transition);
+  transition: background-color var(--transition);
 }
 
 .pending-entry:hover {
-  filter: brightness(1.25);
+  background: var(--color-pending-hover);
 }
 
 .pending-entry:focus-visible {

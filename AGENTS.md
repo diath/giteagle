@@ -68,8 +68,8 @@ every one passing.
 ## Product rules
 
 - **Out of scope:** rebasing onto another branch, blame, merge and conflict
-  UI, staging and committing, force push, submodules, LFS, bare
-  repositories, and a light theme.
+  UI, staging and committing, force push, submodules, LFS and bare
+  repositories.
 - **Tabs** each hold one project. Opening a project that is already open
   shows its tab instead. Closing the last tab leaves one that asks for a
   project. Ctrl+T opens a new tab and Ctrl+W closes the shown one.
@@ -118,9 +118,13 @@ every one passing.
 ## UI rules
 
 - **Colors:**
-  - The theme is dark only.
+  - Settings offers four themes: Dark (Black), the default, Dark (Brown),
+    Light (Beige) and Light (White). A theme applies as soon as it is chosen.
   - Colors come from `ui/src/theme/palette.ts`, exposed as CSS variables in
-    `ui/src/theme/base.css`.
+    `ui/src/theme/base.css`. Each theme gives the same roles their colors, so
+    every color must work in all of them.
+  - `src/theme.rs` repeats each theme's app background for the window, which
+    shows before the page draws.
   - The `giteagle/no-raw-colors` ESLint rule bans raw hex values in components.
   - Don't use pure colors (`#000`, `#fff`, `#f00`) or gradients. Shadows are
     barely visible at most; prefer borders.

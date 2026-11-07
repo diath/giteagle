@@ -8,6 +8,7 @@ import { showToast } from './toasts'
  * defaults, which hold only until `loadSettings` reads the stored ones.
  */
 export const settings = reactive<Settings>({
+  theme: 'darkBlack',
   fontSize: 'normal',
   recentLimit: 10,
   recentProjects: [],

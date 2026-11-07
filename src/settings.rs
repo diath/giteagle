@@ -32,6 +32,8 @@ impl<T> Key<T> {
     }
 }
 
+/// The colors the interface is drawn in, named as in `ui/src/theme/palette.ts`.
+pub const THEME: Key<String> = Key::new("theme");
 /// How many projects the Recent menu remembers.
 pub const RECENT_LIMIT: Key<usize> = Key::new("recentLimit");
 /// The folders of recently opened projects, the latest first.
@@ -46,6 +48,7 @@ pub const ACTIVE_PROJECT: Key<String> = Key::new("activeProject");
 /// them all, so its own settings are listed here too.
 static DEFAULTS: LazyLock<Map<String, Value>> = LazyLock::new(|| {
     [
+        (THEME.name, json!("darkBlack")),
         // How large the interface is drawn; only the frontend reads it.
         ("fontSize", json!("normal")),
         (RECENT_LIMIT.name, json!(10)),
@@ -213,6 +216,7 @@ mod tests {
     #[test]
     fn every_default_fits_its_key() {
         let settings = Settings::load(None);
+        assert_eq!(settings.get(&THEME), "darkBlack");
         assert_eq!(settings.get(&RECENT_LIMIT), 10);
         assert!(settings.get(&RECENT_PROJECTS).is_empty());
         assert!(settings.get(&OPEN_PROJECTS).is_empty());

@@ -12,6 +12,7 @@ mod fetcher;
 pub mod git;
 mod project;
 mod settings;
+mod theme;
 mod watcher;
 
 use app_state::AppState;
@@ -19,6 +20,8 @@ use settings::Settings;
 use tauri::Manager;
 
 pub(crate) const APP_NAME: &str = "GitEagle";
+/// The label Tauri gives the window that `tauri.conf.json` describes.
+const MAIN_WINDOW: &str = "main";
 /// Longer paths lose their middle in the window title.
 const TITLE_PATH_CHARS: usize = 48;
 
@@ -86,7 +89,13 @@ pub fn run(initial: Option<Repository>) {
                 .app_config_dir()
                 .ok()
                 .map(|folder| folder.join(settings::FILE_NAME));
-            app.manage(Settings::load(file));
+            let settings = Settings::load(file);
+            // The window opens before setup runs, so this repaints it before
+            // the page has had time to draw.
+            if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
+                theme::apply(&window, &settings.get(&settings::THEME));
+            }
+            app.manage(settings);
             if let Some(repository) = initial {
                 commands::projects::launch_project(app.handle(), repository);
             }

@@ -1,37 +1,40 @@
 import type { ThemeRegistration } from 'shiki/core'
 
-import { color } from './palette'
+import { cssVar } from './palette'
 
 export const SYNTAX_THEME_NAME = 'giteagle'
 
-/** A Shiki theme built from the palette; Shiki's own themes are never used. */
+/**
+ * A Shiki theme built from the palette; Shiki's own themes are never used.
+ * Its colors are the palette's CSS variables, so highlighted code follows
+ * the theme without being tokenized again.
+ */
 export const syntaxTheme: ThemeRegistration = {
   name: SYNTAX_THEME_NAME,
-  type: 'dark',
   colors: {
-    'editor.background': color('bgSunken'),
-    'editor.foreground': color('fg'),
+    'editor.background': cssVar('bgSunken'),
+    'editor.foreground': cssVar('fg'),
   },
   tokenColors: [
     {
       scope: ['comment', 'punctuation.definition.comment'],
-      settings: { foreground: color('syntaxComment'), fontStyle: 'italic' },
+      settings: { foreground: cssVar('syntaxComment'), fontStyle: 'italic' },
     },
     {
       scope: ['string', 'string.quoted', 'string.template', 'punctuation.definition.string'],
-      settings: { foreground: color('syntaxString') },
+      settings: { foreground: cssVar('syntaxString') },
     },
     {
       scope: ['string.regexp', 'constant.character.escape'],
-      settings: { foreground: color('syntaxRegex') },
+      settings: { foreground: cssVar('syntaxRegex') },
     },
     {
       scope: ['constant.numeric', 'constant.language', 'constant.character'],
-      settings: { foreground: color('syntaxNumber') },
+      settings: { foreground: cssVar('syntaxNumber') },
     },
     {
       scope: ['variable.other.constant', 'support.constant', 'constant.other'],
-      settings: { foreground: color('syntaxConstant') },
+      settings: { foreground: cssVar('syntaxConstant') },
     },
     {
       scope: [
@@ -42,15 +45,15 @@ export const syntaxTheme: ThemeRegistration = {
         'storage.modifier',
         'variable.language',
       ],
-      settings: { foreground: color('syntaxKeyword') },
+      settings: { foreground: cssVar('syntaxKeyword') },
     },
     {
       scope: ['keyword.operator', 'punctuation', 'meta.brace'],
-      settings: { foreground: color('syntaxOperator') },
+      settings: { foreground: cssVar('syntaxOperator') },
     },
     {
       scope: ['entity.name.function', 'support.function', 'meta.function-call.generic'],
-      settings: { foreground: color('syntaxFunction') },
+      settings: { foreground: cssVar('syntaxFunction') },
     },
     {
       scope: [
@@ -60,19 +63,19 @@ export const syntaxTheme: ThemeRegistration = {
         'support.type',
         'support.class',
       ],
-      settings: { foreground: color('syntaxType') },
+      settings: { foreground: cssVar('syntaxType') },
     },
     {
       scope: ['entity.name.namespace', 'entity.name.module', 'entity.name.scope-resolution'],
-      settings: { foreground: color('syntaxNamespace') },
+      settings: { foreground: cssVar('syntaxNamespace') },
     },
     {
       scope: ['variable', 'variable.other'],
-      settings: { foreground: color('syntaxVariable') },
+      settings: { foreground: cssVar('syntaxVariable') },
     },
     {
       scope: ['variable.parameter'],
-      settings: { foreground: color('syntaxParameter') },
+      settings: { foreground: cssVar('syntaxParameter') },
     },
     {
       scope: [
@@ -82,23 +85,23 @@ export const syntaxTheme: ThemeRegistration = {
         'meta.object-literal.key',
         'entity.name.tag.yaml',
       ],
-      settings: { foreground: color('syntaxProperty') },
+      settings: { foreground: cssVar('syntaxProperty') },
     },
     {
       scope: ['entity.name.tag', 'meta.tag'],
-      settings: { foreground: color('syntaxTag') },
+      settings: { foreground: cssVar('syntaxTag') },
     },
     {
       scope: ['entity.other.attribute-name'],
-      settings: { foreground: color('syntaxAttribute') },
+      settings: { foreground: cssVar('syntaxAttribute') },
     },
     {
       scope: ['markup.heading', 'entity.name.section'],
-      settings: { foreground: color('syntaxHeading'), fontStyle: 'bold' },
+      settings: { foreground: cssVar('syntaxHeading'), fontStyle: 'bold' },
     },
     { scope: ['markup.bold'], settings: { fontStyle: 'bold' } },
     { scope: ['markup.italic'], settings: { fontStyle: 'italic' } },
-    { scope: ['markup.inserted'], settings: { foreground: color('diffAddedSign') } },
-    { scope: ['markup.deleted'], settings: { foreground: color('diffRemovedSign') } },
+    { scope: ['markup.inserted'], settings: { foreground: cssVar('diffAddedSign') } },
+    { scope: ['markup.deleted'], settings: { foreground: cssVar('diffRemovedSign') } },
   ],
 }
