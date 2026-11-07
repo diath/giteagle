@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GitEagle - a desktop viewer for Git repositories</title>
+  <meta name="description" content="A desktop viewer for Git repositories: branches, history, diffs and blame, with each repository open in a tab of its own.">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0f0f11">
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <style>
+    /* The colors of the app's Dark (Black) theme, from ui/src/theme/palette.ts. */
+    :root {
+      --bg-app: #0f0f11;
+      --bg-sunken: #0a0a0b;
+      --bg-panel: #141416;
+      --bg-raised: #1a1a1d;
+      --bg-hover: #202023;
+      --bg-active: #28282c;
+      --border: #28282c;
+      --border-strong: #36363b;
+      --fg: #d8d8de;
+      --fg-strong: #e9e9ee;
+      --fg-muted: #9a9aa2;
+      --fg-faint: #77777f;
+      --accent-bright: #f2c078;
+      --accent-muted: #3a2e1f;
+      --green: #93ba68;
+      --green-bright: #b5d68a;
+      --green-muted: #252f1c;
+      --link: #9cc0e3;
+      --focus: #f2c078;
+
+      --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', 'SFMono-Regular', 'DejaVu Sans Mono',
+        Menlo, Consolas, monospace;
+      --radius: 5px;
+      --radius-large: 8px;
+      --transition: 140ms ease;
+      --page-width: 1400px;
+      --gutter: 24px;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      color-scheme: dark;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg-app);
+      color: var(--fg);
+      font-family: var(--font-mono);
+      font-size: 16px;
+      line-height: 1.5;
+      text-rendering: optimizeLegibility;
+    }
+
+    ::selection {
+      background: var(--accent-muted);
+      color: var(--fg-strong);
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    a {
+      color: var(--link);
+    }
+
+    .icon {
+      flex: none;
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Header */
+
+    .hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 57px var(--gutter) 49px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-sunken);
+      text-align: center;
+    }
+
+    .logo {
+      width: 152px;
+      height: 152px;
+    }
+
+    .hero h1 {
+      margin: 20px 0 0;
+      color: var(--fg-strong);
+      font-size: 56px;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .summary {
+      max-width: 46ch;
+      margin: 18px 0 0;
+      color: var(--fg-muted);
+      font-size: 19px;
+      line-height: 1.55;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 36px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      height: 52px;
+      padding: 0 28px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-raised);
+      color: var(--fg);
+      font-size: 18px;
+      font-weight: 600;
+      text-decoration: none;
+      transition:
+        background-color var(--transition),
+        border-color var(--transition),
+        color var(--transition);
+    }
+
+    .button:hover {
+      border-color: var(--border-strong);
+      background: var(--bg-hover);
+      color: var(--fg-strong);
+    }
+
+    .button:active {
+      background: var(--bg-active);
+    }
+
+    .button--download {
+      border-color: var(--green);
+      background: var(--green-muted);
+      color: var(--green-bright);
+    }
+
+    .button--download:hover {
+      border-color: var(--green-bright);
+      background: var(--green-muted);
+    }
+
+    .button--download:active {
+      background: var(--bg-hover);
+    }
+
+    .platforms {
+      margin: 16px 0 0;
+      color: var(--fg-faint);
+      font-size: 14px;
+    }
+
+    /* Features */
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 20px;
+      max-width: var(--page-width);
+      margin: 0 auto;
+      padding: 56px var(--gutter) 72px;
+      list-style: none;
+    }
+
+    .feature {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-large);
+      background: var(--bg-panel);
+      transition: border-color var(--transition);
+    }
+
+    .feature:hover {
+      border-color: var(--border-strong);
+    }
+
+    .shot {
+      position: relative;
+      display: block;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-sunken);
+    }
+
+    .shot:focus-visible {
+      outline-offset: -2px;
+    }
+
+    .shot img {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 10;
+    }
+
+    /* Shows that the screenshot opens at full size. */
+    .shot-hint {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      background: var(--bg-raised);
+      color: var(--fg);
+      opacity: 0;
+      transition: opacity var(--transition);
+    }
+
+    .shot:hover .shot-hint,
+    .shot:focus-visible .shot-hint {
+      opacity: 1;
+    }
+
+    .shot-hint .icon {
+      width: 16px;
+      height: 16px;
+    }
+
+    .feature h2 {
+      margin: 18px 18px 0;
+      color: var(--fg-strong);
+      font-size: 17px;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    .feature p {
+      margin: 8px 18px 20px;
+      color: var(--fg-muted);
+      font-size: 14.5px;
+      line-height: 1.6;
+    }
+
+    .feature code {
+      color: var(--accent-bright);
+      font-family: inherit;
+    }
+
+    /* Footer */
+
+    .footer {
+      max-width: var(--page-width);
+      margin: 0 auto;
+      padding: 28px var(--gutter) 40px;
+      border-top: 1px solid var(--border);
+      color: var(--fg-faint);
+      font-size: 14px;
+    }
+
+    @media (max-width: 1180px) {
+      .features {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 860px) {
+      .features {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      :root {
+        --gutter: 16px;
+      }
+
+      .hero {
+        padding-block: 33px 29px;
+      }
+
+      .logo {
+        width: 112px;
+        height: 112px;
+      }
+
+      .hero h1 {
+        font-size: 40px;
+      }
+
+      .summary {
+        font-size: 17px;
+      }
+
+      .features {
+        grid-template-columns: minmax(0, 1fr);
+        padding-block: 32px 48px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <img class="logo" src="logo.png" width="152" height="152" alt="">
+    <h1>GitEagle</h1>
+    <p class="summary">A desktop viewer for Git repositories: branches, history, diffs, blame and more...</p>
+    <div class="actions">
+      <a class="button button--download" href="https://github.com/diath/giteagle/releases">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 2.5v8 M4.5 7.5L8 11l3.5-3.5 M3 13.5h10" />
+        </svg>
+        Download
+      </a>
+      <a class="button" href="https://github.com/diath/giteagle">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5.5 4L1.5 8l4 4 M10.5 4l4 4-4 4" />
+        </svg>
+        Source
+      </a>
+    </div>
+    <p class="platforms">Windows installer and Linux AppImage · Free and open source</p>
+  </header>
+
+  <main>
+    <ul class="features">
+      <li class="feature">
+        <a class="shot" href="screenshots/history.webp" target="_blank" rel="noopener" aria-label="Open the History screenshot">
+          <img src="screenshots/thumbs/history.webp" width="800" height="500" alt="The commit list, with unpushed commits and uncommitted changes at the top">
+          <span class="shot-hint"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4 M13.5 2.5L7.5 8.5 M12 9.5v4H2.5V4h4" /></svg></span>
+        </a>
+        <h2>History</h2>
+        <p>Commits newest first, with the ones not pushed yet marked and uncommitted changes on top. Every repository opens in a tab of its own.</p>
+      </li>
+
+      <li class="feature">
+        <a class="shot" href="screenshots/diffs.webp" target="_blank" rel="noopener" aria-label="Open the Diffs screenshot">
+          <img src="screenshots/thumbs/diffs.webp" width="800" height="500" alt="A commit's diff with syntax highlighting and a tree of the changed files" loading="lazy">
+          <span class="shot-hint"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4 M13.5 2.5L7.5 8.5 M12 9.5v4H2.5V4h4" /></svg></span>
+        </a>
+        <h2>Diffs</h2>
+        <p>Syntax-highlighted diffs that mark the words that changed, with a tree of the changed files and hidden lines a click away.</p>
+      </li>
+
+      <li class="feature">
+        <a class="shot" href="screenshots/blame.webp" target="_blank" rel="noopener" aria-label="Open the Blame screenshot">
+          <img src="screenshots/thumbs/blame.webp" width="800" height="500" alt="A file with the commit and author that last changed each line" loading="lazy">
+          <span class="shot-hint"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4 M13.5 2.5L7.5 8.5 M12 9.5v4H2.5V4h4" /></svg></span>
+        </a>
+        <h2>Blame</h2>
+        <p>See the commit that last changed each line, following renames, and step back to the blame from before any change.</p>
+      </li>
+
+      <li class="feature">
+        <a class="shot" href="screenshots/files.webp" target="_blank" rel="noopener" aria-label="Open the Files screenshot">
+          <img src="screenshots/thumbs/files.webp" width="800" height="500" alt="The repository's folders and files, each with the last commit that changed it" loading="lazy">
+          <span class="shot-hint"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4 M13.5 2.5L7.5 8.5 M12 9.5v4H2.5V4h4" /></svg></span>
+        </a>
+        <h2>Files</h2>
+        <p>Browse the repository with the last commit that changed each file, then open a file, its history or its blame.</p>
+      </li>
+
+      <li class="feature">
+        <a class="shot" href="screenshots/search.webp" target="_blank" rel="noopener" aria-label="Open the Search screenshot">
+          <img src="screenshots/thumbs/search.webp" width="800" height="500" alt="The commit list filtered to one author's commits" loading="lazy">
+          <span class="shot-hint"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4 M13.5 2.5L7.5 8.5 M12 9.5v4H2.5V4h4" /></svg></span>
+        </a>
+        <h2>Search</h2>
+        <p>Find commits by text, or narrow them down with <code>author:</code>, <code>message:</code>, <code>file:</code> and <code>since:</code>.</p>
+      </li>
+
+      <li class="feature">
+        <a class="shot" href="screenshots/branches.webp" target="_blank" rel="noopener" aria-label="Open the Branches screenshot">
+          <img src="screenshots/thumbs/branches.webp" width="800" height="500" alt="The branch switcher listing local and remote branches" loading="lazy">
+          <span class="shot-hint"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4 M13.5 2.5L7.5 8.5 M12 9.5v4H2.5V4h4" /></svg></span>
+        </a>
+        <h2>Branches</h2>
+        <p>Switch branches like <code>git checkout</code>: changes that don't conflict carry over, and fetch, pull and push are one click away.</p>
+      </li>
+
+      <li class="feature">
+        <a class="shot" href="screenshots/pick-hunks.webp" target="_blank" rel="noopener" aria-label="Open the Pick Hunks screenshot">
+          <img src="screenshots/thumbs/pick-hunks.webp" width="800" height="500" alt="Committing changes hunk by hunk, with Pick, Skip and Skip Rest buttons" loading="lazy">
+          <span class="shot-hint"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4 M13.5 2.5L7.5 8.5 M12 9.5v4H2.5V4h4" /></svg></span>
+        </a>
+        <h2>Pick hunks</h2>
+        <p>Commit whole files, or go through the changes hunk by hunk as with <code>git add --patch</code>, using the Y, N and Q keys.</p>
+      </li>
+
+      <li class="feature">
+        <a class="shot" href="screenshots/squash.webp" target="_blank" rel="noopener" aria-label="Open the Squash screenshot">
+          <img src="screenshots/thumbs/squash.webp" width="800" height="500" alt="Squashing two unpushed commits into an earlier one" loading="lazy">
+          <span class="shot-hint"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4 M13.5 2.5L7.5 8.5 M12 9.5v4H2.5V4h4" /></svg></span>
+        </a>
+        <h2>Reword, squash and drop</h2>
+        <p>Tidy up unpushed commits as <code>git rebase -i</code> would. If any commit would conflict, nothing changes.</p>
+      </li>
+
+      <li class="feature">
+        <a class="shot" href="screenshots/cherry-pick.webp" target="_blank" rel="noopener" aria-label="Open the Cherry-pick screenshot">
+          <img src="screenshots/thumbs/cherry-pick.webp" width="800" height="500" alt="Choosing the branches to cherry-pick a commit onto" loading="lazy">
+          <span class="shot-hint"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4 M13.5 2.5L7.5 8.5 M12 9.5v4H2.5V4h4" /></svg></span>
+        </a>
+        <h2>Cherry-pick and revert</h2>
+        <p>Copy commits onto other local branches without checking them out, or revert them. If any branch conflicts, none changes.</p>
+      </li>
+
+      <li class="feature">
+        <a class="shot" href="screenshots/stashes.webp" target="_blank" rel="noopener" aria-label="Open the Stashes screenshot">
+          <img src="screenshots/thumbs/stashes.webp" width="800" height="500" alt="A stash shown as a diff, with Apply, Pop and Delete buttons" loading="lazy">
+          <span class="shot-hint"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4 M13.5 2.5L7.5 8.5 M12 9.5v4H2.5V4h4" /></svg></span>
+        </a>
+        <h2>Stashes</h2>
+        <p>Read each stash as a diff, then apply, pop or drop it. A stash is only applied when it applies cleanly.</p>
+      </li>
+
+      <li class="feature">
+        <a class="shot" href="screenshots/authors.webp" target="_blank" rel="noopener" aria-label="Open the Authors screenshot">
+          <img src="screenshots/thumbs/authors.webp" width="800" height="500" alt="The authors of the project with their commits and lines changed" loading="lazy">
+          <span class="shot-hint"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4 M13.5 2.5L7.5 8.5 M12 9.5v4H2.5V4h4" /></svg></span>
+        </a>
+        <h2>Authors</h2>
+        <p>Everyone who worked on the branch, with their commits, the lines they added and removed, and when they were last active.</p>
+      </li>
+
+      <li class="feature">
+        <a class="shot" href="screenshots/themes.webp" target="_blank" rel="noopener" aria-label="Open the Themes screenshot">
+          <img src="screenshots/thumbs/themes.webp" width="800" height="500" alt="The same diff in the four themes" loading="lazy">
+          <span class="shot-hint"><svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 2.5h4v4 M13.5 2.5L7.5 8.5 M12 9.5v4H2.5V4h4" /></svg></span>
+        </a>
+        <h2>Themes</h2>
+        <p>Dark (Black), Dark (Brown), Light (Beige) and Light (White), applied as soon as you choose one.</p>
+      </li>
+    </ul>
+  </main>
+
+  <footer class="footer">
+    GitEagle is open source under the MIT License.
+  </footer>
+</body>
+</html>
