@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref } from 'vue'
 
-import type { FontSize, ThemeName } from '../api'
+import type { BlameBackend, FontSize, ThemeName } from '../api'
 import { changeSettings, settings } from '../stores/settings'
 import { FONT_SIZE_SCALES } from '../theme/scale'
 import { useEscape } from '../utils/escape'
@@ -30,6 +30,11 @@ const FONT_SIZES = [
   fontSizeOption('extraLarge', 'Extra large'),
 ]
 
+const BLAME_BACKENDS: { value: BlameBackend; label: string }[] = [
+  { value: 'systemGit', label: 'System git (fast)' },
+  { value: 'git2', label: 'git2 (slow)' },
+]
+
 /** The most projects the Recent menu remembers; more would be hard to scan. */
 const MAX_RECENT_LIMIT = 50
 
@@ -49,6 +54,11 @@ const fontSize = computed({
 const recentLimit = computed({
   get: () => settings.recentLimit,
   set: (recentLimit: number) => changeSettings({ recentLimit }),
+})
+
+const blameBackend = computed({
+  get: () => settings.blameBackend,
+  set: (blameBackend: BlameBackend) => changeSettings({ blameBackend }),
 })
 
 useEscape(() => emit('close'))
@@ -86,6 +96,10 @@ onMounted(async () => {
           <div class="setting">
             <span class="setting-label">Recent projects to remember</span>
             <NumberField v-model="recentLimit" :min="1" :max="MAX_RECENT_LIMIT" label="Recent projects to remember" />
+          </div>
+          <div class="setting">
+            <span class="setting-label">Blame backend</span>
+            <SelectField v-model="blameBackend" class="select" :options="BLAME_BACKENDS" label="Blame backend" />
           </div>
         </fieldset>
 

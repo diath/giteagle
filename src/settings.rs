@@ -13,6 +13,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{Map, Value, json};
 
 use crate::error::{AppError, AppResult, ErrorKind};
+use crate::git::blame::BlameBackend;
 use crate::project::lock;
 
 pub const FILE_NAME: &str = "settings.json";
@@ -43,6 +44,8 @@ pub const RECENT_PROJECTS: Key<Vec<String>> = Key::new("recentProjects");
 pub const OPEN_PROJECTS: Key<Vec<String>> = Key::new("openProjects");
 /// The folder of the project in the shown tab, or empty for a tab without one.
 pub const ACTIVE_PROJECT: Key<String> = Key::new("activeProject");
+/// What finds who last changed each line of a file.
+pub const BLAME_BACKEND: Key<BlameBackend> = Key::new("blameBackend");
 
 /// Every setting there is, with its default. The frontend reads and changes
 /// them all, so its own settings are listed here too.
@@ -55,6 +58,7 @@ static DEFAULTS: LazyLock<Map<String, Value>> = LazyLock::new(|| {
         (RECENT_PROJECTS.name, json!([])),
         (OPEN_PROJECTS.name, json!([])),
         (ACTIVE_PROJECT.name, json!("")),
+        (BLAME_BACKEND.name, json!("systemGit")),
     ]
     .into_iter()
     .map(|(name, value)| (name.to_string(), value))
@@ -221,6 +225,7 @@ mod tests {
         assert!(settings.get(&RECENT_PROJECTS).is_empty());
         assert!(settings.get(&OPEN_PROJECTS).is_empty());
         assert_eq!(settings.get(&ACTIVE_PROJECT), "");
+        assert_eq!(settings.get(&BLAME_BACKEND), BlameBackend::SystemGit);
     }
 
     #[test]

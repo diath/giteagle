@@ -2,7 +2,22 @@ mod common;
 
 use common::TempRepo;
 use giteagle_lib::error::ErrorKind;
-use giteagle_lib::git::blame::{FileBlame, blame_file};
+use giteagle_lib::git::blame::{BlameBackend, FileBlame, blame_file};
+
+/// Blames with the system git and with git2, which must agree.
+fn blame(repo: &TempRepo, id: &str, path: &str) -> FileBlame {
+    let with_git = blame_file(
+        &repo.repository,
+        BlameBackend::SystemGit,
+        repo.path(),
+        id,
+        path,
+    );
+    let with_git2 = blame_file(&repo.repository, BlameBackend::Git2, repo.path(), id, path);
+    let with_git = with_git.expect("blame with the system git");
+    assert_eq!(with_git, with_git2.expect("blame with git2"));
+    with_git
+}
 
 /// Each line's commit subject, in line order.
 fn subjects_by_line(blame: &FileBlame) -> Vec<&str> {
@@ -23,7 +38,7 @@ fn each_line_is_credited_to_the_commit_that_last_changed_it() {
     repo.commit_file("a.txt", "one\nTWO\nthree\n", "Shout two");
     let head = repo.commit_file("a.txt", "one\nTWO\nthree\nfour\n", "Add four");
 
-    let blame = blame_file(&repo.repository, &head.to_string(), "a.txt").unwrap();
+    let blame = blame(&repo, &head.to_string(), "a.txt");
 
     assert_eq!(
         subjects_by_line(&blame),
@@ -42,7 +57,7 @@ fn later_commits_are_ignored() {
     let first = repo.commit_file("a.txt", "one\ntwo\n", "Add a");
     repo.commit_file("a.txt", "one\nchanged\n", "Change two");
 
-    let blame = blame_file(&repo.repository, &first.to_string(), "a.txt").unwrap();
+    let blame = blame(&repo, &first.to_string(), "a.txt");
 
     assert_eq!(subjects_by_line(&blame), ["Add a", "Add a"]);
     assert_eq!(blame.hunks.len(), 1);
@@ -54,7 +69,7 @@ fn changed_lines_lead_to_the_version_before_the_change() {
     let added = repo.commit_file("a.txt", "one\ntwo\nthree\nfour\n", "Add a");
     let head = repo.commit_file("a.txt", "zero\none\ntwo\nTHREE\nfour\n", "Change a");
 
-    let blame = blame_file(&repo.repository, &head.to_string(), "a.txt").unwrap();
+    let blame = blame(&repo, &head.to_string(), "a.txt");
 
     assert_eq!(
         subjects_by_line(&blame),
@@ -81,7 +96,7 @@ fn renames_are_followed() {
     let renamed_lines = lines.replace("line 12\n", "line twelve\n");
     let head = repo.commit_file("new.txt", &renamed_lines, "Rename and change");
 
-    let blame = blame_file(&repo.repository, &head.to_string(), "new.txt").unwrap();
+    let blame = blame(&repo, &head.to_string(), "new.txt");
 
     let subjects = subjects_by_line(&blame);
     assert_eq!(subjects[..11], ["Add old"; 11]);
@@ -99,8 +114,10 @@ fn only_text_files_in_the_commit_can_be_blamed() {
     let head = repo.commit_file("a.txt", "a\n", "Add files");
     let id = head.to_string();
 
-    let binary = blame_file(&repo.repository, &id, "image.bin").unwrap_err();
-    assert_eq!(binary.kind, ErrorKind::InvalidInput);
-    let missing = blame_file(&repo.repository, &id, "missing.txt").unwrap_err();
-    assert_eq!(missing.kind, ErrorKind::NotFound);
+    for backend in [BlameBackend::SystemGit, BlameBackend::Git2] {
+        let binary = blame_file(&repo.repository, backend, repo.path(), &id, "image.bin");
+        assert_eq!(binary.unwrap_err().kind, ErrorKind::InvalidInput);
+        let missing = blame_file(&repo.repository, backend, repo.path(), &id, "missing.txt");
+        assert_eq!(missing.unwrap_err().kind, ErrorKind::NotFound);
+    }
 }

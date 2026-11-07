@@ -14,6 +14,7 @@ export const settings = reactive<Settings>({
   recentProjects: [],
   openProjects: [],
   activeProject: '',
+  blameBackend: 'systemGit',
 })
 
 /** Reads the stored settings, and follows the ones the backend changes from then on. */

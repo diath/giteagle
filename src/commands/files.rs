@@ -1,3 +1,5 @@
+use tauri::State;
+
 use super::{SharedState, blocking};
 use crate::error::AppResult;
 use crate::git::blame::{self, FileBlame};
@@ -6,6 +8,7 @@ use crate::git::status::{StatusEntry, working_tree_status};
 use crate::git::{head_commit, open_without_workdir};
 use crate::project::LastCommits;
 use crate::project::ProjectId;
+use crate::settings::{BLAME_BACKEND, Settings};
 
 const FILE_SEARCH_LIMIT: usize = 500;
 
@@ -61,16 +64,18 @@ pub async fn get_file_at(
 #[tauri::command]
 pub async fn get_file_blame(
     state: SharedState<'_>,
+    settings: State<'_, Settings>,
     project: ProjectId,
     id: String,
     path: String,
 ) -> AppResult<FileBlame> {
+    let backend = settings.get(&BLAME_BACKEND);
     blocking(&state, project, move |project| {
         // Blaming diffs every commit that changed the file, which takes a
         // while on a long history, so it gets a handle of its own instead of
         // holding the shared one.
         let repository = open_without_workdir(&project.git_dir)?;
-        blame::blame_file(&repository, &id, &path)
+        blame::blame_file(&repository, backend, &project.workdir, &id, &path)
     })
     .await
 }

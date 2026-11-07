@@ -1,7 +1,9 @@
 //! Runs the system `git` executable for network operations, so fetch, pull,
 //! and push use the same credential helpers, SSH keys, and configuration as
-//! the user's command line.
+//! the user's command line. Blame runs through it too unless the settings
+//! say otherwise, as it is many times faster than libgit2's.
 
+use std::ffi::OsStr;
 use std::path::Path;
 use std::process::{Command, Output, Stdio};
 
@@ -30,6 +32,32 @@ pub fn is_available() -> bool {
 
 /// Runs `git -C <workdir> <arguments>` and returns its combined output.
 pub fn run(workdir: &Path, arguments: &[String], interaction: Interaction) -> AppResult<String> {
+    let output = output(workdir, arguments, interaction)?;
+    if output.status.success() {
+        Ok(combined_output(&output))
+    } else {
+        Err(failure(&output, &combined_output(&output)))
+    }
+}
+
+/// Runs `git -C <workdir> <arguments>` for what it prints to standard
+/// output, e.g. to parse it. Like background work, it fails rather than
+/// asking for anything.
+pub fn read(workdir: &Path, arguments: &[&str]) -> AppResult<Vec<u8>> {
+    let output = output(workdir, arguments, Interaction::Background)?;
+    if output.status.success() {
+        Ok(output.stdout)
+    } else {
+        let details = String::from_utf8_lossy(&output.stderr);
+        Err(failure(&output, details.trim()))
+    }
+}
+
+fn output(
+    workdir: &Path,
+    arguments: &[impl AsRef<OsStr>],
+    interaction: Interaction,
+) -> AppResult<Output> {
     let mut command = command();
     command
         .arg("-C")
@@ -46,23 +74,21 @@ pub fn run(workdir: &Path, arguments: &[String], interaction: Interaction) -> Ap
             command.env("GIT_SSH_COMMAND", "ssh -o BatchMode=yes");
         }
     }
-
-    let output = command
+    command
         .output()
-        .map_err(|error| AppError::new(ErrorKind::Git, format!("Couldn't run git: {error}")))?;
-    if output.status.success() {
-        Ok(combined_output(&output))
-    } else {
-        let details = combined_output(&output);
-        Err(AppError::new(
-            ErrorKind::Git,
-            if details.is_empty() {
-                format!("git exited with {}", output.status)
-            } else {
-                details
-            },
-        ))
-    }
+        .map_err(|error| AppError::new(ErrorKind::Git, format!("Couldn't run git: {error}")))
+}
+
+/// The error for a git run that failed, saying why in `details` if git did.
+fn failure(output: &Output, details: &str) -> AppError {
+    AppError::new(
+        ErrorKind::Git,
+        if details.is_empty() {
+            format!("git exited with {}", output.status)
+        } else {
+            details.to_string()
+        },
+    )
 }
 
 fn command() -> Command {

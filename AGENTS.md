@@ -45,8 +45,9 @@ every one passing.
   `ui/src/stores/settings.ts` repeats the defaults.
 - **`src/external_git.rs`** runs network operations (fetch, pull, push, remote
   deletes) through the system `git`, so the user's credentials and SSH config
-  apply. It sets `GIT_TERMINAL_PROMPT=0` so nothing prompts. Everything else
-  uses git2.
+  apply. It sets `GIT_TERMINAL_PROMPT=0` so nothing prompts. Blame runs
+  through it too unless Settings choose git2, as libgit2's is many times
+  slower. Everything else uses git2.
 - **`src/watcher.rs` and `src/fetcher.rs`** do background work for each
   project and report to the UI through Tauri events:
   - The watcher polls every 3 seconds for outside changes and the working tree
@@ -116,6 +117,7 @@ every one passing.
   in one commit, following renames. A commit's diff blames that commit's
   version, and uncommitted changes and stashes the one they are compared
   with. Each run of lines can step back to the blame from before its change.
+  The system `git` finds it by default; Settings can switch to git2.
 - **Dates** are shown in the local timezone, and lists show the author date.
 
 ## UI rules

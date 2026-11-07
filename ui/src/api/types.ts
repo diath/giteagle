@@ -16,6 +16,9 @@ export type FontSize = 'small' | 'normal' | 'large' | 'extraLarge'
 /** The colors the interface is drawn in. */
 export type ThemeName = 'darkBlack' | 'darkBrown' | 'lightBeige' | 'lightWhite'
 
+/** What finds who last changed each line: the system `git`, which is far faster, or libgit2. */
+export type BlameBackend = 'systemGit' | 'git2'
+
 /** Mirrors the settings and their defaults in `src/settings.rs`. */
 export interface Settings {
   theme: ThemeName
@@ -28,6 +31,7 @@ export interface Settings {
   openProjects: string[]
   /** The folder of the project in the shown tab, or empty for a tab without one. */
   activeProject: string
+  blameBackend: BlameBackend
 }
 
 /** The tabs to show when the window opens. */
