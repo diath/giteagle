@@ -137,21 +137,18 @@ repository and reloads the interface as you edit it.
 
 ## With cargo install
 
-GitEagle isn't on crates.io, and `cargo install --git` can't build it, since
-the interface has to be built with npm first. From a clone, with the
-prerequisites above:
-
 ```sh
-cd ui
-npm ci
-npm run build
-cd ..
-cargo install --path . --locked --features tauri/custom-protocol
+cargo install giteagle --locked
 ```
 
-This puts `giteagle` in `~/.cargo/bin`. The `tauri/custom-protocol` feature
-makes it load the interface built into it instead of looking for a
-development server, as `cargo tauri build` does.
+This builds GitEagle and puts `giteagle` in `~/.cargo/bin`. The crate comes
+with the interface already built, so you don't need Node or the Tauri CLI,
+but you do need Rust 1.91 or newer and the system libraries listed under
+[From source](#from-source). You get the bare executable, without a desktop
+entry or icon.
+
+From a clone, `cargo install --path . --locked` does the same once
+`npm run build` has built the interface in `ui/`.
 
 ## Running
 
