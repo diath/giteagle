@@ -24,6 +24,9 @@ Run these from the repository root:
 - `npm run typecheck`, `npm run lint` and `npm run build` check the frontend.
   Run them in `ui/`.
 
+Cargo builds embed `ui/dist`, so run `npm run build` in `ui/` before the
+first cargo command.
+
 CI (`.github/workflows/pr.yml`) runs all of these on Linux and Windows, so keep
 every one passing.
 
@@ -31,7 +34,9 @@ every one passing.
 
 - **One Cargo package at the root.** There is no workspace and no `src-tauri/`.
   `build.rs`, `tauri.conf.json`, `icons/` and `capabilities/` sit next to
-  `Cargo.toml`.
+  `Cargo.toml`. The release workflow publishes it to crates.io, and `include`
+  in `Cargo.toml` lists what the crate carries, so add any new file the build
+  reads there.
 - **`src/git/`** holds all repository logic over git2. Its functions take a
   `&Repository` and return serializable structs. It never touches Tauri.
 - **`src/commands/`** holds thin `#[tauri::command]` wrappers. Register new

@@ -3,9 +3,33 @@ name = "giteagle"
 version = "0.1.0"
 description = "Desktop Git repository viewer"
 license = "MIT"
+repository = "https://github.com/diath/giteagle"
+keywords = ["git", "viewer", "desktop", "gui", "tauri"]
+categories = ["development-tools", "gui"]
 edition = "2024"
 rust-version = "1.91"
-publish = false
+# The published crate carries the built interface, so installing it doesn't
+# need Node, and the capability schemas, so tauri-build finds them unchanged
+# instead of writing into the package, which cargo publish rejects. Git
+# ignores both, so cargo only packages them when they are listed here.
+include = [
+    "/build.rs",
+    "/capabilities",
+    "/gen/schemas",
+    "/icons",
+    "/src",
+    "/tauri.conf.json",
+    "/ui/dist",
+    "/LICENSE",
+    "/README.md",
+]
+
+[features]
+default = ["custom-protocol"]
+# Serves the interface built into the binary rather than the dev server, so a
+# plain cargo build or cargo install makes a working app. `cargo tauri dev`
+# turns it off.
+custom-protocol = ["tauri/custom-protocol"]
 
 [lib]
 # A distinct library name avoids output file collisions with the binary on Windows.

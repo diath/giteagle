@@ -52,7 +52,11 @@ def build_demo_repository():
 
 def dump_responses(workdir, searches):
     dump = WORK / "dump.json"
-    run(["cargo", "run", "--quiet", "--example", "docs_dump", "--", workdir, dump, *searches])
+    # The dump never shows a window, so it needn't embed the built interface.
+    run([
+        "cargo", "run", "--quiet", "--no-default-features", "--example", "docs_dump",
+        "--", workdir, dump, *searches,
+    ])
     return dump
 
 
