@@ -6,6 +6,8 @@ on:
 
 permissions:
   contents: write
+  # Lets the crates.io trusted publishing step get a token.
+  id-token: write
 
 jobs:
   release:
@@ -64,3 +66,17 @@ jobs:
           releaseBody: GitEagle v__VERSION__
           releaseDraft: false
           prerelease: false
+
+      # The crate is published once, from the Linux job. The build above has
+      # made ui/dist and gen/schemas, which the crate carries, and the stamped
+      # version leaves Cargo.toml modified, hence --allow-dirty.
+      - name: Authenticate with crates.io
+        if: runner.os == 'Linux'
+        id: crates-io-auth
+        uses: rust-lang/crates-io-auth-action@v1
+
+      - name: Publish to crates.io
+        if: runner.os == 'Linux'
+        run: cargo publish --allow-dirty
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-io-auth.outputs.token }}
