@@ -1,0 +1,84 @@
+{
+  "window": [1280, 800],
+  "zoom": 2,
+  "holdMs": 6500,
+  "tabs": ["/home/mira/code/lumen", "/home/mira/code/atlas-api", "/home/mira/dotfiles"],
+  "recent": [
+    "/home/mira/code/lumen",
+    "/home/mira/code/atlas-api",
+    "/home/mira/dotfiles",
+    "/home/mira/code/field-notes"
+  ],
+  "searches": ["author:priya"],
+  "screens": {
+    "history": {
+      "steps": [],
+      "thumbnail": [0, 0, 800]
+    },
+    "diffs": {
+      "steps": [
+        "clicktext:.commit-entry=>Add live reload to the dev server",
+        "clicktext:.tree-row=>render.rs"
+      ],
+      "thumbnail": [0, 50, 800]
+    },
+    "blame": {
+      "steps": [
+        "clicktext:.tabs .tab=>Files",
+        "clicktext:.files-tab .row=>src",
+        "clicktext:.files-tab .row=>render.rs",
+        "click:[title=\"Show who last changed each line\"]"
+      ],
+      "thumbnail": [0, 50, 800]
+    },
+    "files": {
+      "steps": ["clicktext:.tabs .tab=>Files"],
+      "thumbnail": [0, 95, 800]
+    },
+    "search": {
+      "steps": ["type:.search-field input=>author:priya", "enter:.search-field input"],
+      "thumbnail": [0, 40, 800]
+    },
+    "branches": {
+      "steps": ["click:[title=\"Switch to another branch\"]"],
+      "thumbnail": [0, 50, 800]
+    },
+    "pick-hunks": {
+      "steps": ["click:[title^=\"Commit (Pick Hunks)\"]", "key:y", "key:n", "key:y", "key:y"],
+      "thumbnail": [40, 12, 800]
+    },
+    "squash": {
+      "steps": [
+        "click:[title^=\"Squash other\"]@2",
+        "clicktext:label.row=>Fix the reading time",
+        "clicktext:label.row=>Show reading times"
+      ],
+      "thumbnail": [146, 78, 1000]
+    },
+    "cherry-pick": {
+      "steps": [
+        "click:[title^=\"Cherry-pick\"]@4",
+        "clicktext:label.branch=>feature/rss-feed"
+      ],
+      "thumbnail": [285, 178, 720]
+    },
+    "stashes": {
+      "steps": ["clicktext:.tabs .tab=>Stash", "click:.stash-entry"],
+      "thumbnail": [0, 50, 800]
+    },
+    "authors": {
+      "steps": ["clicktext:.tabs .tab=>Authors"],
+      "thumbnail": [0, 95, 800]
+    }
+  },
+  "composites": {
+    "themes": {
+      "themes": ["darkBlack", "darkBrown", "lightBeige", "lightWhite"],
+      "steps": [
+        "clicktext:.commit-entry=>Add live reload to the dev server",
+        "clicktext:.tree-row=>render.rs"
+      ],
+      "thumbnail": [0, 50, 800]
+    }
+  }
+}

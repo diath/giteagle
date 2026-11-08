@@ -55,6 +55,11 @@ every one passing.
   - The fetcher fetches when a project opens and then every 5 minutes.
 - **`tests/`** holds integration tests that build temporary repositories with
   `TempRepo` from `tests/common`.
+- **`docs/`** holds the project website, which GitHub Pages serves.
+  `python3 tools/screenshots/generate.py` remakes its screenshots of a
+  made-up repository from the backend's responses, which the `docs_dump`
+  example records. A command that a screenshot needs must be dumped there
+  too.
 - **`ui/src/api/`** holds typed `invoke` wrappers and DTO types. The DTOs mirror
   the Rust structs (serde `camelCase`) by hand, so change both sides together.
 - **`ui/src/stores/`** holds the app state:

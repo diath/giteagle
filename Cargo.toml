@@ -11,6 +11,12 @@ publish = false
 # A distinct library name avoids output file collisions with the binary on Windows.
 name = "giteagle_lib"
 
+# Records the backend's responses for the website's screenshots; see
+# tools/screenshots/generate.py.
+[[example]]
+name = "docs_dump"
+path = "tools/screenshots/dump.rs"
+
 [build-dependencies]
 tauri-build = { version = "2.7", features = [] }
 
