@@ -17,6 +17,7 @@ export type BusyOperation =
   | 'reword'
   | 'squash'
   | 'drop'
+  | 'move'
 
 const NON_CLEAN_LABELS: Record<Exclude<Overview['state'], 'clean'>, string> = {
   merge: 'Merge in progress',
@@ -127,7 +128,7 @@ export function createRepo(api: ProjectApi, refreshWorkingTree: () => Promise<vo
       // Both act on the pushed commits of the checked-out branch.
       canCherryPick: idle && clean && onBranch,
       canRevert: idle && clean && onBranch,
-      // Rewording, squashing and dropping act on its unpushed commits.
+      // Rewording, squashing, dropping and moving act on its unpushed commits.
       canRewrite: idle && clean && onBranch,
       notice: overview.state === 'clean' ? null : NON_CLEAN_LABELS[overview.state],
     }

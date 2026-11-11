@@ -111,15 +111,21 @@ every one passing.
   - Revert adds a revert commit, or reverts in the working tree and stages
     the result. If anything is staged, it conflicts, or it would overwrite
     local changes, nothing changes.
-- **Reword, squash and drop** are offered only on unpushed commits after the
-  last merge, and all ask for confirmation first. As in `git rebase -i`, the
-  commits after the changed one are recreated on top of it, in memory, and
-  only the current branch moves. If any commit conflicts or local changes
-  would be overwritten, nothing changes.
+- **Reword, squash, drop and moving** are offered only on unpushed commits
+  after the last merge. As in `git rebase -i`, the commits after the changed
+  one are recreated on top of it, in memory, and only the current branch
+  moves. If any commit conflicts or local changes would be overwritten,
+  nothing changes.
+  - Reword, squash and drop ask for confirmation first.
   - Reword changes only the message and never touches the working tree.
   - Squash folds the chosen commits into the one it was started from, which
     keeps its place and its author. Ctrl+Click on it starts checking them
     in the commit list instead.
+  - Up and Down swap a commit with the next newer or older one, without
+    asking first. They are offered only in the full commit list, not in
+    search results or the history of a file. The branch must end with the
+    same files, so the working tree is never touched, and commits that undo
+    each other's changes can't swap.
 - **Committing** is offered on the uncommitted changes row, onto the current
   branch but never a detached HEAD. The commit holds HEAD's files with only
   the chosen changes, whatever is staged. Afterwards the index holds the

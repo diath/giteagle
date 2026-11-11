@@ -74,6 +74,7 @@ const emptyText = computed(() => {
       :active="active"
       :upstream="repo.overview?.head.upstream ?? null"
       :empty-text="emptyText"
+      :reorderable="!appliedQuery"
       @open="(commit, sequence) => openCommit(commit.id, { sequence })"
     >
       <template #top>

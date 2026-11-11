@@ -72,9 +72,10 @@
 - **[Pick hunks](docs/screenshots/pick-hunks.webp)** - You can commit whole
   files, or you can select the changes hunk by hunk. The Y, N and Q keys have
   the same function as in `git add --patch`.
-- **[Reword, squash and drop](docs/screenshots/squash.webp)** - You can change
-  the messages of unpushed commits, squash them or drop them, as in
-  `git rebase -i`. If a commit causes a conflict, nothing changes.
+- **[Reword, squash, drop and move](docs/screenshots/squash.webp)** - You can
+  change the messages of unpushed commits, squash them, drop them or move
+  them up and down, as in `git rebase -i`. If a commit causes a conflict,
+  nothing changes.
 - **[Cherry-pick and revert](docs/screenshots/cherry-pick.webp)** - You can
   copy commits to other local branches without a checkout, or you can revert
   them. If a conflict occurs on one branch, no branch changes.
@@ -211,8 +212,8 @@ there are no tabs to open, it shows a tab that asks for a repository.
 GitEagle is mainly a viewer. At this time, it does not have these features:
 
 - Rebase onto a different branch.
-- The functions of `git rebase -i` other than reword, squash and drop. For
-  example, you cannot change the order of commits or edit a commit.
+- The functions of `git rebase -i` other than reword, squash, drop and
+  changing the order of commits. For example, you cannot edit a commit.
 - Merges, and an interface to resolve conflicts.
 - Staging. GitEagle makes commits from the working tree, not from the index.
 - Force push.

@@ -1,7 +1,8 @@
-//! Rewording, squashing and dropping the unpushed commits of the current
-//! branch. As with `git rebase -i`, the commits after the one that changes
-//! are recreated on top of it. That happens in memory first, so a conflict
-//! anywhere leaves the branch, the index and the working tree as they were.
+//! Rewording, squashing, dropping and moving the unpushed commits of the
+//! current branch. As with `git rebase -i`, the commits after the one that
+//! changes are recreated on top of it. That happens in memory first, so a
+//! conflict anywhere leaves the branch, the index and the working tree as
+//! they were.
 //!
 //! Only commits after the last pushed one qualify, so nothing others may
 //! have fetched is rewritten, and only those after the last merge, so no
@@ -10,7 +11,7 @@
 use std::collections::HashSet;
 
 use git2::{Commit, Oid, Repository, Signature, Tree};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::history::unpushed_commits;
 use super::overview::{ensure_clean_state, upstream_of};
@@ -130,6 +131,31 @@ impl<'r> Line<'r> {
             "{short} is not on the current branch."
         )))
     }
+
+    /// Why the oldest commit of the line, `short`, can't move further down.
+    fn floor_reason(&self, short: &str) -> String {
+        let boundary = short_id(self.boundary.id());
+        if !self.unpushed.contains(&self.boundary.id()) {
+            format!(
+                "{short} can't move below {boundary}, which has already been pushed to {}.",
+                self.upstream
+            )
+        } else if self.boundary.parent_count() > 1 {
+            format!("{short} can't move below the merge commit {boundary}.")
+        } else {
+            format!("{short} can't move below {boundary}, the first commit in the history.")
+        }
+    }
+}
+
+/// Which way a commit moves in the history of its branch.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum MoveDirection {
+    /// After the next newer commit.
+    Up,
+    /// Before the next older commit.
+    Down,
 }
 
 /// One commit of the rewritten line: the original commits whose changes it
@@ -322,6 +348,93 @@ pub fn drop_commit(repository: &Repository, id: &str) -> AppResult<()> {
         &format!("Dropping {short}"),
         &format!("drop: {subject}"),
     )
+}
+
+/// Swaps a commit with the next newer or older one, like swapping two lines
+/// in `git rebase -i`, and returns the moved commit's new id. The branch
+/// has to end with the same files as before, so the working tree and the
+/// index are never touched, and commits that undo each other's changes
+/// can't swap places.
+pub fn move_commit(
+    repository: &Repository,
+    id: &str,
+    direction: MoveDirection,
+) -> AppResult<String> {
+    ensure_clean_state(repository)?;
+    let target = find_commit(repository, id)?;
+    let short = short_id(target.id());
+    let line = Line::of_current_branch(repository)?;
+    let position = line.position(repository, &target)?;
+    let older_position = match direction {
+        MoveDirection::Up if position + 1 == line.commits.len() => {
+            return Err(AppError::invalid_state(format!(
+                "{short} is the newest commit, so it can't move up."
+            )));
+        }
+        MoveDirection::Up => position,
+        MoveDirection::Down if position == 0 => {
+            return Err(AppError::invalid_state(line.floor_reason(&short)));
+        }
+        MoveDirection::Down => position - 1,
+    };
+    let older = &line.commits[older_position];
+    let newer = &line.commits[older_position + 1];
+    let other = short_id(match direction {
+        MoveDirection::Up => newer.id(),
+        MoveDirection::Down => older.id(),
+    });
+    let committer = user_signature(repository, "Moving")?;
+    let conflict_error = |_: &Commit, paths: &[String]| {
+        AppError::new(
+            ErrorKind::Conflict,
+            format!(
+                "Swapping {short} and {other} makes their changes conflict ({}), so nothing \
+                 was moved.",
+                list_paths(paths)
+            ),
+        )
+    };
+
+    let swapped = replay(
+        repository,
+        older.parent(0)?,
+        &[Step::keep(newer), Step::keep(older)],
+        &committer,
+        conflict_error,
+    )?;
+    if swapped.tree_id() != newer.tree_id() {
+        return Err(AppError::new(
+            ErrorKind::Conflict,
+            format!(
+                "Swapping {short} and {other} would change the files of the branch, as one \
+                 undoes changes of the other, so nothing was moved."
+            ),
+        ));
+    }
+    let moved = match direction {
+        MoveDirection::Up => swapped.id(),
+        MoveDirection::Down => swapped.parent_id(0)?,
+    };
+    // The files are as they were from here on, so the later commits are
+    // recreated with their own trees and can't conflict.
+    let later: Vec<Step> = line.commits[older_position + 2..]
+        .iter()
+        .map(Step::keep)
+        .collect();
+    let new_head = replay(repository, swapped, &later, &committer, conflict_error)?;
+    let subject = split_message(&commit_message(&target)).0;
+    let way = match direction {
+        MoveDirection::Up => "up",
+        MoveDirection::Down => "down",
+    };
+    finish(
+        repository,
+        &line,
+        &new_head,
+        &format!("Moving {short}"),
+        &format!("move {way}: {subject}"),
+    )?;
+    Ok(moved.to_string())
 }
 
 /// Makes the commits of `steps` one after another on top of `base`, with the

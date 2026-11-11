@@ -1,8 +1,17 @@
-<script setup lang="ts">
-import { computed, ref } from 'vue'
+<script lang="ts">
+/** Which way an unpushed commit can move in the list. */
+export interface Movable {
+  up: boolean
+  down: boolean
+}
+</script>
 
-import type { CommitSummary } from '../api'
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+
+import { errorMessage, type CommitSummary, type MoveDirection } from '../api'
 import { useProject } from '../stores/project'
+import { showToast } from '../stores/toasts'
 import { joinNames } from '../utils/authors'
 import { formatAbsolute, formatRelative } from '../utils/dates'
 import AppIcon from './AppIcon.vue'
@@ -13,14 +22,23 @@ import RevertDialog from './RevertDialog.vue'
 import RewordDialog from './RewordDialog.vue'
 import SquashDialog from './SquashDialog.vue'
 
-const props = defineProps<{ commit: CommitSummary }>()
-const emit = defineEmits<{ open: [] }>()
+const props = defineProps<{
+  commit: CommitSummary
+  /** Set to offer Up and Down, which are enabled the ways the commit can move. */
+  movable?: Movable | null
+  /** Set when the commit was just moved this way, so the entry takes the focus. */
+  focusMove?: MoveDirection | null
+}>()
+const emit = defineEmits<{ open: []; moved: [id: string, direction: MoveDirection]; focused: [] }>()
 
 const {
+  api,
   canSelect,
   capabilities,
   commitSelection,
   isChecked,
+  refreshEverything,
+  repo,
   startCherryPickSelection,
   startSquashSelection,
   toggleChecked,
@@ -31,6 +49,9 @@ const SQUASH_TITLE = 'Squash other commits into this one\nCtrl+Click to check th
 
 const expanded = ref(false)
 const dialog = ref<'reword' | 'squash' | 'drop' | 'cherryPick' | 'revert' | null>(null)
+const entry = ref<HTMLElement | null>(null)
+const upButton = ref<HTMLButtonElement | null>(null)
+const downButton = ref<HTMLButtonElement | null>(null)
 
 /** Whether the row is a checkbox, while commits are checked to act on together. */
 const selectable = computed(() => commitSelection.active && canSelect(props.commit))
@@ -65,10 +86,39 @@ function squash(event: MouseEvent): void {
     dialog.value = 'squash'
   }
 }
+
+/** Moving keeps every change and can be undone the other way, so it doesn't ask first. */
+async function move(direction: MoveDirection): Promise<void> {
+  repo.busy = 'move'
+  let movedId: string
+  try {
+    movedId = await api.moveCommit(props.commit.id, direction)
+  } catch (error) {
+    showToast('error', errorMessage(error))
+    return
+  } finally {
+    repo.busy = null
+  }
+  emit('moved', movedId, direction)
+  await refreshEverything()
+}
+
+// A moved commit comes back as a new entry. The same button gets the focus,
+// or the row when the commit can't move further that way.
+onMounted(() => {
+  if (!props.focusMove) {
+    return
+  }
+  const button = props.focusMove === 'up' ? upButton.value : downButton.value
+  const target = button && !button.disabled ? button : entry.value
+  target?.focus()
+  emit('focused')
+})
 </script>
 
 <template>
   <div
+    ref="entry"
     class="commit-entry"
     :class="{ checked }"
     :role="selectable ? 'checkbox' : 'button'"
@@ -122,6 +172,31 @@ function squash(event: MouseEvent): void {
          unpushed commits. -->
     <div v-if="commit.isPushed !== null" class="actions">
       <template v-if="commit.isPushed === false">
+        <template v-if="movable">
+          <button
+            ref="upButton"
+            class="button button--icon"
+            type="button"
+            :disabled="!capabilities.canRewrite || commitSelection.active || !movable.up"
+            title="Move this commit up, after the newer one"
+            @click.stop="move('up')"
+            @keydown.enter.stop
+          >
+            <AppIcon name="arrowUp" />
+          </button>
+          <button
+            ref="downButton"
+            class="button button--icon"
+            type="button"
+            :disabled="!capabilities.canRewrite || commitSelection.active || !movable.down"
+            title="Move this commit down, before the older one"
+            @click.stop="move('down')"
+            @keydown.enter.stop
+          >
+            <AppIcon name="arrowDown" />
+          </button>
+          <span class="divider" aria-hidden="true"></span>
+        </template>
         <button
           class="button button--icon"
           type="button"
@@ -282,7 +357,7 @@ function squash(event: MouseEvent): void {
   gap: var(--space-2);
 }
 
-/* Sets the commit's own actions apart from Cherry-pick and Revert. */
+/* Sets Up and Down, and the commit's own actions, apart from the others. */
 .divider {
   flex: none;
   width: 1px;

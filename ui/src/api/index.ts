@@ -18,6 +18,7 @@ import type {
   GitHubPage,
   HistoryCursor,
   HistoryPage,
+  MoveDirection,
   Overview,
   PendingChanges,
   PendingSummary,
@@ -109,6 +110,8 @@ export function createProjectApi(project: ProjectId) {
     squashCommits: (id: string, others: string[], message: string) =>
       call<void>('squash_commits', { id, others, message }),
     dropCommit: (id: string) => call<void>('drop_commit', { id }),
+    /** Swaps the commit with its neighbor and resolves to its new id. */
+    moveCommit: (id: string, direction: MoveDirection) => call<string>('move_commit', { id, direction }),
     stashes: () => call<StashSummary[]>('list_stashes'),
     stash: (id: string) => call<StashDetails>('get_stash', { id }),
     saveStash: (message: string, includeUntracked: boolean) =>

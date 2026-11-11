@@ -72,6 +72,7 @@ pub fn run(initial: Option<Repository>) {
             commands::rewrite::reword_commit,
             commands::rewrite::squash_commits,
             commands::rewrite::drop_commit,
+            commands::rewrite::move_commit,
             commands::stashes::list_stashes,
             commands::stashes::get_stash,
             commands::stashes::save_stash,

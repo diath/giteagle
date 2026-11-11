@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 
-import { errorMessage, type CommitSummary, type HistoryCursor, type HistoryPage } from '../api'
+import {
+  errorMessage,
+  type CommitSummary,
+  type HistoryCursor,
+  type HistoryPage,
+  type MoveDirection,
+} from '../api'
 import type { CommitSequence } from '../stores/navigation'
 import { scaled } from '../theme/scale'
 import AppIcon from './AppIcon.vue'
-import CommitEntry from './CommitEntry.vue'
+import CommitEntry, { type Movable } from './CommitEntry.vue'
 
 /** How close to the bottom, in design pixels, the next page starts loading. */
 const PRELOAD_MARGIN = 750
@@ -19,6 +25,11 @@ const props = defineProps<{
   active: boolean
   upstream: string | null
   emptyText: string
+  /**
+   * Whether unpushed commits offer Up and Down. Only a list of every commit
+   * in order does, since a move swaps a commit with its neighbor.
+   */
+  reorderable?: boolean
 }>()
 
 const emit = defineEmits<{ open: [commit: CommitSummary, sequence: CommitSequence] }>()
@@ -36,10 +47,31 @@ let observer: IntersectionObserver | null = null
 /** The commit the list's history starts from; refreshes stay on it. */
 let listHead: string | null = null
 let refreshPending = false
+/**
+ * The commit that was just moved, which comes back with a new id as a new
+ * entry and takes the focus, so the same button can move it on.
+ */
+const moved = ref<{ id: string; direction: MoveDirection } | null>(null)
 
 type Row =
-  | { type: 'commit'; key: string; commit: CommitSummary }
+  | { type: 'commit'; key: string; commit: CommitSummary; movable: Movable | null }
   | { type: 'marker'; key: string; pushed: boolean }
+
+/** Which way an unpushed commit can move, judged by its neighbors in the list. */
+function movableAt(index: number): Movable | null {
+  const commit = commits.value[index]
+  if (!props.reorderable || commit.isPushed !== false) {
+    return null
+  }
+  const newer = index > 0 ? commits.value[index - 1] : null
+  const older = index + 1 < commits.value.length ? commits.value[index + 1] : null
+  // The older neighbor may be on a page that isn't loaded yet.
+  return { up: newer?.isPushed === false, down: older ? older.isPushed === false : !done.value }
+}
+
+function focusMoveFor(commit: CommitSummary): MoveDirection | null {
+  return moved.value?.id === commit.id ? moved.value.direction : null
+}
 
 const rows = computed<Row[]>(() => {
   const result: Row[] = []
@@ -54,7 +86,7 @@ const rows = computed<Row[]>(() => {
         result.push({ type: 'marker', key: `marker-${commit.id}`, pushed: commit.isPushed })
       }
     }
-    result.push({ type: 'commit', key: commit.id, commit })
+    result.push({ type: 'commit', key: commit.id, commit, movable: movableAt(index) })
   })
   return result
 })
@@ -240,7 +272,15 @@ onBeforeUnmount(() => observer?.disconnect())
         <AppIcon :name="row.pushed ? 'check' : 'push'" />
         <span>{{ row.pushed ? `Pushed to ${upstream ?? 'the upstream'}` : 'Not pushed yet' }}</span>
       </div>
-      <CommitEntry v-else :commit="row.commit" @open="emit('open', row.commit, sequence)" />
+      <CommitEntry
+        v-else
+        :commit="row.commit"
+        :movable="row.movable"
+        :focus-move="focusMoveFor(row.commit)"
+        @open="emit('open', row.commit, sequence)"
+        @moved="(id, direction) => (moved = { id, direction })"
+        @focused="moved = null"
+      />
     </template>
 
     <div v-if="error" class="status status--error">

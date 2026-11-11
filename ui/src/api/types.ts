@@ -252,6 +252,9 @@ export interface RewritableCommit {
   authorTime: number
 }
 
+/** Which way a commit moves: after the next newer commit, or before the next older one. */
+export type MoveDirection = 'up' | 'down'
+
 export type EntryKind = 'directory' | 'file' | 'symlink' | 'submodule'
 
 export interface DirectoryEntry {

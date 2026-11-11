@@ -3,9 +3,11 @@ mod common;
 use std::fs;
 
 use common::TempRepo;
-use git2::{Commit, Oid, Status};
+use git2::{Commit, Oid, Signature, Status};
 use giteagle_lib::error::ErrorKind;
-use giteagle_lib::git::rewrite::{drop_commit, reword, rewritable_commits, squash};
+use giteagle_lib::git::rewrite::{
+    MoveDirection, drop_commit, move_commit, reword, rewritable_commits, squash,
+};
 use giteagle_lib::git::short_id;
 use giteagle_lib::git::status::changed_paths;
 
@@ -350,4 +352,204 @@ fn only_unpushed_commits_after_the_last_merge_can_be_changed() {
         .map(|commit| commit.id)
         .collect();
     assert_eq!(listed, [after_merge.to_string()]);
+}
+
+#[test]
+fn moving_a_commit_swaps_it_with_its_neighbour_and_keeps_the_files_and_local_changes() {
+    let repo = TempRepo::new();
+    let base = pushed_base(&repo);
+    repo.write("b.txt", "b\n");
+    let moved = repo.commit_as("Add b", "Other Person", "other@example.com");
+    repo.commit_file("c.txt", "c\n", "Add c");
+    let old_head = repo.commit_file("d.txt", "d\n", "Add d");
+    repo.write("a.txt", "local\n");
+    repo.write("e.txt", "staged\n");
+    repo.stage("e.txt");
+    let local_changes = statuses(&repo);
+
+    let moved_up = move_commit(&repo.repository, &moved.to_string(), MoveDirection::Up).unwrap();
+
+    assert_eq!(messages_since(&repo, base), ["Add d", "Add b", "Add c"]);
+    let tip = head(&repo);
+    assert_eq!(tip.tree_id(), tree_of(&repo, old_head));
+    let rewritten = tip.parent(0).unwrap();
+    assert_eq!(rewritten.id().to_string(), moved_up);
+    let original = repo.repository.find_commit(moved).unwrap();
+    assert_eq!(rewritten.author().name().unwrap(), "Other Person");
+    assert_eq!(rewritten.author().when(), original.author().when());
+    assert_eq!(rewritten.committer().name().unwrap(), "Test User");
+    let below = rewritten.parent(0).unwrap().tree().unwrap();
+    assert!(below.get_name("c.txt").is_some());
+    assert!(below.get_name("b.txt").is_none());
+    assert_eq!(statuses(&repo), local_changes);
+    assert_eq!(read(&repo, "a.txt"), "local\n");
+    assert_eq!(last_reflog_message(&repo), "move up: Add b");
+
+    let moved_down = move_commit(&repo.repository, &moved_up, MoveDirection::Down).unwrap();
+
+    assert_eq!(messages_since(&repo, base), ["Add d", "Add c", "Add b"]);
+    let tip = head(&repo);
+    assert_eq!(tip.tree_id(), tree_of(&repo, old_head));
+    assert_eq!(
+        tip.parent(0).unwrap().parent_id(0).unwrap().to_string(),
+        moved_down
+    );
+    assert_eq!(
+        tree_of(&repo, moved_down.parse().unwrap()),
+        original.tree_id()
+    );
+    assert_eq!(statuses(&repo), local_changes);
+    assert_eq!(last_reflog_message(&repo), "move down: Add b");
+}
+
+#[test]
+fn commits_that_change_different_lines_of_a_file_can_swap() {
+    let repo = TempRepo::new();
+    let base = repo.commit_file("a.txt", "1\n2\n3\n4\n5\n6\n7\n8\n9\n", "Base");
+    repo.set_remote_branch("origin", "main", base);
+    repo.set_upstream("main", Some("origin/main"));
+    repo.commit_file("a.txt", "one\n2\n3\n4\n5\n6\n7\n8\n9\n", "Change one");
+    let moved = repo.commit_file("a.txt", "one\n2\n3\n4\n5\n6\n7\n8\nnine\n", "Change nine");
+
+    let moved = move_commit(&repo.repository, &moved.to_string(), MoveDirection::Down).unwrap();
+
+    assert_eq!(messages_since(&repo, base), ["Change one", "Change nine"]);
+    let moved = repo.repository.find_commit(moved.parse().unwrap()).unwrap();
+    let blob = moved
+        .tree()
+        .unwrap()
+        .get_name("a.txt")
+        .unwrap()
+        .to_object(&repo.repository)
+        .unwrap();
+    assert_eq!(
+        blob.as_blob().unwrap().content(),
+        b"1\n2\n3\n4\n5\n6\n7\n8\nnine\n"
+    );
+    assert_eq!(read(&repo, "a.txt"), "one\n2\n3\n4\n5\n6\n7\n8\nnine\n");
+    assert!(statuses(&repo).is_empty());
+}
+
+#[test]
+fn a_move_past_a_commit_it_builds_on_changes_nothing() {
+    let repo = TempRepo::new();
+    pushed_base(&repo);
+    let first = repo.commit_file("a.txt", "one\n2\n3\n", "Change one");
+    let second = repo.commit_file("a.txt", "uno\n2\n3\n", "Change one again");
+
+    let error =
+        move_commit(&repo.repository, &second.to_string(), MoveDirection::Down).unwrap_err();
+
+    assert_eq!(error.kind, ErrorKind::Conflict);
+    assert_eq!(
+        error.message,
+        format!(
+            "Swapping {} and {} makes their changes conflict (a.txt), so nothing was moved.",
+            short_id(second),
+            short_id(first)
+        )
+    );
+    assert_eq!(repo.head_id(), second);
+    assert_eq!(read(&repo, "a.txt"), "uno\n2\n3\n");
+}
+
+#[test]
+fn commits_that_undo_each_other_cannot_swap() {
+    let repo = TempRepo::new();
+    pushed_base(&repo);
+    let change = repo.commit_file("a.txt", "one\n2\n3\n", "Change one");
+    let undo = repo.commit_file("a.txt", "1\n2\n3\n", "Change one back");
+
+    let error = move_commit(&repo.repository, &change.to_string(), MoveDirection::Up).unwrap_err();
+
+    assert_eq!(error.kind, ErrorKind::Conflict);
+    assert_eq!(
+        error.message,
+        format!(
+            "Swapping {} and {} would change the files of the branch, as one undoes changes \
+             of the other, so nothing was moved.",
+            short_id(change),
+            short_id(undo)
+        )
+    );
+    assert_eq!(repo.head_id(), undo);
+    assert_eq!(read(&repo, "a.txt"), "1\n2\n3\n");
+}
+
+#[test]
+fn commits_move_only_among_the_unpushed_commits_after_the_last_merge() {
+    let repo = TempRepo::new();
+    let pushed = pushed_base(&repo);
+    let reason = |id: Oid, direction| {
+        move_commit(&repo.repository, &id.to_string(), direction)
+            .unwrap_err()
+            .message
+    };
+    let oldest = repo.commit_file("b.txt", "b\n", "Add b");
+    let newest = repo.commit_file("c.txt", "c\n", "Add c");
+
+    assert_eq!(
+        reason(newest, MoveDirection::Up),
+        format!(
+            "{} is the newest commit, so it can't move up.",
+            short_id(newest)
+        )
+    );
+    assert_eq!(
+        reason(oldest, MoveDirection::Down),
+        format!(
+            "{} can't move below {}, which has already been pushed to origin/main.",
+            short_id(oldest),
+            short_id(pushed)
+        )
+    );
+    assert!(reason(pushed, MoveDirection::Up).contains("has already been pushed"));
+
+    repo.create_branch("side", newest);
+    repo.checkout("side");
+    let side = repo.commit_file("side.txt", "side\n", "Add side");
+    repo.checkout("main");
+    repo.write("side.txt", "side\n");
+    let merge = repo.commit_merge("Merge side", side);
+    let after_merge = repo.commit_file("d.txt", "d\n", "Add d");
+    let tip = repo.commit_file("e.txt", "e\n", "Add e");
+
+    assert_eq!(
+        reason(after_merge, MoveDirection::Down),
+        format!(
+            "{} can't move below the merge commit {}.",
+            short_id(after_merge),
+            short_id(merge)
+        )
+    );
+    assert!(reason(newest, MoveDirection::Up).contains("the merge commit"));
+    assert_eq!(repo.head_id(), tip);
+}
+
+#[test]
+fn the_first_commit_in_the_history_stays_first() {
+    let repo = TempRepo::new();
+    let root = repo.commit_file("a.txt", "a\n", "Root");
+    let moved = repo.commit_file("b.txt", "b\n", "Add b");
+    // An upstream that shares no history, so the root commit is unpushed.
+    let signature = Signature::now("Test User", "test@example.com").unwrap();
+    let tree = repo.repository.find_commit(root).unwrap().tree().unwrap();
+    let elsewhere = repo
+        .repository
+        .commit(None, &signature, &signature, "Elsewhere", &tree, &[])
+        .unwrap();
+    repo.set_remote_branch("origin", "main", elsewhere);
+    repo.set_upstream("main", Some("origin/main"));
+
+    let error = move_commit(&repo.repository, &moved.to_string(), MoveDirection::Down).unwrap_err();
+
+    assert_eq!(
+        error.message,
+        format!(
+            "{} can't move below {}, the first commit in the history.",
+            short_id(moved),
+            short_id(root)
+        )
+    );
+    assert_eq!(repo.head_id(), moved);
 }
