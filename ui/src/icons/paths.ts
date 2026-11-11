@@ -39,6 +39,7 @@ export const ICON_PATHS = {
   commit: 'M5.5 8a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0 M1.5 8h4 M10.5 8h4',
   pickHunks: 'M1.5 4.5l1.5 1.5 2.5-3 M1.5 11.5l1.5 1.5 2.5-3 M8 4.5h6.5 M8 11.5h6.5',
   copy: 'M5.5 5.5h8v8h-8z M10.5 5.5v-3h-8v8h3',
+  clipboard: 'M5.5 3h-2v11h9V3h-2 M5.5 1.75h5v2.5h-5z',
   stash: 'M2 3h12v3H2z M3 6v7h10V6 M6.5 8.5h3',
   stashApply: 'M2 3h12v3H2z M3 6v7h10V6 M8 8v3.5 M6.25 9.75L8 8l1.75 1.75',
   stashPop: 'M3 7.5v6h10v-6 M2 4.5l11-2.75 M8 12V5.5 M6 7.5l2-2 2 2',

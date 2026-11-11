@@ -103,15 +103,24 @@ const fromFileIndex = computed(() => {
   )
 })
 
-async function copyId(): Promise<void> {
-  if (!details.value) {
-    return
-  }
+async function copyHash(hash: string, description: string): Promise<void> {
   try {
-    await navigator.clipboard.writeText(details.value.id)
-    showToast('success', 'Copied the commit hash to the clipboard.')
+    await navigator.clipboard.writeText(hash)
+    showToast('success', `Copied the ${description} to the clipboard.`)
   } catch (caught) {
-    showToast('error', `Couldn't copy the commit hash: ${errorMessage(caught)}`)
+    showToast('error', `Couldn't copy the ${description}: ${errorMessage(caught)}`)
+  }
+}
+
+async function copyId(): Promise<void> {
+  if (details.value) {
+    await copyHash(details.value.id, 'commit hash')
+  }
+}
+
+async function copyShortId(): Promise<void> {
+  if (details.value) {
+    await copyHash(details.value.shortId, 'short commit hash')
   }
 }
 
@@ -146,6 +155,15 @@ onMounted(async () => {
       </template>
       <template #title>
         Commit <span class="hash">{{ details?.shortId ?? id.slice(0, 7) }}</span>
+        <button
+          class="icon-button copy-short"
+          type="button"
+          title="Copy the short commit hash"
+          :disabled="!details"
+          @click="copyShortId"
+        >
+          <AppIcon name="clipboard" />
+        </button>
       </template>
       <template #after-title>
         <button class="button" type="button" :disabled="!newerCommit" :title="newerTitle" @click="showNewer">
@@ -340,6 +358,12 @@ onMounted(async () => {
 /* The button overhangs its row instead of making it taller than the rest. */
 .copy {
   margin-block: calc((1lh - var(--icon-button-size)) / 2);
+}
+
+/* The margin takes back most of the frame's padding, so the button sits
+   against the frame's right edge. */
+.copy-short {
+  margin-right: calc(-1 * var(--space-2));
 }
 
 /* The margin cancels the padding, so the hash lines up with the other
