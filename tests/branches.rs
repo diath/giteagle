@@ -4,7 +4,9 @@ use std::fs;
 
 use common::TempRepo;
 use giteagle_lib::error::ErrorKind;
-use giteagle_lib::git::branches::{delete_info, delete_local_branch, list_branches, switch_branch};
+use giteagle_lib::git::branches::{
+    create_branch, delete_info, delete_local_branch, list_branches, switch_branch,
+};
 use giteagle_lib::git::overview::{HeadKind, RepoState, overview};
 use giteagle_lib::git::snapshot::fingerprint;
 use giteagle_lib::git::sync::{pull_arguments, push_arguments};
@@ -207,6 +209,125 @@ fn switching_to_a_remote_branch_creates_a_tracking_branch() {
     switch_branch(&repo.repository, "main", false).unwrap();
     let again = switch_branch(&repo.repository, "origin/topic/remote", true).unwrap();
     assert_eq!(again, "topic/remote");
+}
+
+#[test]
+fn creating_a_branch_switches_to_it_and_keeps_local_changes() {
+    let repo = TempRepo::new();
+    let base = repo.commit_file("file.txt", "base", "Base");
+    repo.write("file.txt", "uncommitted");
+
+    create_branch(&repo.repository, "topic/new", &base.to_string()).unwrap();
+
+    assert_eq!(repo.current_branch(), "topic/new");
+    assert_eq!(repo.head_id(), base);
+    assert_eq!(
+        fs::read_to_string(repo.file_path("file.txt")).unwrap(),
+        "uncommitted"
+    );
+}
+
+#[test]
+fn creating_a_branch_from_another_one_updates_the_working_tree() {
+    let repo = TempRepo::new();
+    let base = repo.commit_file("file.txt", "base", "Base");
+    repo.commit_file("later.txt", "later", "Later");
+
+    create_branch(&repo.repository, "from-base", &base.to_string()).unwrap();
+
+    assert_eq!(repo.current_branch(), "from-base");
+    assert_eq!(repo.head_id(), base);
+    assert!(!repo.file_path("later.txt").exists());
+}
+
+#[test]
+fn a_branch_created_from_a_remote_branch_has_no_upstream() {
+    let repo = TempRepo::new();
+    let base = repo.commit_file("file.txt", "base", "Base");
+    repo.set_remote_branch("origin", "main", base);
+
+    create_branch(&repo.repository, "topic", &base.to_string()).unwrap();
+
+    let info = overview(&repo.repository).unwrap();
+    assert_eq!(info.head.name.as_deref(), Some("topic"));
+    assert_eq!(info.head.upstream, None);
+}
+
+#[test]
+fn a_branch_can_be_created_from_a_detached_head() {
+    let repo = TempRepo::new();
+    let first = repo.commit_file("file.txt", "1", "First");
+    repo.commit_file("file.txt", "2", "Second");
+    repo.repository.set_head_detached(first).unwrap();
+
+    create_branch(&repo.repository, "rescued", &first.to_string()).unwrap();
+
+    assert_eq!(repo.current_branch(), "rescued");
+    assert_eq!(repo.head_id(), first);
+}
+
+#[test]
+fn creating_a_branch_that_would_overwrite_local_changes_changes_nothing() {
+    let repo = TempRepo::new();
+    let base = repo.commit_file("file.txt", "base", "Base");
+    let tip = repo.commit_file("file.txt", "changed", "Change");
+    repo.write("file.txt", "uncommitted");
+
+    let error = create_branch(&repo.repository, "from-base", &base.to_string()).unwrap_err();
+
+    assert_eq!(error.kind, ErrorKind::Conflict);
+    assert!(error.message.contains("file.txt"));
+    assert_eq!(repo.current_branch(), "main");
+    assert_eq!(repo.head_id(), tip);
+    assert!(
+        repo.repository
+            .find_branch("from-base", git2::BranchType::Local)
+            .is_err()
+    );
+    assert_eq!(
+        fs::read_to_string(repo.file_path("file.txt")).unwrap(),
+        "uncommitted"
+    );
+}
+
+#[test]
+fn a_branch_name_that_cannot_be_used_changes_nothing() {
+    let repo = TempRepo::new();
+    let base = repo.commit_file("file.txt", "base", "Base");
+    let tip = repo.commit_file("later.txt", "later", "Later");
+    repo.create_branch("taken", tip);
+    let base = base.to_string();
+
+    let error = create_branch(&repo.repository, "bad name", &base).unwrap_err();
+    assert_eq!(error.kind, ErrorKind::InvalidInput);
+    let error = create_branch(&repo.repository, "taken", &base).unwrap_err();
+    assert_eq!(error.kind, ErrorKind::InvalidState);
+    let error = create_branch(&repo.repository, "taken/nested", &base).unwrap_err();
+    assert_eq!(error.kind, ErrorKind::InvalidState);
+    assert!(error.message.contains("named taken exists"));
+    repo.create_branch("parent/child", tip);
+    let error = create_branch(&repo.repository, "parent", &base).unwrap_err();
+    assert_eq!(error.kind, ErrorKind::InvalidState);
+    assert!(error.message.contains("named parent/child exists"));
+
+    assert_eq!(repo.current_branch(), "main");
+    assert_eq!(repo.head_id(), tip);
+    assert!(repo.file_path("later.txt").exists());
+    assert_eq!(list_branches(&repo.repository).unwrap().local.len(), 3);
+}
+
+#[test]
+fn creating_a_branch_is_blocked_during_a_merge() {
+    let repo = TempRepo::new();
+    let base = repo.commit_file("file.txt", "1", "Base");
+    fs::write(
+        repo.repository.path().join("MERGE_HEAD"),
+        format!("{base}\n"),
+    )
+    .unwrap();
+
+    let error = create_branch(&repo.repository, "topic", &base.to_string()).unwrap_err();
+    assert_eq!(error.kind, ErrorKind::InvalidState);
 }
 
 #[test]

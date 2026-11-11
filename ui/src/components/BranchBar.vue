@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import { errorMessage } from '../api'
 import { useProject } from '../stores/project'
@@ -7,10 +7,13 @@ import { showToast } from '../stores/toasts'
 import { formatRelative } from '../utils/dates'
 import { joinWithAnd } from '../utils/lists'
 import AppIcon from './AppIcon.vue'
+import NewBranchDialog from './NewBranchDialog.vue'
 
 defineEmits<{ openSwitcher: [] }>()
 
 const { api, applyFetchStatus, capabilities, refreshEverything, repo } = useProject()
+
+const newBranchOpen = ref(false)
 
 const head = computed(() => repo.overview?.head ?? null)
 
@@ -105,6 +108,17 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
 <template>
   <header class="bar">
     <div class="controls">
+      <button
+        class="button"
+        type="button"
+        :disabled="!capabilities.canSwitch"
+        title="Create a branch and switch to it"
+        @click="newBranchOpen = true"
+      >
+        <AppIcon name="plus" />
+        New Branch
+      </button>
+
       <div class="inset current" :title="branchLabel">
         <AppIcon name="branch" />
         <span class="branch-name ellipsis" :class="{ detached: head?.kind === 'detached' }">{{ branchLabel }}</span>
@@ -157,6 +171,8 @@ async function sync(operation: 'pull' | 'push'): Promise<void> {
       <AppIcon name="warning" />
       {{ capabilities.notice }} - finish it locally to switch, pull, or push.
     </span>
+
+    <NewBranchDialog v-if="newBranchOpen" @close="newBranchOpen = false" />
   </header>
 </template>
 

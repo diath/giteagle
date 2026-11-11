@@ -28,6 +28,21 @@ pub async fn switch_branch(
 }
 
 #[tauri::command]
+pub async fn create_branch(
+    state: SharedState<'_>,
+    project: ProjectId,
+    name: String,
+    base_id: String,
+) -> AppResult<()> {
+    blocking(&state, project, move |project| {
+        project.perform_change(|project| {
+            project.with_repo(|repository| branches::create_branch(repository, &name, &base_id))
+        })
+    })
+    .await
+}
+
+#[tauri::command]
 pub async fn get_delete_info(
     state: SharedState<'_>,
     project: ProjectId,

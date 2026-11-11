@@ -62,6 +62,7 @@ pub fn run(initial: Option<Repository>) {
             commands::committing::commit_changes,
             commands::branches::list_branches,
             commands::branches::switch_branch,
+            commands::branches::create_branch,
             commands::branches::get_delete_info,
             commands::branches::delete_branch,
             commands::cherry_pick::list_pick_targets,

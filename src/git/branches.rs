@@ -164,6 +164,56 @@ pub fn switch_branch(repository: &Repository, name: &str, is_remote: bool) -> Ap
     Ok(local_name.to_string())
 }
 
+/// Creates a local branch at the commit `base_id` and switches to it, like
+/// `git switch --no-track -c <name> <base>`. It gets no upstream even when
+/// started from a remote branch, so that Push publishes it under its own name
+/// instead of pushing to the branch it started from.
+pub fn create_branch(repository: &Repository, name: &str, base_id: &str) -> AppResult<()> {
+    ensure_clean_state(repository)?;
+    if !git2::Branch::name_is_valid(name)? {
+        return Err(AppError::invalid_input(format!(
+            "{name} is not a valid branch name."
+        )));
+    }
+    ensure_name_is_free(repository, name)?;
+    let commit = repository.find_commit(Oid::from_str(base_id)?)?;
+
+    // The branch comes first so that anything still refusing it leaves the
+    // working tree as it was.
+    let mut branch = repository.branch(name, &commit, false)?;
+    let checkout = checkout_safely(repository, commit.as_object(), |conflicts| {
+        overwrite_error(&format!("Switching to {name}"), conflicts)
+    });
+    if let Err(error) = checkout {
+        branch.delete()?;
+        return Err(error);
+    }
+    repository.set_head(&reference_name(branch.get())?)?;
+    Ok(())
+}
+
+/// Refuses a name that is taken. Git stores branches as paths, so `topic` also
+/// can't sit next to `topic/one`.
+fn ensure_name_is_free(repository: &Repository, name: &str) -> AppResult<()> {
+    for branch in repository.branches(Some(BranchType::Local))? {
+        let (branch, _) = branch?;
+        let Ok(existing) = branch.get().shorthand() else {
+            continue;
+        };
+        if existing == name {
+            return Err(AppError::invalid_state(format!(
+                "A branch named {name} already exists."
+            )));
+        }
+        if existing.starts_with(&format!("{name}/")) || name.starts_with(&format!("{existing}/")) {
+            return Err(AppError::invalid_state(format!(
+                "{name} can't be created while a branch named {existing} exists."
+            )));
+        }
+    }
+    Ok(())
+}
+
 fn switch_to_local(repository: &Repository, name: &str) -> AppResult<String> {
     let branch = repository.find_branch(name, BranchType::Local)?;
     if branch.is_head() {

@@ -92,6 +92,10 @@ every one passing.
 - **Switching branches** behaves like `git checkout`: non-conflicting changes
   carry over. If the switch would overwrite local changes or fails, nothing
   changes.
+- **New Branch** creates a local branch from the branch chosen in its dialog,
+  by default the current one, and switches to it as above. If the switch
+  fails, no branch is created. The new branch has no upstream, so Push
+  publishes it under its own name.
 - **Applying a stash** behaves like `git stash apply`, but only when it
   applies cleanly. If anything is staged, the stash conflicts with HEAD, or it
   would overwrite local changes, nothing changes. Apply, pop, drop and

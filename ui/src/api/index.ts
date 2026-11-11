@@ -94,6 +94,8 @@ export function createProjectApi(project: ProjectId) {
     branches: () => call<BranchList>('list_branches'),
     switchBranch: (name: string, isRemote: boolean) =>
       call<string>('switch_branch', { name, isRemote }),
+    /** Creates a branch at the commit and switches to it. */
+    createBranch: (name: string, baseId: string) => call<void>('create_branch', { name, baseId }),
     deleteInfo: (name: string) => call<DeleteInfo>('get_delete_info', { name }),
     deleteBranch: (name: string, deleteRemote: boolean) =>
       call<void>('delete_branch', { name, deleteRemote }),

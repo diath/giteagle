@@ -5,6 +5,7 @@ import { showToast } from './toasts'
 
 export type BusyOperation =
   | 'switch'
+  | 'createBranch'
   | 'pull'
   | 'push'
   | 'delete'
