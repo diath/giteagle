@@ -5,6 +5,7 @@ import { errorMessage, type CommitDetails } from '../api'
 import AppIcon from '../components/AppIcon.vue'
 import AvatarStack from '../components/AvatarStack.vue'
 import DiffBrowser from '../components/DiffBrowser.vue'
+import PageSearch from '../components/PageSearch.vue'
 import ViewBar from '../components/ViewBar.vue'
 import type { CommitSequence } from '../stores/navigation'
 import { useProject } from '../stores/project'
@@ -12,10 +13,11 @@ import { showToast } from '../stores/toasts'
 import { formatAbsolute, formatRelative } from '../utils/dates'
 import { useEscape } from '../utils/escape'
 
-const props = defineProps<{ id: string; fromFile: string | null; sequence: CommitSequence | null }>()
+const props = defineProps<{ id: string; fromFile: string | null; sequence: CommitSequence | null; active: boolean }>()
 
 const { api, goBack, openCommit, replaceCommit } = useProject()
 
+const root = ref<HTMLElement | null>(null)
 const details = shallowRef<CommitDetails | null>(null)
 const error = ref<string | null>(null)
 const browser = ref<InstanceType<typeof DiffBrowser> | null>(null)
@@ -139,7 +141,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="commit-view">
+  <div ref="root" class="commit-view">
     <ViewBar icon="commit">
       <template #before-title>
         <button
@@ -182,6 +184,8 @@ onMounted(async () => {
       </template>
     </ViewBar>
 
+    <PageSearch :root="root" :active="active" />
+
     <p v-if="error" class="error">{{ error }}</p>
     <p v-else-if="!details" class="loading faint">Loading commit…</p>
 
@@ -198,14 +202,14 @@ onMounted(async () => {
         <header class="commit-header">
           <dl class="detail-list">
             <dt>Commit</dt>
-            <dd>
+            <dd data-searchable>
               <span class="hash commit-hash" :title="details.id">{{ details.shortId }}</span>
               <button class="icon-button copy" type="button" title="Copy the commit id" @click="copyId">
                 <AppIcon name="copy" />
               </button>
             </dd>
             <dt>{{ details.parents.length === 1 ? 'Parent' : 'Parents' }}</dt>
-            <dd>
+            <dd data-searchable>
               <span v-if="details.parents.length === 0" class="faint">none (root commit)</span>
               <button
                 v-for="parent in details.parents"
@@ -220,10 +224,10 @@ onMounted(async () => {
               <span v-if="details.parents.length > 1" class="faint">(diff against the first parent)</span>
             </dd>
             <dt>Authored</dt>
-            <dd>{{ formatAbsolute(details.authorTime) }} <span class="faint">({{ formatRelative(details.authorTime) }})</span></dd>
+            <dd data-searchable>{{ formatAbsolute(details.authorTime) }} <span class="faint">({{ formatRelative(details.authorTime) }})</span></dd>
             <template v-if="committerDiffers">
               <dt>Committed</dt>
-              <dd>
+              <dd data-searchable>
                 {{ formatAbsolute(details.committerTime) }}
                 <span class="faint">({{ formatRelative(details.committerTime) }})</span>
                 <span class="muted"> by {{ details.committer.name }}</span>
@@ -240,13 +244,13 @@ onMounted(async () => {
             </dd>
           </dl>
 
-          <h1 class="subject">{{ details.subject }}</h1>
-          <pre v-if="details.body" class="body">{{ details.body }}</pre>
+          <h1 class="subject" data-searchable>{{ details.subject }}</h1>
+          <pre v-if="details.body" class="body" data-searchable>{{ details.body }}</pre>
 
           <ul class="authors">
             <li v-for="author in details.authors" :key="author.email" class="author">
               <AvatarStack :authors="[author]" :size="30" />
-              <span>{{ author.name }} <span class="faint">&lt;{{ author.email }}&gt;</span></span>
+              <span data-searchable>{{ author.name }} <span class="faint">&lt;{{ author.email }}&gt;</span></span>
             </li>
           </ul>
         </header>
@@ -257,6 +261,9 @@ onMounted(async () => {
 
 <style scoped>
 .commit-view {
+  /* Clears the sticky file headers, whose buttons it would otherwise cover. */
+  --page-search-top: calc(var(--icon-button-size) + 2 * var(--space-1) + var(--space-2));
+
   display: flex;
   flex-direction: column;
   height: 100%;

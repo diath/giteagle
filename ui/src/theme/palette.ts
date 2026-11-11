@@ -266,6 +266,9 @@ function rolesOf({ neutral, accents, extras }: Theme) {
     diffHunkFg: accents.blue.dim,
     diffGapBg: neutral[2],
 
+    searchMatch: accents.yellow.dim,
+    searchMatchCurrent: accents.orange.bright,
+
     syntaxComment: neutral[8],
     syntaxString: accents.green.bright,
     syntaxNumber: accents.orange.bright,

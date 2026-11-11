@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import AppIcon from '../components/AppIcon.vue'
 import FileVersionBar from '../components/FileVersionBar.vue'
+import PageSearch from '../components/PageSearch.vue'
 import { useProject } from '../stores/project'
 import { useEscape } from '../utils/escape'
 import { useFileAt } from '../utils/fileText'
 
-const props = defineProps<{ commit: string; shortId: string; path: string }>()
+const props = defineProps<{ commit: string; shortId: string; path: string; active: boolean }>()
 
 const { api, goBack, openBlame, openFileHistory } = useProject()
 const { lines, rows, notice } = useFileAt(api, props.commit, props.path)
+const root = ref<HTMLElement | null>(null)
 
 useEscape(goBack)
 
@@ -19,7 +21,7 @@ const lineNumbers = computed(() => lines.value.map((_, index) => index + 1).join
 </script>
 
 <template>
-  <div class="file-view">
+  <div ref="root" class="file-view">
     <FileVersionBar icon="file" :commit="commit" :short-id="shortId" :path="path">
       <template #end>
         <button
@@ -43,12 +45,14 @@ const lineNumbers = computed(() => lines.value.map((_, index) => index + 1).join
       </template>
     </FileVersionBar>
 
+    <PageSearch :root="root" :active="active" />
+
     <p v-if="notice" class="message" :class="notice.tone">{{ notice.text }}</p>
     <div v-else class="code-scroll">
       <div class="code">
         <pre class="line-numbers" aria-hidden="true">{{ lineNumbers }}</pre>
         <div class="text">
-          <div v-for="(segments, index) in rows" :key="index" class="line"><span
+          <div v-for="(segments, index) in rows" :key="index" class="line" data-searchable><span
             v-for="(segment, segmentIndex) in segments"
             :key="segmentIndex"
             :class="{ italic: segment.italic, bold: segment.bold }"

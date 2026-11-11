@@ -69,6 +69,18 @@ textarea {
   color: var(--color-fg-strong);
 }
 
+/* What a search of the page found, set by PageSearchWidget.vue. The text
+   color is set too, as a match can be over any token's color. */
+::highlight(page-search-match) {
+  background-color: var(--color-search-match);
+  color: var(--color-text-on-accent);
+}
+
+::highlight(page-search-current) {
+  background-color: var(--color-search-match-current);
+  color: var(--color-text-on-accent);
+}
+
 :focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: 1px;

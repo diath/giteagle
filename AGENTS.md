@@ -145,6 +145,11 @@ every one passing.
   with. Each run of lines can step back to the blame from before its change.
   The system `git` finds it by default; Settings can switch to git2.
 - **Dates** are shown in the local timezone, and lists show the author date.
+- **Searching a page:** Ctrl+F toggles a widget in the corner of the File View
+  and the Commit View. It finds what the page shows, ignoring case, so
+  unexpanded gaps and hidden files aren't searched. Typing, Enter and
+  Shift+Enter or its buttons bring a match into view. Text opts in with the
+  `data-searchable` attribute.
 
 ## UI rules
 

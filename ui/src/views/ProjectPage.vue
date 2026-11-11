@@ -78,6 +78,7 @@ onMounted(() => void project.load())
         :commit="view.commit"
         :short-id="view.shortId"
         :path="view.path"
+        :active="isActive(index)"
       />
       <BlameView
         v-else-if="view.kind === 'blame'"
@@ -86,7 +87,7 @@ onMounted(() => void project.load())
         :path="view.path"
         :line="view.line"
       />
-      <CommitView v-else :id="view.id" :from-file="view.fromFile" :sequence="view.sequence" />
+      <CommitView v-else :id="view.id" :from-file="view.fromFile" :sequence="view.sequence" :active="isActive(index)" />
     </div>
   </div>
   <p v-else class="loading">Loading the repository…</p>

@@ -288,7 +288,7 @@ defineExpose({ element: root })
         <span class="additions">+{{ file.additions }}</span>
         <span class="deletions">−{{ file.deletions }}</span>
       </span>
-      <span class="path ellipsis" :title="file.path">
+      <span class="path ellipsis" :title="file.path" data-searchable="sticky">
         <template v-if="file.oldPath">
           <span class="muted">{{ file.oldPath }}</span>
           <span class="faint"> → </span>
@@ -324,15 +324,15 @@ defineExpose({ element: root })
     </header>
 
     <div v-if="!collapsed" class="file-body">
-      <p v-if="modeChange" class="note">{{ modeChange }}</p>
-      <p v-if="summary" class="note">{{ summary }}</p>
+      <p v-if="modeChange" class="note" data-searchable>{{ modeChange }}</p>
+      <p v-if="summary" class="note" data-searchable>{{ summary }}</p>
       <div v-if="shownHunks.length > 0 && !file.tooLarge" class="code-scroll">
         <table class="code" :style="{ '--gutter-width': gutterWidth }">
           <tbody>
             <template v-for="row in rows" :key="row.key">
               <tr v-if="row.type === 'hunk'" class="hunk-row">
                 <td class="gutter" colspan="2"></td>
-                <td class="hunk-text" colspan="2">
+                <td class="hunk-text" colspan="2" data-searchable>
                   {{ row.header }}<span v-if="row.section" class="section">{{ row.section }}</span>
                 </td>
               </tr>
@@ -348,7 +348,7 @@ defineExpose({ element: root })
                 <td class="gutter">{{ row.line.oldLine ?? '' }}</td>
                 <td class="gutter">{{ row.line.newLine ?? '' }}</td>
                 <td class="sign">{{ row.line.kind === 'added' ? '+' : row.line.kind === 'removed' ? '−' : '' }}</td>
-                <td class="text"><span
+                <td class="text" data-searchable><span
                   v-for="(segment, index) in row.segments"
                   :key="index"
                   :class="{ changed: segment.changed, italic: segment.italic, bold: segment.bold }"

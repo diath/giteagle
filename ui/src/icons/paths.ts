@@ -14,6 +14,7 @@ export const ICON_PATHS = {
   parent: 'M7 3.5L3.5 7 7 10.5 M3.5 7h6a3 3 0 0 1 3 3v2.5',
   back: 'M9.5 3.5L5 8l4.5 4.5',
   chevronDown: 'M4 6l4 4 4-4',
+  chevronUp: 'M4 10l4-4 4 4',
   chevronLeft: 'M10 4l-4 4 4 4',
   chevronRight: 'M6 4l4 4-4 4',
   search: 'M2.5 7a4.5 4.5 0 1 0 9 0a4.5 4.5 0 1 0-9 0 M10.3 10.3l3.2 3.2',
