@@ -5,13 +5,13 @@
 <h1 align="center">GitEagle</h1>
 
 <p align="center">
-  A desktop viewer for Git repositories: branches, history, diffs, blame and
-  more, with each repository open in a tab of its own.
+  GitEagle is a desktop viewer for Git repositories. It shows branches,
+  history, diffs, blame and more. Each repository opens in a separate tab.
 </p>
 
 <p align="center">
   <a href="https://github.com/diath/giteagle/releases"><b>Download</b></a>
-  · Windows installer and Linux AppImage · Free and open source
+  a Windows installer or a Linux AppImage. GitEagle is free and open source.
 </p>
 
 <table>
@@ -21,21 +21,21 @@
       <br><b>History</b>
     </td>
     <td align="center">
-      <a href="docs/screenshots/diffs.webp"><img src="docs/screenshots/thumbs/diffs.webp" width="280" alt="A commit's diff with syntax highlighting and a tree of the changed files"></a>
+      <a href="docs/screenshots/diffs.webp"><img src="docs/screenshots/thumbs/diffs.webp" width="280" alt="A commit diff with syntax highlighting and a tree of the changed files"></a>
       <br><b>Diffs</b>
     </td>
     <td align="center">
-      <a href="docs/screenshots/blame.webp"><img src="docs/screenshots/thumbs/blame.webp" width="280" alt="A file with the commit and author that last changed each line"></a>
+      <a href="docs/screenshots/blame.webp"><img src="docs/screenshots/thumbs/blame.webp" width="280" alt="A file with the commit and the author that last changed each line"></a>
       <br><b>Blame</b>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <a href="docs/screenshots/branches.webp"><img src="docs/screenshots/thumbs/branches.webp" width="280" alt="The branch switcher listing local and remote branches"></a>
+      <a href="docs/screenshots/branches.webp"><img src="docs/screenshots/thumbs/branches.webp" width="280" alt="The branch switcher with local and remote branches"></a>
       <br><b>Branches</b>
     </td>
     <td align="center">
-      <a href="docs/screenshots/pick-hunks.webp"><img src="docs/screenshots/thumbs/pick-hunks.webp" width="280" alt="Committing changes hunk by hunk"></a>
+      <a href="docs/screenshots/pick-hunks.webp"><img src="docs/screenshots/thumbs/pick-hunks.webp" width="280" alt="The dialog that commits changes hunk by hunk"></a>
       <br><b>Pick hunks</b>
     </td>
     <td align="center">
@@ -47,136 +47,183 @@
 
 # Features
 
-- **[History](docs/screenshots/history.webp)** - Commits newest first, with
-  the ones not pushed yet marked and uncommitted changes on top. Every
-  repository opens in a tab of its own, and the tabs that were open come back
-  the next time you start GitEagle.
-- **[Diffs](docs/screenshots/diffs.webp)** - Syntax-highlighted diffs that
-  mark the words that changed, with a tree of the changed files and hidden
-  lines a click away.
-- **[Blame](docs/screenshots/blame.webp)** - See the commit that last changed
-  each line, following renames, and step back to the blame from before any
-  change.
-- **[Files](docs/screenshots/files.webp)** - Browse the repository with the
-  last commit that changed each file, then open a file, its history or its
-  blame.
-- **[Search](docs/screenshots/search.webp)** - Find commits by text, or narrow
-  them down with `author:`, `message:`, `file:` and `since:`.
-- **[Branches](docs/screenshots/branches.webp)** - Switch branches like
-  `git checkout`: changes that don't conflict carry over. Fetch, pull
-  (fast-forward only) and push are one click away, and fetches also run
-  quietly in the background.
-- **[Pick hunks](docs/screenshots/pick-hunks.webp)** - Commit whole files, or
-  go through the changes hunk by hunk as with `git add --patch`, using the Y,
-  N and Q keys.
-- **[Reword, squash and drop](docs/screenshots/squash.webp)** - Tidy up
-  unpushed commits as `git rebase -i` would. If any commit would conflict,
-  nothing changes.
-- **[Cherry-pick and revert](docs/screenshots/cherry-pick.webp)** - Copy
-  commits onto other local branches without checking them out, or revert
-  them. If any branch conflicts, none changes.
-- **[Stashes](docs/screenshots/stashes.webp)** - Read each stash as a diff,
-  then apply, pop or drop it. A stash is only applied when it applies cleanly.
-- **[Authors](docs/screenshots/authors.webp)** - Everyone who worked on the
-  branch, with their commits, the lines they added and removed, and when they
-  were last active.
-- **[Themes](docs/screenshots/themes.webp)** - Dark (Black), Dark (Brown),
-  Light (Beige) and Light (White), applied as soon as you choose one.
+- **[History](docs/screenshots/history.webp)** - The commit list shows the
+  newest commits first. It marks the commits that are not pushed.
+  Uncommitted changes are at the top of the list.
+- **Tabs** - Each repository opens in a separate tab. When you start
+  GitEagle, it opens all the tabs that were open when you closed it.
+- **[Diffs](docs/screenshots/diffs.webp)** - GitEagle shows diffs with syntax
+  highlighting and marks the words that changed. A tree shows the changed
+  files. You can show the hidden lines with one click.
+- **[Blame](docs/screenshots/blame.webp)** - Blame shows the commit that last
+  changed each line, and it follows renames. You can also see the blame from
+  before each change.
+- **[Files](docs/screenshots/files.webp)** - The Files tab shows each file with
+  the last commit that changed it. From this tab, you can open a file, its
+  history or its blame.
+- **[Search](docs/screenshots/search.webp)** - You can find commits by text.
+  To get more specific results, use `author:`, `message:`, `file:` and
+  `since:`.
+- **[Branches](docs/screenshots/branches.webp)** - When you switch branches,
+  GitEagle keeps the uncommitted changes that do not conflict, as
+  `git checkout` does. You can fetch, pull and push with one click. Pull does
+  only fast-forward merges. GitEagle also fetches in the background without
+  prompts.
+- **[Pick hunks](docs/screenshots/pick-hunks.webp)** - You can commit whole
+  files, or you can select the changes hunk by hunk. The Y, N and Q keys have
+  the same function as in `git add --patch`.
+- **[Reword, squash and drop](docs/screenshots/squash.webp)** - You can change
+  the messages of unpushed commits, squash them or drop them, as in
+  `git rebase -i`. If a commit causes a conflict, nothing changes.
+- **[Cherry-pick and revert](docs/screenshots/cherry-pick.webp)** - You can
+  copy commits to other local branches without a checkout, or you can revert
+  them. If a conflict occurs on one branch, no branch changes.
+- **[Stashes](docs/screenshots/stashes.webp)** - GitEagle shows each stash as a
+  diff. You can apply, pop or drop a stash. GitEagle applies a stash only if
+  it does not cause a conflict or overwrite local changes.
+- **[Authors](docs/screenshots/authors.webp)** - The Authors tab shows each
+  person who worked on the branch. For each author, it shows the commits, the
+  added and removed lines and the time of the last commit.
+- **[Themes](docs/screenshots/themes.webp)** - There are four themes: Dark
+  (Black), Dark (Brown), Light (Beige) and Light (White). GitEagle applies a
+  theme immediately when you select it.
 
-# Installing
+# Installation
 
-GitEagle needs `git` on your `PATH`: fetch, pull, push and blame run through
-it, so your credentials and SSH config apply. It won't start without it.
+You must have `git` on your `PATH`. If GitEagle cannot find `git`, it does not
+start. GitEagle uses `git` for fetch, pull, push and blame. Because of this,
+your credentials and SSH configuration apply.
 
 ## Pre-built binaries
 
-Every release on the [releases page](https://github.com/diath/giteagle/releases)
-has a Windows installer and a Linux AppImage. macOS isn't built yet.
+Each release on the [releases page](https://github.com/diath/giteagle/releases)
+has a Windows installer and a Linux AppImage. There is no macOS build at this
+time.
 
-- **Windows:** run `GitEagle_<version>_x64-setup.exe`. The installer isn't
-  code-signed, so SmartScreen may warn about it; choose *More info*, then
-  *Run anyway*.
-- **Linux:** make the AppImage executable and run it:
+To install GitEagle on Windows:
 
-  ```sh
-  chmod +x GitEagle_<version>_amd64.AppImage
-  ./GitEagle_<version>_amd64.AppImage
-  ```
+1. Run `GitEagle_<version>_x64-setup.exe`.
+2. If SmartScreen shows a warning, click *More info*.
+3. Click *Run anyway*.
+
+SmartScreen can show a warning because the installer is not code-signed.
+
+To run GitEagle on Linux:
+
+1. Make the AppImage executable:
+
+   ```sh
+   chmod +x GitEagle_<version>_amd64.AppImage
+   ```
+
+2. Run the AppImage:
+
+   ```sh
+   ./GitEagle_<version>_amd64.AppImage
+   ```
 
 ## From source
 
-You need:
+Before you start, install this software:
 
 - Rust 1.91 or newer
-- Node.js 24 with npm
-- The Tauri CLI: `cargo install tauri-cli --version "^2.12" --locked`
-- The system libraries Tauri needs, listed in
-  [Tauri's prerequisites](https://v2.tauri.app/start/prerequisites/). On
-  Debian and Ubuntu:
+- Node.js 24 and npm
+- The Tauri CLI. To install it, run
+  `cargo install tauri-cli --version "^2.12" --locked`.
+- The system libraries for Tauri. Refer to
+  [Tauri's prerequisites](https://v2.tauri.app/start/prerequisites/) for the
+  list. On Debian and Ubuntu, use this command to install them:
 
   ```sh
   sudo apt install build-essential libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
   ```
 
-Then build it:
+To build GitEagle:
 
-```sh
-git clone https://github.com/diath/giteagle.git
-cd giteagle/ui
-npm ci
-cd ..
-cargo tauri build
-```
+1. Clone the repository:
 
-The installer or AppImage ends up in `target/release/bundle/`, and the bare
-executable in `target/release/`. Add `--no-bundle` to skip the installer and
-build only the executable.
+   ```sh
+   git clone https://github.com/diath/giteagle.git
+   ```
 
-To work on GitEagle, `cargo tauri dev -- -- <path>` runs it against a
-repository and reloads the interface as you edit it.
+2. Install the interface packages:
+
+   ```sh
+   cd giteagle/ui
+   npm ci
+   ```
+
+3. Build GitEagle:
+
+   ```sh
+   cd ..
+   cargo tauri build
+   ```
+
+The installer or the AppImage is in `target/release/bundle/`. The executable
+is in `target/release/`. To build only the executable, add `--no-bundle` to
+`cargo tauri build`.
+
+To make changes to GitEagle, run `cargo tauri dev -- -- <path>`. This command
+runs GitEagle on the repository at `<path>`. When you edit the interface,
+GitEagle reloads it.
 
 ## With cargo install
+
+To build and install GitEagle with cargo, run this command:
 
 ```sh
 cargo install giteagle --locked
 ```
 
-This builds GitEagle and puts `giteagle` in `~/.cargo/bin`. The crate comes
-with the interface already built, so you don't need Node or the Tauri CLI,
-but you do need Rust 1.91 or newer and the system libraries listed under
-[From source](#from-source). You get the bare executable, without a desktop
-entry or icon.
+This command puts the `giteagle` executable in `~/.cargo/bin`. It does not add
+a desktop entry or an icon.
 
-From a clone, `cargo install --path . --locked` does the same once
-`npm run build` has built the interface in `ui/`.
+Because the crate contains the built interface, Node.js and the Tauri CLI are
+not necessary. You must have Rust 1.91 or newer. You must also have the system
+libraries that [From source](#from-source) gives.
 
-## Running
+To install GitEagle from a clone:
+
+1. In `ui/`, run `npm run build` to build the interface.
+2. In the repository root, run `cargo install --path . --locked`.
+
+## Run GitEagle
+
+To start GitEagle, run this command:
 
 ```sh
 giteagle [path]
 ```
 
-GitEagle reopens the repositories that were open when it last closed. Given a
-path, it also opens the repository that contains it, searching upward like
-`git` does. Without one, it shows the tab you had open last, or a tab that
-asks for a repository.
+When GitEagle starts, it opens all the repositories that were open when it
+closed.
 
-# Missing Features
+If you give a path, GitEagle also opens the repository that contains this
+path. GitEagle looks for the repository in the folder of the path first. Then
+it looks in each folder above it, as `git` does.
 
-GitEagle is a viewer first, so it leaves these out for now:
+If you do not give a path, GitEagle shows the tab that you had open last. If
+there are no tabs to open, it shows a tab that asks for a repository.
 
-- Rebasing onto another branch, and the parts of `git rebase -i` beyond
-  reword, squash and drop, such as reordering or editing commits
-- Merging, and a UI for resolving conflicts
-- Staging: commits are made straight from the working tree instead
-- Force pushing
-- Submodules
-- Git LFS
-- Bare repositories
-- Tuning for very large repositories: the commit list loads lazily, but
-  nothing else is optimized for them
-- macOS builds
+# Features Not Available
+
+GitEagle is mainly a viewer. At this time, it does not have these features:
+
+- Rebase onto a different branch.
+- The functions of `git rebase -i` other than reword, squash and drop. For
+  example, you cannot change the order of commits or edit a commit.
+- Merges, and an interface to resolve conflicts.
+- Staging. GitEagle makes commits from the working tree, not from the index.
+- Force push.
+- Submodules.
+- Git LFS.
+- Bare repositories.
+- Optimization for very large repositories. The commit list loads more commits
+  when you scroll down. Other parts of GitEagle do not have optimization for
+  large repositories.
+- macOS builds.
 
 # License
 
-GitEagle is licensed under the [MIT License](LICENSE).
+The [MIT License](LICENSE) applies to GitEagle.
