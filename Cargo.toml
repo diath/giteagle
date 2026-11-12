@@ -41,6 +41,24 @@ name = "giteagle_lib"
 name = "docs_dump"
 path = "tools/screenshots/dump.rs"
 
+# Dependencies such as git2 and the vendored libgit2 are slow unoptimized and
+# rarely change, so dev builds optimize them once and drop their debug info.
+# The app's own code stays quick to rebuild and keeps line tables for
+# backtraces.
+[profile.dev]
+opt-level = 1
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 2
+debug = false
+
+# Full debug info for the app's own code, for stepping through it in a
+# debugger: cargo build --profile debugging
+[profile.debugging]
+inherits = "dev"
+debug = true
+
 [build-dependencies]
 tauri-build = { version = "2.7", features = [] }
 
